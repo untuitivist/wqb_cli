@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wqb-cli"
+version = "0.2.5"
+description = "WorldQuant BRAIN Python API wrapper and agent-oriented research workflow nodes."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "msgpack>=1.0",
+    "pandas>=2.0",
+    "requests>=2.31",
+]
+
+[tool.setuptools.packages.find]
+include = ["wqb_core*"]
+
+[tool.pytest.ini_options]
+testpaths = ["wqb_core/unitest"]

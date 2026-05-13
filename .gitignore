@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local credentials and auth state
+.env
+.env.*
+!.env.example
+.wqb_cli_auth/
+
+# Browser profiles and runtime caches
+.tmp_edge_profile/
+wqb_core/.tmp_edge_profile/
+
+# Workflow runtime outputs
+docs/research_runs/
+workflow/**/__pycache__/
+
+# Large local data snapshots
+docs/data_all/all_data.pickle
+wqb_core/dataset/forum/*.sqlite3
+wqb_core/dataset/forum/WQPCommunityState_*.json
+
+# Local notebooks and editor state
+.ipynb_checkpoints/
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store

@@ -71,6 +71,22 @@ def validate(run_dir: Path, node_dir: Path) -> dict[str, Any]:
     if status not in FINAL_STATUSES:
         errors.append(f"invalid node_result status: {status}")
 
+    node_contract = node_input.get("node", {})
+    required_outputs = node_contract.get("required_outputs", [])
+    if not isinstance(required_outputs, list):
+        errors.append("node_input.node.required_outputs must be a list when present")
+        required_outputs = []
+    for rel in required_outputs:
+        if not isinstance(rel, str):
+            errors.append(f"required output path is not a string: {rel!r}")
+            continue
+        out_path = node_dir / rel
+        if rel.endswith("/"):
+            if not out_path.is_dir():
+                errors.append(f"missing required output directory: {rel}")
+        elif not out_path.is_file():
+            errors.append(f"missing required output file: {rel}")
+
     constraints = result.get("constraints_checked")
     if not isinstance(constraints, dict):
         errors.append("node_result.constraints_checked missing or not an object")
@@ -97,6 +113,37 @@ def validate(run_dir: Path, node_dir: Path) -> dict[str, Any]:
         path = node_dir / name
         if path.is_file() and not path.read_text(encoding="utf-8", errors="replace").strip():
             errors.append(f"{name} is empty")
+
+    evidence = {}
+    if (node_dir / "evidence_index.json").is_file():
+        evidence = load_json(node_dir / "evidence_index.json")
+        inputs_read = evidence.get("inputs_read")
+        if inputs_read is not None and not isinstance(inputs_read, list):
+            errors.append("evidence_index.inputs_read must be a list when present")
+        outputs_written = evidence.get("outputs_written")
+        if outputs_written is not None and not isinstance(outputs_written, list):
+            errors.append("evidence_index.outputs_written must be a list when present")
+
+    declared_upstreams = node_input.get("upstream_artifacts", {})
+    if declared_upstreams and isinstance(evidence.get("inputs_read"), list):
+        declared_paths = set()
+        for value in declared_upstreams.values():
+            if isinstance(value, str):
+                declared_paths.add(str((run_dir / value).resolve()) if not Path(value).is_absolute() else str(Path(value).resolve()))
+            elif isinstance(value, list):
+                for item in value:
+                    if isinstance(item, str):
+                        declared_paths.add(str((run_dir / item).resolve()) if not Path(item).is_absolute() else str(Path(item).resolve()))
+        for item in evidence["inputs_read"]:
+            if not isinstance(item, dict) or "path" not in item:
+                continue
+            raw = item["path"]
+            if not isinstance(raw, str):
+                continue
+            path = Path(raw)
+            resolved = str(path.resolve() if path.is_absolute() else (run_dir / path).resolve())
+            if declared_paths and resolved not in declared_paths and "node_input.json" not in raw:
+                warnings.append(f"input read not declared in node_input.upstream_artifacts: {raw}")
 
     if status == "success" and result.get("blocking_reason") not in (None, ""):
         warnings.append("success node_result has a blocking_reason")

@@ -18,6 +18,7 @@ Read these contracts before doing work:
 - {NODE_CONTRACT}
 - workgraph/regular/nodesubagent_contract.md
 - workgraph/regular/node_output_contract.md
+- workgraph/regular/node_io_constraints.md
 - workgraph/regular/python_alpha_contract.md when the assigned node touches PYTHON candidates
 
 Hard boundary:

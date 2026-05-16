@@ -62,6 +62,7 @@ It receives:
 
 It may write only inside its assigned node directory.
 It must produce the full output bundle in `workgraph/regular/node_output_contract.md`, including detailed process and handoff files.
+It must follow `workgraph/regular/node_io_constraints.md`.
 It must not run later nodes, change `graph_state.json`, or edit any source file.
 
 ## Execution Gates

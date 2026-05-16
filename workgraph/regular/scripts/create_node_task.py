@@ -75,6 +75,7 @@ def main() -> None:
             "node_contract": str((root / nodes[args.node_id]["contract_path"]).resolve()),
             "nodesubagent_contract": str((regular_dir / "nodesubagent_contract.md").resolve()),
             "node_output_contract": str((regular_dir / "node_output_contract.md").resolve()),
+            "node_io_constraints": str((regular_dir / "node_io_constraints.md").resolve()),
             "subagent_prompt_template": str((regular_dir / "subagent_prompt_template.md").resolve()),
         },
         "required_output_bundle": [
@@ -91,7 +92,25 @@ def main() -> None:
     if args.extra_input:
         extra_path = Path(args.extra_input).resolve()
         assert_inside(extra_path, run_dir)
-        node_input["extra"] = load_json(extra_path)
+        extra = load_json(extra_path)
+        if not isinstance(extra, dict):
+            raise SystemExit("--input JSON must be an object")
+        upstream_artifacts = extra.pop("upstream_artifacts", None)
+        if upstream_artifacts is not None:
+            if not isinstance(upstream_artifacts, dict):
+                raise SystemExit("upstream_artifacts must be an object")
+            for value in upstream_artifacts.values():
+                values = value if isinstance(value, list) else [value]
+                for item in values:
+                    if not isinstance(item, str):
+                        raise SystemExit("upstream_artifacts values must be strings or string lists")
+                    path = Path(item)
+                    resolved = path.resolve() if path.is_absolute() else (run_dir / path).resolve()
+                    assert_inside(resolved, run_dir)
+                    if not resolved.exists():
+                        raise SystemExit(f"Declared upstream artifact does not exist: {item}")
+            node_input["upstream_artifacts"] = upstream_artifacts
+        node_input["extra"] = extra
 
     write_json(node_dir / "node_input.json", node_input)
 

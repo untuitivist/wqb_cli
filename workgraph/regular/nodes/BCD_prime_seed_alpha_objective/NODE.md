@@ -31,9 +31,12 @@ This node is executed by a nodesubagent only.
    - `category` when available
 4. If category is missing, infer it only from alpha metadata or fields and mark the confidence.
 5. Convert the optimization objective into structured constraints and target metrics.
-6. Do not inspect unrelated platform themes.
-7. Do not run broad pyramid selection.
-8. Do not generate new expressions.
+6. Derive `implementation_mode` from the seed alpha language unless the user explicitly asks to change language.
+   If the seed alpha language is PYTHON, set allowed datafield types to `["MATRIX"]`.
+   If the seed alpha language is FASTEXPR, keep Python disabled unless the optimization objective explicitly requires Python Alpha.
+7. Do not inspect unrelated platform themes.
+8. Do not run broad pyramid selection.
+9. Do not generate new expressions.
 
 ## decision.json Minimum Shape
 
@@ -46,6 +49,12 @@ This node is executed by a nodesubagent only.
   },
   "source": "BCD_prime_seed_alpha_objective",
   "seed_alpha_id": "abc123",
+  "implementation_mode": {
+    "primary": "FASTEXPR",
+    "allow_python": false,
+    "allowed_datafield_types": ["MATRIX", "VECTOR", "GROUP", "SCALAR"],
+    "reason": "Derived from seed alpha language."
+  },
   "optimization_objective": {
     "primary_goal": "improve fitness",
     "constraints": []

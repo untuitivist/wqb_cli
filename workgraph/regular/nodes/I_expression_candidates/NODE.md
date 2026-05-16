@@ -11,6 +11,7 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
 - H `outputs/mechanism_hypotheses.json`.
 - H `outputs/field_mechanism_map.json`.
 - E `outputs/available_datafields.json`.
+- D or BCD' `outputs/decision.json` for `implementation_mode`.
 
 ## Required Outputs
 
@@ -27,8 +28,9 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
 3. If no template fits the selected category, block with a clear reason.
 4. Keep expression rationale tied to H hypothesis ids.
 5. For FASTEXPR candidates, validate operator parameters and keep the final expression in `regular`.
-6. For PYTHON candidates, follow `workgraph/regular/python_alpha_contract.md`.
-7. For PYTHON candidates, run structural validation before writing `simulation_batch.json`:
+6. Generate PYTHON candidates only if D/BCD' `implementation_mode` allows Python.
+7. For PYTHON candidates, follow `workgraph/regular/python_alpha_contract.md`.
+8. For PYTHON candidates, run structural validation before writing `simulation_batch.json`:
    - source parses as Python
    - exactly one `@alpha(...)`
    - function parameters are exactly `(data, store)`
@@ -37,8 +39,8 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
    - every declared field is present in E `available_datafields.json` with `type = "MATRIX"`
    - candidate is marked for single-alpha simulation, not parallel Python batch simulation
    - final output is cast to `np.float32`
-8. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
-9. Do not submit simulations directly unless this node contract is explicitly expanded.
+9. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
+10. Do not submit simulations directly unless this node contract is explicitly expanded.
 
 ## Candidate Language Families
 
@@ -78,6 +80,7 @@ It must use `data.field_id` style access and must not use `data["field_id"]`.
 The decorator must not include `lookback`; use `settings.lookback`.
 All fields in `data=[...]` must be MATRIX fields from E.
 If a hypothesis needs non-MATRIX fields, emit only a FASTEXPR candidate or block that Python variant.
+If D/BCD' did not enable Python, do not create Python candidates.
 
 Use the validator with E's field library:
 

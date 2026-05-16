@@ -3,6 +3,7 @@
 ## Role
 
 Choose exactly one target tower from B and C evidence.
+Choose the implementation mode before E runs, so E can filter datafield types correctly.
 This node is executed by a nodesubagent only.
 
 ## Required Inputs
@@ -28,7 +29,10 @@ This node is executed by a nodesubagent only.
 7. Enforce hard category constraints before theme preference.
 8. Explain why the selected tower beats the second choice.
 9. Do not inspect dataset or datafield pools directly; leave hard field feasibility to E.
-10. Do not generate expressions.
+10. Choose `implementation_mode` as `FASTEXPR`, `PYTHON`, or `MIXED`.
+    Use `PYTHON` only when the intended research direction needs Python Alpha state/helpers and can work with MATRIX datafields only.
+    Use `FASTEXPR` when non-MATRIX fields may be important or when the idea is expressible with platform operators.
+11. Do not generate expressions.
 
 ## Tower Selection Priority
 
@@ -53,6 +57,12 @@ If point-lighting value is tied or close, use GM/VF/weight fit, field-supply pri
     "delay": 1,
     "category": "pv"
   },
+  "implementation_mode": {
+    "primary": "FASTEXPR",
+    "allow_python": false,
+    "allowed_datafield_types": ["MATRIX", "VECTOR", "GROUP", "SCALAR"],
+    "reason": "FASTEXPR is the default unless Python-specific mechanics are needed before E."
+  },
   "second_choice": {},
   "lighting_priority_judgment": "",
   "category_concentration_judgment": "",
@@ -71,6 +81,7 @@ If point-lighting value is tied or close, use GM/VF/weight fit, field-supply pri
 ## Success Criteria
 
 - Exactly one tower is selected.
+- Implementation mode is selected before E.
 - The output can drive E/F/G/H without extra user steering.
 
 ## Block Conditions

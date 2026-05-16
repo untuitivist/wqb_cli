@@ -177,11 +177,13 @@ Downstream nodes should treat the run as seed-alpha optimization rather than bro
    - Exception: `BCD_prime_seed_alpha_objective` may replace B/C/D when the user supplies `alpha_id` and `optimization_objective`.
 2. E must block when the candidate datafield pool is empty unless the workagent explicitly branches back to D.
 3. I must only use fields present in E outputs.
-4. G must degrade, not fail, when external sources time out.
-5. J must support bounded runs; a timeout must produce a resumable `node_result.json`.
-6. M defaults to review mode; live submission requires an explicit user instruction.
-7. PYTHON candidates must follow `workgraph/regular/python_alpha_contract.md`.
-8. SUPER candidates are out of scope for this graph and belong under `workgraph/super/` later.
-9. F must search high-VF, high-weight, and Grand Master forum evidence first, then D/E/BCD'-specific experience.
-10. `graph_state.json` must be updated by `update_graph_state.py`; manual run summaries are not completion evidence.
-11. J must receive an explicit bounded budget and must write resumable state before any polling.
+4. D or BCD' must choose implementation mode before E.
+   If Python is enabled, E must expose a MATRIX-only usable field subset.
+5. G must degrade, not fail, when external sources time out.
+6. J must support bounded runs; a timeout must produce a resumable `node_result.json`.
+7. M defaults to review mode; live submission requires an explicit user instruction.
+8. PYTHON candidates must follow `workgraph/regular/python_alpha_contract.md`.
+9. SUPER candidates are out of scope for this graph and belong under `workgraph/super/` later.
+10. F must search high-VF, high-weight, and Grand Master forum evidence first, then D/E/BCD'-specific experience.
+11. `graph_state.json` must be updated by `update_graph_state.py`; manual run summaries are not completion evidence.
+12. J must receive an explicit bounded budget and must write resumable state before any polling.

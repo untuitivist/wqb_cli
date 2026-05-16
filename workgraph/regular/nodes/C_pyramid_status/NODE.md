@@ -23,11 +23,19 @@ This node is executed by a nodesubagent only.
 2. Collect current-quarter and all-time pyramid counts.
 3. Normalize tower keys as `REGION/D<delay>/<category>`.
 4. Preserve raw counts and derived fields separately.
+5. Include multiplier when available.
+6. Include derived ranking fields for D:
+   - `remaining_to_three`
+   - `is_empty_current_quarter`
+   - `is_d0`
+   - `current_quarter_count`
+   - `all_time_count`
+   - `multiplier`
 
 ## Success Criteria
 
 - D can compare towers without reading chat history.
-- `pyramid_summary.json` includes current count, all-time count, and remaining slots to 3.
+- `pyramid_summary.json` includes current count, all-time count, remaining slots to 3, D0 flag, and multiplier when available.
 
 ## Block Conditions
 

@@ -19,12 +19,30 @@ This node is executed by a nodesubagent only.
 
 ## Process Requirements
 
-1. Use C point-lighting status as the first priority.
-2. Enforce hard category constraints before theme preference.
-3. Prefer mature non-D0 towers when point-lighting priority is tied.
-4. Explain why the selected tower beats the second choice.
-5. Do not inspect dataset or datafield pools.
-6. Do not generate expressions.
+1. Use point-lighting as the first priority.
+2. Within point-lighting candidates, serve the user's durable objective: high VF, higher weight, and GM readiness.
+3. Prefer towers that can plausibly produce many distinct, low-correlation, post-cost-valid regular alphas.
+4. Prefer mature D1 towers when point-lighting priority is tied or when D0 adds unnecessary fragility.
+5. Prefer categories with broad mechanism depth and likely field supply.
+6. Penalize crowded categories when B/C evidence suggests high reuse, high production correlation risk, or weak uniqueness.
+7. Enforce hard category constraints before theme preference.
+8. Explain why the selected tower beats the second choice.
+9. Do not inspect dataset or datafield pools directly; leave hard field feasibility to E.
+10. Do not generate expressions.
+
+## Tower Selection Priority
+
+Use this order when ranking towers:
+
+1. **Hard viability**: region, delay, and category must be valid for REGULAR alpha work and compatible with available auth/platform state.
+2. **Point-lighting value**: current-quarter count, remaining slots to 3, multiplier, and all-time coverage.
+3. **GM/VF/weight fit**: among point-lighting candidates, category should support quality, diversity, uniqueness, low correlation, and post-cost robustness.
+4. **Field-supply prior**: before E checks exact fields, prefer categories historically likely to have enough clean fields and mechanisms.
+5. **Crowding risk**: avoid towers likely dominated by reused fields, common templates, or high prod-corr patterns.
+6. **Theme/platform fit**: use B themes as a tie-breaker when the above are close.
+
+If two towers have meaningfully different point-lighting value, choose the better point-lighting tower unless it violates hard viability.
+If point-lighting value is tied or close, use GM/VF/weight fit, field-supply prior, and crowding risk to break the tie.
 
 ## decision.json Minimum Shape
 
@@ -40,6 +58,11 @@ This node is executed by a nodesubagent only.
   "category_concentration_judgment": "",
   "vertical_maturity_judgment": "",
   "d0_avoidance_judgment": "",
+  "objective_alignment_judgment": "",
+  "field_supply_prior_judgment": "",
+  "crowding_risk_judgment": "",
+  "theme_fit_judgment": "",
+  "expected_downstream_burden": "",
   "why_this_tower": "",
   "why_not_second_choice": ""
 }

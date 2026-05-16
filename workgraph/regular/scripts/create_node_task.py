@@ -97,6 +97,8 @@ def main() -> None:
 
     state_path = run_dir / "graph_state.json"
     state = load_json(state_path)
+    if state.get("current_node"):
+        raise SystemExit(f"Cannot assign a new node while current_node is active: {state['current_node']}")
     state["status"] = "node_assigned"
     state["current_node"] = args.node_id
     state["steps"].append({"step": step, "node_id": args.node_id, "node_dir": str(node_dir), "status": "assigned"})

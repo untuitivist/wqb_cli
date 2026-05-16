@@ -20,6 +20,13 @@ Read:
 - `node_input.json`
 - upstream artifacts listed in `node_input.json`
 
+On startup, before any action that can block, write:
+
+- `process_log.md`
+- `validation_report.json`
+
+Use the startup format required by `workgraph/regular/node_output_contract.md`.
+
 Write:
 
 - `node_result.json`
@@ -39,6 +46,9 @@ Write:
 - Do not invent upstream artifacts.
 - Do not hide failed checks in prose. Put them in `validation_report.json` and `node_result.json`.
 - Do not write a summary-only node. The next nodesubagent must be able to continue from your files without reading chat history.
+- Do not leave `validation_report.json` in `started` status when finishing.
+- Do not claim `success` when required output files are missing.
+- Do not continue from chat history. Use `node_input.json` and upstream artifacts only.
 
 ## Result Rules
 

@@ -16,6 +16,16 @@ NN_NODE_ID/
   outputs/
 ```
 
+## Startup Files
+
+Before any network request, API polling, simulation, broad source inspection, or long-running command, the nodesubagent must write minimal startup evidence:
+
+- `process_log.md` with `started_at`, node id, assigned node directory, and intended first action.
+- `validation_report.json` with `status = "started"` and a `write_scope_only_node_dir` check.
+
+These files are not optional.
+They let the workagent distinguish a stuck nodesubagent from a node that never started.
+
 ## process_log.md
 
 Record the actual work sequence.
@@ -83,6 +93,8 @@ Write machine-readable checks:
 
 Use `failed` for any check that should block downstream use.
 Use `warning` for degraded but usable optional evidence.
+The final `validation_report.json` status must be one of `passed`, `warning`, or `failed`.
+`started` is allowed only while the node is still running.
 
 ## handoff.md
 
@@ -114,6 +126,8 @@ Write final status:
     "write_scope_only_node_dir": true,
     "used_required_inputs": true,
     "process_log_complete": true,
+    "evidence_index_complete": true,
+    "validation_report_complete": true,
     "handoff_complete": true
   },
   "notes": []
@@ -121,3 +135,13 @@ Write final status:
 ```
 
 Allowed status values are `success`, `blocked`, `degraded`, and `failed`.
+
+`node_result.json` is invalid unless:
+
+- `node_id` matches the assigned node id in `node_input.json`.
+- `constraints_checked.write_scope_only_node_dir` is `true`.
+- `constraints_checked.process_log_complete` is `true`.
+- `constraints_checked.evidence_index_complete` is `true`.
+- `constraints_checked.validation_report_complete` is `true`.
+- `constraints_checked.handoff_complete` is `true`.
+- The final `validation_report.json` is not `status = "started"`.

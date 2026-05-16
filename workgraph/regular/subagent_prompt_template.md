@@ -27,6 +27,9 @@ Do not create another run directory.
 Do not execute any later node.
 Do not decide the graph branch.
 
+Startup requirement:
+Before any network request, long-running command, API polling, simulation, or broad source inspection, write minimal startup `process_log.md` and `validation_report.json` in {NODE_DIR}.
+
 Your job:
 Execute the node described by {NODE_CONTRACT}.
 Use only upstream artifacts listed in {NODE_DIR}/node_input.json.

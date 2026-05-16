@@ -64,6 +64,24 @@ It may write only inside its assigned node directory.
 It must produce the full output bundle in `workgraph/regular/node_output_contract.md`, including detailed process and handoff files.
 It must not run later nodes, change `graph_state.json`, or edit any source file.
 
+## Execution Gates
+
+The graph state is the only authoritative progress record.
+A run-level summary, chat transcript, or loose output file never counts as node completion.
+
+The workagent must enforce these gates:
+
+1. Use `create_node_task.py` to create `node_input.json` and the assigned node directory.
+2. Assign exactly one nodesubagent to that node.
+3. Require startup files before long work: `process_log.md` and `validation_report.json`.
+4. After the nodesubagent returns, run `validate_node_bundle.py`.
+5. Run `validate_run_scope.py` before accepting the node.
+6. Run `update_graph_state.py` only after bundle and scope validation pass.
+7. Schedule the next node only when `graph_state.current_node` is null.
+
+The workagent may not write node outputs to repair or complete a nodesubagent's work.
+If a node is thin, stuck, or missing files, the workagent must schedule a redo in a new node directory.
+
 ## Required Run Files
 
 ```text
@@ -164,3 +182,5 @@ Downstream nodes should treat the run as seed-alpha optimization rather than bro
 7. PYTHON candidates must follow `workgraph/regular/python_alpha_contract.md`.
 8. SUPER candidates are out of scope for this graph and belong under `workgraph/super/` later.
 9. F must search high-VF, high-weight, and Grand Master forum evidence first, then D/E/BCD'-specific experience.
+10. `graph_state.json` must be updated by `update_graph_state.py`; manual run summaries are not completion evidence.
+11. J must receive an explicit bounded budget and must write resumable state before any polling.

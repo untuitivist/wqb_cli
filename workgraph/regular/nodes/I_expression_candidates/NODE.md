@@ -28,7 +28,15 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
 4. Keep expression rationale tied to H hypothesis ids.
 5. For FASTEXPR candidates, validate operator parameters and keep the final expression in `regular`.
 6. For PYTHON candidates, follow `workgraph/regular/python_alpha_contract.md`.
-7. Do not submit simulations directly unless this node contract is explicitly expanded.
+7. For PYTHON candidates, run structural validation before writing `simulation_batch.json`:
+   - source parses as Python
+   - exactly one `@alpha(...)`
+   - function parameters are exactly `(data, store)`
+   - fields are accessed as attributes, not `data["field"]`
+   - `lookback` is in settings, not in `@alpha(...)`
+   - final output is cast to `np.float32`
+8. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
+9. Do not submit simulations directly unless this node contract is explicitly expanded.
 
 ## Candidate Language Families
 
@@ -64,6 +72,8 @@ PYTHON candidates use:
 ```
 
 Python candidate source code must contain imports, helpers, and exactly one `@alpha(...)` decorated function in the same string.
+It must use `data.field_id` style access and must not use `data["field_id"]`.
+The decorator must not include `lookback`; use `settings.lookback`.
 
 ## Success Criteria
 

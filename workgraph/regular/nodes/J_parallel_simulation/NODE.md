@@ -23,11 +23,31 @@ This node supports REGULAR FASTEXPR and REGULAR PYTHON payloads.
 
 1. Enforce the workagent budget before submitting anything.
 2. Support dry-run or preview mode when requested.
-3. Write partial results and `resume_state.json` before any long wait.
+3. Write `outputs/resume_state.json` before any network call or long wait.
 4. On timeout, return `status=degraded` if partial results are usable, otherwise `blocked`.
 5. Do not loop indefinitely to chase a good alpha.
 6. Route validation by `settings.language`.
 7. Preserve every submitted payload exactly under `outputs/payloads/`.
+8. Do not write batch results at run root. All J artifacts must be under this node directory.
+9. Do not skip `outputs/submitted_batch.json`, `outputs/simulation_results.json`, or `outputs/resume_state.json`, even in dry-run mode.
+
+## Budget Contract
+
+`node_input.json.extra.budget` must contain:
+
+```json
+{
+  "mode": "preview",
+  "max_candidates": 3,
+  "max_wall_time_sec": 600,
+  "poll_interval_sec": 15,
+  "max_poll_attempts": 20
+}
+```
+
+Allowed `mode` values are `preview`, `submit_only`, and `submit_and_poll`.
+If the budget is missing, J must block before any API call.
+If the budget expires, J must stop, write `resume_state.json`, and return `degraded` when any partial result is usable.
 
 ## Language-Specific Validation
 

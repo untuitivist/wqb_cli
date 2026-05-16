@@ -33,6 +33,9 @@ They belong to the `workgraph/regular/` workgraph, not the future `workgraph/sup
 - Include exactly one `@alpha(...)` decorated function.
 - The decorated function must accept exactly `(data, store)`.
 - Declare every input field in `@alpha(data=[...])`.
+- Do not pass `lookback` to `@alpha(...)`; lookback belongs in `settings.lookback`.
+- Access fields as attributes such as `data.returns` or `data.close`.
+  Do not use `data["returns"]` or other dictionary-style access.
 - Do not include `universe` in `data`; it is always available as `data.universe`.
 - Do not mutate data arrays in place; copy first when modifying.
 - Return a one-dimensional `np.float32` array of shape `[n_instruments]`.
@@ -59,6 +62,24 @@ Every Python alpha candidate must include:
     "returns_float32": true
   }
 }
+```
+
+## Required Structural Checks
+
+Before I passes a Python candidate downstream, it must record structural validation results for:
+
+- parses with `ast.parse`
+- exactly one decorated function with decorator name `alpha`
+- decorated function has exactly two parameters named `data` and `store`
+- `@alpha(...)` contains a `data=[...]` declaration
+- `@alpha(...)` does not contain `lookback=...`
+- source does not use dictionary-style `data[...]` access
+- source returns or explicitly casts with `.astype(np.float32)`
+
+The nodesubagent may use:
+
+```text
+workgraph/regular/scripts/validate_python_alpha.py <candidate_json_or_py>
 ```
 
 ## J-Node Handling

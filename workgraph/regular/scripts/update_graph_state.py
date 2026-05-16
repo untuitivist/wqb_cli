@@ -4,6 +4,8 @@ import argparse
 import json
 from pathlib import Path
 
+from validate_node_bundle import validate as validate_node_bundle
+
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8-sig"))
@@ -46,6 +48,9 @@ def main() -> None:
     missing_bundle = validate_output_bundle(node_dir)
     if missing_bundle:
         raise SystemExit(f"Missing required node output bundle files: {missing_bundle}")
+    bundle_report = validate_node_bundle(run_dir, node_dir)
+    if not bundle_report["ok"]:
+        raise SystemExit(f"Invalid node output bundle: {bundle_report['errors']}")
 
     state_path = run_dir / "graph_state.json"
     state = load_json(state_path)

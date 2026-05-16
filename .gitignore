@@ -26,7 +26,6 @@ env/
 wqb_core/.tmp_edge_profile/
 
 # Workflow runtime outputs
-docs/research_runs/
 research_runs/run_*/
 workflow/**/__pycache__/
 workflow/nodes/I_表达式候选集/当前operators使用情况.md

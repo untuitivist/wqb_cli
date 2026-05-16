@@ -43,3 +43,6 @@ wqb_core/dataset/forum/WQPCommunityState_*.json
 # OS files
 Thumbs.db
 .DS_Store
+
+# agent history
+智能体对话历史/

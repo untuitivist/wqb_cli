@@ -185,6 +185,7 @@ if __name__ == "__main__":
     import asyncio
     import inspect
     import json
+    from pathlib import Path
 
     from wqb_core import WQBSession
     from requests import Response
@@ -278,6 +279,7 @@ if __name__ == "__main__":
     parser.add_argument("--password")
     parser.add_argument("--prefer-dotenv")
     parser.add_argument("--dotenv-path")
+    parser.add_argument("--output", help="Write serialized JSON result to this path instead of stdout.")
     args, unknown = parser.parse_known_args()
 
     session_kwargs = {}
@@ -297,4 +299,11 @@ if __name__ == "__main__":
     result = target(**kwargs)
     if inspect.isawaitable(result):
         result = asyncio.run(result)
-    print(json.dumps(_cli_serialize(result), ensure_ascii=False, indent=2, default=str))
+    serialized = _cli_serialize(result)
+    text = json.dumps(serialized, ensure_ascii=False, indent=2, default=str)
+    if args.output:
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(text, encoding="utf-8")
+    else:
+        print(text)

@@ -2,6 +2,8 @@
 
 Python alpha candidates are REGULAR alphas with `settings.language = "PYTHON"`.
 They belong to the `workgraph/regular/` workgraph, not the future `workgraph/super/` workgraph.
+In the current graph, Python alpha support is intentionally narrower than FASTEXPR:
+Python alpha candidates are submitted as single-alpha simulations only, and every declared data field must be a MATRIX datafield.
 
 ## Payload Shape
 
@@ -33,6 +35,8 @@ They belong to the `workgraph/regular/` workgraph, not the future `workgraph/sup
 - Include exactly one `@alpha(...)` decorated function.
 - The decorated function must accept exactly `(data, store)`.
 - Declare every input field in `@alpha(data=[...])`.
+- Every field declared in `@alpha(data=[...])` must appear in E `outputs/available_datafields.json` with `type = "MATRIX"`.
+  Do not use VECTOR, GROUP, SCALAR, or table-shaped fields in Python alpha candidates until the PythonAlpha path is expanded.
 - Do not pass `lookback` to `@alpha(...)`; lookback belongs in `settings.lookback`.
 - Access fields as attributes such as `data.returns` or `data.close`.
   Do not use `data["returns"]` or other dictionary-style access.
@@ -84,6 +88,7 @@ workgraph/regular/scripts/validate_python_alpha.py <candidate_json_or_py>
 
 ## J-Node Handling
 
-J submits Python alpha payloads through the same `wqb_core.simulation.simulate` path as FASTEXPR.
+J submits Python alpha payloads through the single-alpha `wqb_core.simulation.simulate` source script.
+Do not send Python alpha payloads through the parallel/concurrent batch path.
 J must preserve the full source code string in its submitted payload artifact.
 J must not run unbounded remote simulations; use the workagent budget.

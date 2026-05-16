@@ -25,6 +25,8 @@ This node is executed by a nodesubagent only.
 2. Record the exact non-secret evidence used.
 3. Do not print or copy credentials, cookies, or tokens into outputs.
 4. If auth is missing or expired, return `status=blocked`.
+5. Prefer the source script:
+   `python wqb_core/user/get_authentication.py --output outputs/auth_status.json`
 
 ## Success Criteria
 

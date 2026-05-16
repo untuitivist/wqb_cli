@@ -34,6 +34,8 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
    - function parameters are exactly `(data, store)`
    - fields are accessed as attributes, not `data["field"]`
    - `lookback` is in settings, not in `@alpha(...)`
+   - every declared field is present in E `available_datafields.json` with `type = "MATRIX"`
+   - candidate is marked for single-alpha simulation, not parallel Python batch simulation
    - final output is cast to `np.float32`
 8. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
 9. Do not submit simulations directly unless this node contract is explicitly expanded.
@@ -74,11 +76,19 @@ PYTHON candidates use:
 Python candidate source code must contain imports, helpers, and exactly one `@alpha(...)` decorated function in the same string.
 It must use `data.field_id` style access and must not use `data["field_id"]`.
 The decorator must not include `lookback`; use `settings.lookback`.
+All fields in `data=[...]` must be MATRIX fields from E.
+If a hypothesis needs non-MATRIX fields, emit only a FASTEXPR candidate or block that Python variant.
+
+Use the validator with E's field library:
+
+```text
+python workgraph/regular/scripts/validate_python_alpha.py <candidate_json> --fields <E available_datafields.json> --require-matrix-fields
+```
 
 ## Success Criteria
 
 - Every candidate has id, language, type, regular payload, hypothesis id, field ids, and settings.
-- Every PYTHON candidate passes the local structural checks in `python_alpha_contract.md`.
+- Every PYTHON candidate passes the local structural and MATRIX-field checks in `python_alpha_contract.md`.
 - `simulation_batch.json` is ready for J.
 
 ## Block Conditions

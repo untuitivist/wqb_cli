@@ -5,6 +5,8 @@
 Run a bounded simulation batch from I candidates.
 This node is executed by a nodesubagent only.
 This node supports REGULAR FASTEXPR and REGULAR PYTHON payloads.
+FASTEXPR may use the bounded concurrent path.
+PYTHON must use the single-alpha simulation path because current PythonAlpha support only handles one backtest at a time.
 
 ## Required Inputs
 
@@ -30,6 +32,10 @@ This node supports REGULAR FASTEXPR and REGULAR PYTHON payloads.
 7. Preserve every submitted payload exactly under `outputs/payloads/`.
 8. Do not write batch results at run root. All J artifacts must be under this node directory.
 9. Do not skip `outputs/submitted_batch.json`, `outputs/simulation_results.json`, or `outputs/resume_state.json`, even in dry-run mode.
+10. For FASTEXPR batches, prefer the source script:
+    `python wqb_core/simulation/concurrent_simulate.py --targets @file:<I simulation_batch.json> --mode preview --concurrency 1 --slot-count 1 --payload-output-dir outputs/payloads --submitted-output outputs/submitted_batch.json --resume-output outputs/resume_state.json --output outputs/simulation_results.json`
+11. For each PYTHON candidate, use the single-alpha source script:
+    `python wqb_core/simulation/simulate.py --target @file:<single_python_candidate.json> --mode preview --payload-output outputs/payloads/<candidate_id>.json --submitted-output outputs/submitted_batch.json --resume-output outputs/resume_state.json --output outputs/simulation_results.json`
 
 ## Budget Contract
 
@@ -65,7 +71,9 @@ If the budget expires, J must stop, write `resume_state.json`, and return `degra
 - Require `regular` to be a non-empty Python source string.
 - Require exactly one `@alpha(...)` decorated function.
 - Require `lookback` in settings.
+- Require all `@alpha(data=[...])` fields to be MATRIX fields accepted by I.
 - Preserve the full code string in the payload artifact.
+- Submit one Python alpha per `simulate.py` run; do not pack Python payloads into `concurrent_simulate.py`.
 - Do not execute local BrainLab simulations unless the workagent explicitly sets a local-debug mode.
 
 ## Success Criteria

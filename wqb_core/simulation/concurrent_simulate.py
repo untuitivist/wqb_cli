@@ -253,11 +253,93 @@ if __name__ == "__main__":
             return [_cli_serialize(v) for v in list(value)]
         return value
 
+    def _cli_write_json(path: str | None, value) -> None:
+        if not path:
+            return
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(_cli_serialize(value), ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def _normalize_cli_targets(value):
+        if isinstance(value, dict):
+            for key in ("targets", "payloads", "simulation_batch", "candidates"):
+                nested = value.get(key)
+                if isinstance(nested, list):
+                    return nested
+            if {"type", "settings", "regular"}.issubset(value):
+                return [value]
+        return value
+
+    def _candidate_payload(candidate):
+        if isinstance(candidate, dict) and {"type", "settings", "regular"}.issubset(candidate):
+            return {
+                "type": candidate["type"],
+                "settings": candidate["settings"],
+                "regular": candidate["regular"],
+            }
+        return candidate
+
+    def _candidate_id(candidate, index: int) -> str:
+        if isinstance(candidate, dict):
+            for key in ("id", "candidate_id", "name"):
+                value = candidate.get(key)
+                if value:
+                    return str(value)
+        return f"candidate_{index:03d}"
+
+    def _preview_artifacts(targets, payload_output_dir: str | None):
+        payloads = []
+        submitted = []
+        if targets is None:
+            return payloads, submitted
+        for index, candidate in enumerate(targets, start=1):
+            candidate_id = _candidate_id(candidate, index)
+            payload = _candidate_payload(candidate)
+            payload_record = {
+                "candidate_id": candidate_id,
+                "payload": payload,
+            }
+            payloads.append(payload_record)
+            submitted.append(
+                {
+                    "candidate_id": candidate_id,
+                    "language": (
+                        payload.get("settings", {}).get("language")
+                        if isinstance(payload, dict)
+                        else None
+                    ),
+                    "type": payload.get("type") if isinstance(payload, dict) else None,
+                    "status": "preview",
+                    "payload_file": f"{candidate_id}.json" if payload_output_dir else None,
+                }
+            )
+            if payload_output_dir:
+                output_path = Path(payload_output_dir) / f"{candidate_id}.json"
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(
+                    json.dumps(payload, ensure_ascii=False, indent=2, default=str),
+                    encoding="utf-8",
+                )
+        return payloads, submitted
+
     parser = argparse.ArgumentParser(description=inspect.getdoc(ConcurrentSimulateMixin.concurrent_simulate) or "")
     parser.add_argument("--username")
     parser.add_argument("--password")
     parser.add_argument("--prefer-dotenv")
     parser.add_argument("--dotenv-path")
+    parser.add_argument(
+        "--mode",
+        choices=("preview", "submit_and_poll"),
+        default="submit_and_poll",
+        help="preview writes node artifacts without API submission.",
+    )
+    parser.add_argument("--output", help="Write serialized JSON result to this path instead of stdout.")
+    parser.add_argument("--payload-output-dir", help="Write each submitted payload to this directory.")
+    parser.add_argument("--submitted-output", help="Write submitted batch metadata to this path.")
+    parser.add_argument("--resume-output", help="Write resumable run state to this path.")
     args, unknown = parser.parse_known_args()
 
     session_kwargs = {}
@@ -270,15 +352,65 @@ if __name__ == "__main__":
             raise SystemExit("--username and --password must be provided together")
         session_kwargs["wqb_auth"] = (args.username, args.password)
 
-    session = WQBSession(**session_kwargs)
-
-    target = getattr(session, "concurrent_simulate")
     kwargs = _cli_collect_unknown(unknown)
+    kwargs["targets"] = _normalize_cli_targets(kwargs.get("targets"))
+    payloads, submitted = _preview_artifacts(kwargs.get("targets"), args.payload_output_dir)
+    _cli_write_json(
+        args.resume_output,
+        {
+            "mode": args.mode,
+            "status": "started",
+            "submitted_count": len(submitted),
+        },
+    )
+    _cli_write_json(args.submitted_output, submitted)
+    if args.mode == "preview":
+        result = {
+            "mode": "preview",
+            "submitted_count": len(submitted),
+            "results": [],
+            "payloads": payloads,
+        }
+        _cli_write_json(
+            args.resume_output,
+            {
+                "mode": args.mode,
+                "status": "preview_complete",
+                "submitted_count": len(submitted),
+            },
+        )
+        serialized = _cli_serialize(result)
+        text = json.dumps(serialized, ensure_ascii=False, indent=2, default=str)
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(text, encoding="utf-8")
+        else:
+            print(text)
+        raise SystemExit(0)
+
+    session = WQBSession(**session_kwargs)
+    target = getattr(session, "concurrent_simulate")
     result = target(**kwargs)
     if inspect.isawaitable(result):
         result = asyncio.run(result)
+    _cli_write_json(
+        args.resume_output,
+        {
+            "mode": args.mode,
+            "status": "complete",
+            "submitted_count": len(submitted),
+        },
+    )
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
-    print(json.dumps(_cli_serialize(result), ensure_ascii=False, indent=2, default=str))
+    serialized = _cli_serialize(result)
+    text = json.dumps(serialized, ensure_ascii=False, indent=2, default=str)
+    if args.output:
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(text, encoding="utf-8")
+    else:
+        print(text)

@@ -31,6 +31,10 @@ This node is executed by a nodesubagent only.
    - `current_quarter_count`
    - `all_time_count`
    - `multiplier`
+7. Prefer the source scripts:
+   - `python wqb_core/user/get_pyramid_alphas.py --scope quarter --output outputs/current_quarter_pyramids.json`
+   - `python wqb_core/user/get_pyramid_alphas.py --scope all --output outputs/all_pyramids.json`
+   - `python wqb_core/user/get_pyramid_multipliers.py --output outputs/pyramid_multipliers.json`
 
 ## Success Criteria
 

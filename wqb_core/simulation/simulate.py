@@ -186,11 +186,59 @@ if __name__ == "__main__":
             return [_cli_serialize(v) for v in list(value)]
         return value
 
+    def _cli_write_json(path: str | None, value) -> None:
+        if not path:
+            return
+        output_path = Path(path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
+            json.dumps(_cli_serialize(value), ensure_ascii=False, indent=2, default=str),
+            encoding="utf-8",
+        )
+
+    def _normalize_cli_target(value):
+        if isinstance(value, dict):
+            for key in ("target", "payload", "alpha"):
+                nested = value.get(key)
+                if isinstance(nested, dict):
+                    return nested
+            if isinstance(value.get("candidates"), list):
+                candidates = value["candidates"]
+                if len(candidates) != 1:
+                    raise SystemExit(
+                        f"simulate.py handles exactly one candidate, got {len(candidates)}"
+                    )
+                return _normalize_cli_target(candidates[0])
+            if {"type", "settings", "regular"}.issubset(value):
+                return {
+                    "type": value["type"],
+                    "settings": value["settings"],
+                    "regular": value["regular"],
+                }
+        return value
+
+    def _target_id(value) -> str:
+        if isinstance(value, dict):
+            for key in ("id", "candidate_id", "name"):
+                if value.get(key):
+                    return str(value[key])
+        return "single_alpha"
+
     parser = argparse.ArgumentParser(description=inspect.getdoc(SimulateMixin.simulate) or "")
     parser.add_argument("--username")
     parser.add_argument("--password")
     parser.add_argument("--prefer-dotenv")
     parser.add_argument("--dotenv-path")
+    parser.add_argument(
+        "--mode",
+        choices=("preview", "submit_and_poll"),
+        default="submit_and_poll",
+        help="preview writes node artifacts without API submission.",
+    )
+    parser.add_argument("--output", help="Write serialized JSON result to this path instead of stdout.")
+    parser.add_argument("--payload-output", help="Write the exact submitted payload to this path.")
+    parser.add_argument("--submitted-output", help="Write submitted metadata to this path.")
+    parser.add_argument("--resume-output", help="Write resumable run state to this path.")
     args, unknown = parser.parse_known_args()
 
     session_kwargs = {}
@@ -203,15 +251,75 @@ if __name__ == "__main__":
             raise SystemExit("--username and --password must be provided together")
         session_kwargs["wqb_auth"] = (args.username, args.password)
 
-    session = WQBSession(**session_kwargs)
-
-    target = getattr(session, "simulate")
     kwargs = _cli_collect_unknown(unknown)
+    if "target" not in kwargs:
+        raise SystemExit("simulate.py requires --target <payload>, for example --target @file:alpha.json")
+    original_target = kwargs["target"]
+    kwargs["target"] = _normalize_cli_target(original_target)
+    target_id = _target_id(original_target)
+    _cli_write_json(args.payload_output, kwargs["target"])
+    _cli_write_json(
+        args.submitted_output,
+        {
+            "candidate_id": target_id,
+            "language": (
+                kwargs["target"].get("settings", {}).get("language")
+                if isinstance(kwargs["target"], dict)
+                else None
+            ),
+            "type": kwargs["target"].get("type") if isinstance(kwargs["target"], dict) else None,
+            "status": "preview" if args.mode == "preview" else "submitted",
+        },
+    )
+    _cli_write_json(
+        args.resume_output,
+        {
+            "mode": args.mode,
+            "status": "started",
+            "candidate_id": target_id,
+        },
+    )
+    if args.mode == "preview":
+        result = {
+            "mode": "preview",
+            "candidate_id": target_id,
+            "result": None,
+            "payload": kwargs["target"],
+        }
+        _cli_write_json(
+            args.resume_output,
+            {
+                "mode": args.mode,
+                "status": "preview_complete",
+                "candidate_id": target_id,
+            },
+        )
+        text = json.dumps(_cli_serialize(result), ensure_ascii=False, indent=2, default=str)
+        if args.output:
+            _cli_write_json(args.output, result)
+        else:
+            print(text)
+        raise SystemExit(0)
+
+    session = WQBSession(**session_kwargs)
+    target = getattr(session, "simulate")
     result = target(**kwargs)
     if inspect.isawaitable(result):
         result = asyncio.run(result)
+    _cli_write_json(
+        args.resume_output,
+        {
+            "mode": args.mode,
+            "status": "complete",
+            "candidate_id": target_id,
+        },
+    )
     try:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
-    print(json.dumps(_cli_serialize(result), ensure_ascii=False, indent=2, default=str))
+    text = json.dumps(_cli_serialize(result), ensure_ascii=False, indent=2, default=str)
+    if args.output:
+        _cli_write_json(args.output, result)
+    else:
+        print(text)

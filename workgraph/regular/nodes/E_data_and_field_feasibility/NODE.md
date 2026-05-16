@@ -26,11 +26,14 @@ This node is executed by a nodesubagent only.
    - Used datasets should preferably not be reused.
 3. Use run-local outputs for every derived artifact.
 4. Do not silently continue with an empty candidate field pool.
+5. Preserve datafield `type` exactly.
+   Python Alpha candidates can only use fields where `type = "MATRIX"`.
 
 ## Success Criteria
 
 - `available_datafields.json` has `candidate_count > 0`.
 - Every candidate field includes dataset id, field id, type, and exclusion status.
+- Every MATRIX candidate can be identified mechanically by I.
 
 ## Block Conditions
 

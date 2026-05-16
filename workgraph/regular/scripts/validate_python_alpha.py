@@ -48,12 +48,17 @@ def validate_source(source: str) -> dict[str, Any]:
     if arg_names != ["data", "store"]:
         errors.append(f"alpha function args must be exactly ['data', 'store'], got {arg_names}")
 
+    declared_fields: list[str] = []
     has_data_kw = False
     has_lookback_kw = False
     if deco is not None:
         for kw in deco.keywords:
             if kw.arg == "data":
                 has_data_kw = True
+                if isinstance(kw.value, ast.List):
+                    for elt in kw.value.elts:
+                        if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
+                            declared_fields.append(elt.value)
             if kw.arg == "lookback":
                 has_lookback_kw = True
     if not has_data_kw:
@@ -70,7 +75,52 @@ def validate_source(source: str) -> dict[str, Any]:
     if ".astype(np.float32)" not in source_flat and ".astype(\"float32\")" not in source_flat:
         warnings.append("could not find explicit final .astype(np.float32) cast")
 
-    return {"ok": not errors, "errors": errors, "warnings": warnings}
+    return {
+        "ok": not errors,
+        "errors": errors,
+        "warnings": warnings,
+        "declared_fields": declared_fields,
+    }
+
+
+def _iter_field_records(value: Any):
+    if isinstance(value, list):
+        for item in value:
+            yield from _iter_field_records(item)
+        return
+    if not isinstance(value, dict):
+        return
+    if any(key in value for key in ("id", "field_id", "datafield_id")):
+        yield value
+    for key in ("datafields", "fields", "candidates", "available_datafields", "items"):
+        nested = value.get(key)
+        if isinstance(nested, (list, dict)):
+            yield from _iter_field_records(nested)
+
+
+def load_field_types(path: Path) -> dict[str, str]:
+    payload = json.loads(path.read_text(encoding="utf-8-sig"))
+    field_types: dict[str, str] = {}
+    for record in _iter_field_records(payload):
+        field_id = record.get("id") or record.get("field_id") or record.get("datafield_id")
+        field_type = record.get("type") or record.get("data_type") or record.get("field_type")
+        if field_id is not None and field_type is not None:
+            field_types[str(field_id)] = str(field_type).upper()
+    return field_types
+
+
+def require_matrix_fields(report: dict[str, Any], field_types: dict[str, str]) -> None:
+    errors = report.setdefault("errors", [])
+    for field_id in report.get("declared_fields", []):
+        if field_id == "universe":
+            errors.append("do not include universe in @alpha(data=[...])")
+            continue
+        field_type = field_types.get(field_id)
+        if field_type is None:
+            errors.append(f"field {field_id!r} is not present in the allowed field library")
+        elif field_type != "MATRIX":
+            errors.append(f"field {field_id!r} has type {field_type}, expected MATRIX")
+    report["ok"] = not errors
 
 
 def load_source(path: Path) -> str:
@@ -86,9 +136,22 @@ def load_source(path: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate a WQB REGULAR PYTHON alpha source string.")
     parser.add_argument("path", help="Path to a .py file or JSON candidate containing regular.")
+    parser.add_argument(
+        "--fields",
+        help="Optional available_datafields.json path used to check declared field types.",
+    )
+    parser.add_argument(
+        "--require-matrix-fields",
+        action="store_true",
+        help="Require every declared @alpha data field to be present and type MATRIX.",
+    )
     args = parser.parse_args()
 
     report = validate_source(load_source(Path(args.path)))
+    if args.require_matrix_fields:
+        if not args.fields:
+            raise SystemExit("--require-matrix-fields requires --fields")
+        require_matrix_fields(report, load_field_types(Path(args.fields)))
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if not report["ok"]:
         raise SystemExit(1)

@@ -135,23 +135,6 @@ python workgraph\regular\scripts\validate_python_alpha.py candidate.json --field
 - E 根据 `implementation_mode` 筛字段类型。
 - I 只能按该模式生成 FASTEXPR 或 PYTHON candidate。
 
-## Alpha 改进知识
-
-平台教程中的 operator、IS 结果解释和回测设置经验整理在：
-
-```text
-workgraph/regular/alpha_improvement_guide.md
-```
-
-H/I/K/L 节点应使用它把失败指标转换成具体改进动作，例如：
-
-- 用 `rank` 降低截面极值和持仓集中。
-- 用 `ts_rank` 做历史相对强弱。
-- 用 `ts_delta` 做短期变化信号。
-- 用 decay 降低过高 turnover。
-- 用 truncation 控制单票权重。
-- 用 neutralization 处理市场/行业暴露。
-
 ## 安装
 
 建议使用本地 Conda 环境 `WQBRAIN`：
@@ -183,3 +166,4 @@ Copy-Item .env.example .env
 - `docs/research_runs/`
 - `__pycache__/`
 - 浏览器临时 profile，例如 `wqb_core/.tmp_edge_profile/`
+

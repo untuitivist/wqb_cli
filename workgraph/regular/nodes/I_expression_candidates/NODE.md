@@ -28,15 +28,9 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
 3. If no template fits the selected category, block with a clear reason.
 4. Keep expression rationale tied to H hypothesis ids.
 5. For FASTEXPR candidates, validate operator parameters and keep the final expression in `regular`.
-6. Use `workgraph/regular/alpha_improvement_guide.md` for operator and settings choices:
-   - use `rank` to control cross-sectional extremes and concentration
-   - use `ts_rank` for history-relative signals
-   - use `ts_delta` for short-horizon changes
-   - guard raw divide/ratio expressions against unit, zero-denominator, and concentration problems
-   - adjust decay/truncation/neutralization deliberately when generating settings variants
-7. Generate PYTHON candidates only if D/BCD' `implementation_mode` allows Python.
-8. For PYTHON candidates, follow `workgraph/regular/python_alpha_contract.md`.
-9. For PYTHON candidates, run structural validation before writing `simulation_batch.json`:
+6. Generate PYTHON candidates only if D/BCD' `implementation_mode` allows Python.
+7. For PYTHON candidates, follow `workgraph/regular/python_alpha_contract.md`.
+8. For PYTHON candidates, run structural validation before writing `simulation_batch.json`:
    - source parses as Python
    - exactly one `@alpha(...)`
    - function parameters are exactly `(data, store)`
@@ -45,8 +39,8 @@ This node may generate REGULAR candidates in either FASTEXPR or PYTHON language.
    - every declared field is present in E `available_datafields.json` with `type = "MATRIX"`
    - candidate is marked for single-alpha simulation, not parallel Python batch simulation
    - final output is cast to `np.float32`
-10. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
-11. Do not submit simulations directly unless this node contract is explicitly expanded.
+9. Invalid PYTHON candidates must be written to `outputs/python_candidates.json` with failure reasons, but must not appear in `outputs/simulation_batch.json`.
+10. Do not submit simulations directly unless this node contract is explicitly expanded.
 
 ## Candidate Language Families
 

@@ -21,7 +21,8 @@ This node is executed by a nodesubagent only.
 1. Use only candidates approved by K.
 2. Check correlation, pool value, and other slow gate evidence within budget.
 3. Record missing or timed-out checks explicitly.
-4. Recommend M, D, or E through output only; do not branch directly.
+4. Use `workgraph/regular/alpha_improvement_guide.md` when interpreting settings robustness, PnL shape, concentration, and slow-check warnings.
+5. Recommend M, D, or E through output only; do not branch directly.
 
 ## Success Criteria
 

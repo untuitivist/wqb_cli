@@ -28,8 +28,9 @@ This node is executed by a nodesubagent only.
 2. Separate hard pass/fail metrics from softer interpretation.
 3. Build `metric_policy.json` before ranking candidates.
 4. Apply hard gates first; do not promote a candidate to L only because the narrative is promising.
-5. Recommend one of L, D, E, H, I, or BEST_K_BRANCH, but do not update graph state.
-6. Preserve enough detail for a future H/I/E redo.
+5. Use `workgraph/regular/alpha_improvement_guide.md` to translate failures into concrete improvement actions.
+6. Recommend one of L, D, E, H, I, or BEST_K_BRANCH, but do not update graph state.
+7. Preserve enough detail for a future H/I/E redo.
 
 ## Metric Policy
 

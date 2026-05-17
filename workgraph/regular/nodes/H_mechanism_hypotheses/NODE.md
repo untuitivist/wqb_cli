@@ -27,6 +27,8 @@ This node is executed by a nodesubagent only.
 4. Do not hard-code analyst fields when the D category is not analyst.
 5. Do not generate alpha expressions.
 6. In BCD' mode, form mechanisms as controlled improvements to the seed alpha and objective, not as broad tower discovery.
+7. Use `workgraph/regular/alpha_improvement_guide.md` when translating K failure modes or seed objectives into mechanism changes.
+   Keep operator/settings ideas as guidance for I; H should still focus on economic mechanism and field families.
 
 ## Success Criteria
 

@@ -160,8 +160,10 @@
       "allowed_next": ["L_slow_final_check", "D_main_tower", "E_data_and_field_feasibility", "H_mechanism_hypotheses", "I_expression_candidates", "BEST_K_BRANCH"],
       "write_scope": "node_dir",
       "required_outputs": [
+        "outputs/metric_policy.json",
         "outputs/diagnosis.json",
         "outputs/survivors.json",
+        "outputs/rejected_candidates.json",
         "outputs/branch_recommendation.json"
       ]
     },

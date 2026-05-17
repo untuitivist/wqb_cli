@@ -164,6 +164,150 @@ flowchart TD
     L --> E
 ```
 
+## Node Responsibilities
+
+Each node has a narrow responsibility.
+Agents must not blur these boundaries.
+
+### A Login / Shared Auth
+
+Purpose: verify that WQB authentication is usable for this run.
+
+- Reads local auth/session state through `wqb_core`.
+- Writes non-secret auth status evidence.
+- Blocks when auth is missing or expired.
+- Does not choose a tower, inspect fields, or run simulations.
+
+### B Theme / Platform Opportunities
+
+Purpose: collect broad platform/theme opportunities for normal discovery mode.
+
+- Looks for current platform opportunities, themes, events, or category hints.
+- Produces theme context for D and H.
+- Does not inspect exact datafield pools.
+- Does not choose the final tower by itself.
+
+### C Pyramid Status
+
+Purpose: measure point-lighting state.
+
+- Reads current-quarter and all-time pyramid/light-tower status.
+- Computes remaining slots, empty-current-quarter flags, D0/maturity hints, and multipliers.
+- Feeds D with point-lighting evidence.
+- Does not choose expressions or fields.
+
+### BCD' Seed Alpha / Objective
+
+Purpose: replace B, C, and D when the user gives a specific alpha id and optimization objective.
+
+- Fetches or records seed alpha context.
+- Derives the D-equivalent tower from seed settings and metadata.
+- Converts the user's objective into structured constraints.
+- Chooses `implementation_mode` before E.
+- Does not run broad discovery or generate new expressions.
+
+### D Main Tower
+
+Purpose: choose exactly one target tower for the run.
+
+- Uses B theme context and C pyramid status.
+- Applies the priority order: point-lighting first, then high VF, high weight, GM readiness.
+- Chooses `implementation_mode` before E: `FASTEXPR`, `PYTHON`, or `MIXED`.
+- Produces `decision.json` and ranked alternatives.
+- Does not inspect exact datafields or generate expressions.
+
+### E Data and Field Feasibility
+
+Purpose: build the datafield pool for the selected tower.
+
+- Reads D or BCD' decision.
+- Screens dataset and datafield candidates.
+- Enforces exclusions: OS-bad datasets, used datafields, and preferably reused datasets.
+- Preserves field metadata, especially `type`.
+- If Python is enabled, exposes a MATRIX-only usable subset.
+- Does not form mechanisms or expressions.
+
+### F Community / Help Center Experience
+
+Purpose: collect platform/community operating knowledge.
+
+- Prioritizes high VF, high weight, and Grand Master evidence.
+- Then collects D/E/BCD'-specific hints.
+- Produces actionable lessons for H/I/J/K.
+- Does not choose the final mechanism or expression.
+
+### G External Material
+
+Purpose: collect optional external context.
+
+- Searches external sources relevant to the tower, field family, or mechanism.
+- Summarizes useful non-platform evidence.
+- Degrades on source failure rather than failing the run.
+- Does not override platform evidence.
+
+### H Economic Mechanism Hypotheses
+
+Purpose: convert evidence into economic mechanisms.
+
+- Uses B or BCD' context, D/BCD' decision, E fields, F experience, and G material.
+- Produces a small set of mechanism hypotheses and a field-mechanism map.
+- In seed mode, designs controlled improvements to the seed alpha.
+- Uses `alpha_improvement_guide.md` only to guide mechanism repair, not to write expressions.
+- Does not generate alpha payloads.
+
+### I Expression Candidates
+
+Purpose: turn H mechanisms into simulation-ready candidates.
+
+- Uses only fields allowed by E.
+- Generates FASTEXPR and, when enabled by D/BCD', PYTHON candidates.
+- Uses `alpha_improvement_guide.md` for operator and settings choices.
+- Validates Python candidates against `python_alpha_contract.md`.
+- Writes `simulation_batch.json`.
+- Does not submit simulations.
+
+### J Parallel Simulation
+
+Purpose: run bounded simulations or previews for I candidates.
+
+- Enforces workagent-provided budget.
+- Preserves every submitted payload under `outputs/payloads/`.
+- Writes submitted batch, simulation results, and resumable state.
+- Uses `concurrent_simulate.py` for FASTEXPR batches.
+- Uses single-alpha `simulate.py` for PYTHON candidates.
+- Does not loop indefinitely or diagnose final quality.
+
+### K Diagnosis
+
+Purpose: score J results and decide the repair branch.
+
+- Builds `metric_policy.json`.
+- Applies hard gates for Sharpe, Fitness, Turnover, prod_corr, self_corr, Margin, and objective-specific constraints.
+- Uses preferred targets for ranking and caveats.
+- Interprets IS results, warnings, PnL shape, unit issues, weight concentration, and sub-universe failures.
+- Produces survivors, rejected candidates, diagnosis, and branch recommendation.
+- Does not update graph state or run more simulations.
+
+### L Slow Final Check
+
+Purpose: perform bounded slow checks on K survivors.
+
+- Checks final correlation, pool value, platform submission evidence, and other slow gates within budget.
+- Uses `alpha_improvement_guide.md` to interpret robustness issues.
+- Produces approved candidates for M.
+- Can recommend returning to D or E when slow evidence invalidates the current path.
+- Does not submit live unless M later receives explicit approval.
+
+### M Submit / Light Tower / Pool / SA / OSM
+
+Purpose: prepare final review-mode actions.
+
+- Reads L-approved candidates.
+- Prepares submission, light-tower, pool, self-alpha, or OSM action plan.
+- Defaults to review mode.
+- Live submission requires explicit user instruction.
+- Does not continue research loops after final action planning.
+
 ## Seed Alpha Shortcut
 
 When the user provides a specific `alpha_id` and an optimization objective, the workagent may schedule `BCD_prime_seed_alpha_objective` after A.

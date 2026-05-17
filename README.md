@@ -16,6 +16,12 @@
 workgraph/regular/
 ```
 
+每个节点的职责边界见：
+
+```text
+workgraph/regular/WORKGRAPH.md
+```
+
 它的目标不是一次性生成一个 alpha，而是让 workagent 和 nodesubagent 在可审计、可恢复、可监督的约束下完成研究流程：
 
 - 点塔是第一优先级。

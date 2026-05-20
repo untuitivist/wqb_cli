@@ -43,6 +43,9 @@ def add_user_parser(subparsers: argparse._SubParsersAction) -> None:
     }
     for name, help_text in simple_self.items():
         parser = user_sub.add_parser(name, help=help_text)
+        if name in {"pyramid-alphas", "pyramid-multipliers"}:
+            parser.add_argument("--start-date", help="Quarter start date, e.g. 2026-04-01")
+            parser.add_argument("--end-date", help="Quarter end date, e.g. 2026-07-01")
         parser.add_argument("--output", help="Write JSON result to file")
 
     consultant_tutorial_patch = user_sub.add_parser("consultant-tutorial-patch", help="PATCH /users/self/consultant/tutorial/summary")
@@ -114,7 +117,13 @@ def handle_user(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     if args.user_command in simple_paths:
         endpoint = registry.get(simple_paths[args.user_command])
         client = WqbClient(registry, session_from_cookies(args.cookies))
-        prepared = client.prepare(endpoint, "GET")
+        params = {}
+        if args.user_command in {"pyramid-alphas", "pyramid-multipliers"}:
+            if args.start_date:
+                params["startDate"] = args.start_date
+            if args.end_date:
+                params["endDate"] = args.end_date
+        prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)
         write_json(result, args.output)
         return 0

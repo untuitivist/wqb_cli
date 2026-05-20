@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "scope": "USA_1",
+  "table": "base",
+  "total": 85921,
+  "offset": 0,
+  "limit": 3,
+  "filters": {
+    "datafield": "volume",
+    "dataset": null
+  },
+  "columns": [
+    "id",
+    "datafield",
+    "dataset",
+    "category"
+  ],
+  "rows": [
+    {
+      "id": "Wj8njr7k",
+      "datafield": [
+        "earnings_announcement_time_of_day",
+        "volume",
+        "cap",
+        "returns"
+      ],
+      "dataset": [
+        "earnings7",
+        "pv1"
+      ],
+      "category": [
+        "earnings",
+        "pv"
+      ]
+    },
+    {
+      "id": "A1KzJ9Xw",
+      "datafield": [
+        "earnings_date_fiscal_quarter",
+        "volume",
+        "close"
+      ],
+      "dataset": [
+        "earnings7",
+        "pv1"
+      ],
+      "category": [
+        "earnings",
+        "pv"
+      ]
+    },
+    {
+      "id": "RRX66n9o",
+      "datafield": [
+        "ebitda_reported_value",
+        "anl4_afv4_eps_mean",
+        "volume",
+        "close"
+      ],
+      "dataset": [
+        "analyst4",
+        "pv1"
+      ],
+      "category": [
+        "analyst",
+        "pv"
+      ]
+    }
+  ]
+}

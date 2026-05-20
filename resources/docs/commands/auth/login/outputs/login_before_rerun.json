@@ -1,0 +1,43 @@
+﻿{
+  "ok": true,
+  "endpoint": "/authentication",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/authentication",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 201,
+    "reason": "Created",
+    "elapsed_ms": 1018,
+    "content_type": "application/json",
+    "allow": "GET, POST, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": null,
+    "body": {
+      "user": {
+        "id": "JL40454"
+      },
+      "token": {
+        "expiry": 3600
+      },
+      "permissions": [
+        "BEFORE_AND_AFTER_PERFORMANCE_V2",
+        "BRAIN_LABS",
+        "BRAIN_LABS_JUPYTER_LAB",
+        "CONSULTANT",
+        "MULTI_SIMULATION",
+        "PROD_ALPHAS",
+        "REFERRAL",
+        "SUPER_ALPHA",
+        "VISUALIZATION",
+        "WORKDAY"
+      ]
+    }
+  }
+}

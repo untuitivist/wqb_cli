@@ -1,0 +1,39 @@
+{
+  "path": "/alphas/{alpha_id}/submit",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/submit",
+  "methods": [
+    "POST"
+  ],
+  "source": [
+    "rocky-d/wqb"
+  ],
+  "description": "Submit alpha.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "Submission action. Has side effect.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/submit",
+      "method": "POST",
+      "resolved_path": "/alphas/vR5p8vqb/submit",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/submit",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

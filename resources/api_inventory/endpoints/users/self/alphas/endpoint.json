@@ -1,0 +1,539 @@
+{
+  "path": "/users/self/alphas",
+  "url_template": "https://api.worldquantbrain.com/users/self/alphas",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "rocky-d/wqb"
+  ],
+  "description": "Current user's alphas.",
+  "safe_probe": true,
+  "params": {
+    "limit": "1..100",
+    "offset": "0..10000",
+    "dateSubmitted": "range",
+    "type": "REGULAR|SUPER",
+    "color": "platform color",
+    "tag": "tag filter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/alphas?limit=1",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "type": "str",
+          "author": "str",
+          "settings": {
+            "instrumentType": "...",
+            "region": "...",
+            "universe": "...",
+            "delay": "...",
+            "decay": "...",
+            "neutralization": "...",
+            "truncation": "...",
+            "pasteurization": "...",
+            "unitHandling": "...",
+            "nanHandling": "...",
+            "maxTrade": "...",
+            "maxPosition": "...",
+            "language": "...",
+            "visualization": "...",
+            "startDate": "...",
+            "endDate": "...",
+            "testPeriod": "..."
+          },
+          "regular": {
+            "code": "...",
+            "description": "...",
+            "operatorCount": "..."
+          },
+          "dateCreated": "str",
+          "dateSubmitted": "NoneType",
+          "dateModified": "str",
+          "name": "NoneType",
+          "favorite": "bool",
+          "hidden": "bool",
+          "color": "NoneType",
+          "category": "NoneType",
+          "tags": [],
+          "classifications": [
+            "..."
+          ],
+          "grade": "NoneType",
+          "stage": "str",
+          "status": "str",
+          "is": {
+            "pnl": "...",
+            "bookSize": "...",
+            "longCount": "...",
+            "shortCount": "...",
+            "turnover": "...",
+            "returns": "...",
+            "drawdown": "...",
+            "margin": "...",
+            "sharpe": "...",
+            "fitness": "...",
+            "startDate": "...",
+            "investabilityConstrained": "...",
+            "riskNeutralized": "...",
+            "checks": "..."
+          },
+          "os": "NoneType",
+          "train": {
+            "pnl": "...",
+            "bookSize": "...",
+            "longCount": "...",
+            "shortCount": "...",
+            "turnover": "...",
+            "returns": "...",
+            "drawdown": "...",
+            "margin": "...",
+            "fitness": "...",
+            "sharpe": "...",
+            "startDate": "...",
+            "investabilityConstrained": "...",
+            "riskNeutralized": "..."
+          },
+          "test": {
+            "pnl": "...",
+            "bookSize": "...",
+            "longCount": "...",
+            "shortCount": "...",
+            "turnover": "...",
+            "returns": "...",
+            "drawdown": "...",
+            "margin": "...",
+            "fitness": "...",
+            "sharpe": "...",
+            "startDate": "...",
+            "investabilityConstrained": "...",
+            "riskNeutralized": "..."
+          },
+          "prod": "NoneType",
+          "competitions": "NoneType",
+          "themes": "NoneType",
+          "pyramids": "NoneType",
+          "pyramidThemes": "NoneType",
+          "team": "NoneType",
+          "osmosisPoints": "NoneType",
+          "origin": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 10000,
+      "next": "http://api.worldquantbrain.com:443/users/self/alphas?limit=1&offset=1",
+      "previous": null,
+      "results": [
+        {
+          "id": "d5n3po5X",
+          "type": "REGULAR",
+          "author": "JL40454",
+          "settings": {
+            "instrumentType": "EQUITY",
+            "region": "CHN",
+            "universe": "TOP2000U",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "SUBINDUSTRY",
+            "truncation": 0.04,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "OFF",
+            "maxTrade": "OFF",
+            "maxPosition": "OFF",
+            "language": "FASTEXPR",
+            "visualization": false,
+            "startDate": "2014-01-01",
+            "endDate": "2023-12-31",
+            "testPeriod": "P1Y6M"
+          },
+          "regular": {
+            "code": "-ts_rank(ts_mean(rank(volume) * ts_delta(close, 5), 20), 60)",
+            "description": null,
+            "operatorCount": 6
+          },
+          "dateCreated": "2026-05-18T12:48:19-04:00",
+          "dateSubmitted": null,
+          "dateModified": "2026-05-18T12:48:20-04:00",
+          "name": null,
+          "favorite": false,
+          "hidden": false,
+          "color": null,
+          "category": null,
+          "tags": [],
+          "classifications": [
+            {
+              "id": "DATA_USAGE:SINGLE_DATA_SET",
+              "name": "Single Data Set Alpha"
+            }
+          ],
+          "grade": null,
+          "stage": "IS",
+          "status": "UNSUBMITTED",
+          "is": {
+            "pnl": -1565006,
+            "bookSize": 20000000,
+            "longCount": 918,
+            "shortCount": 934,
+            "turnover": 0.209,
+            "returns": -0.0162,
+            "drawdown": 0.3603,
+            "margin": -0.000155,
+            "sharpe": -0.23,
+            "fitness": -0.06,
+            "startDate": "2014-01-01",
+            "investabilityConstrained": {
+              "pnl": -1602844,
+              "bookSize": 20000000,
+              "longCount": 937,
+              "shortCount": 984,
+              "turnover": 0.2048,
+              "returns": -0.0166,
+              "drawdown": 0.3637,
+              "margin": -0.000162,
+              "fitness": -0.07,
+              "sharpe": -0.24
+            },
+            "riskNeutralized": {
+              "pnl": -8092348,
+              "bookSize": 20000000,
+              "longCount": 918,
+              "shortCount": 934,
+              "turnover": 0.209,
+              "returns": -0.0838,
+              "drawdown": 0.8103,
+              "margin": -0.000802,
+              "fitness": -1.7,
+              "sharpe": -2.69
+            },
+            "checks": [
+              {
+                "name": "LOW_SHARPE",
+                "result": "FAIL",
+                "limit": 2.07,
+                "value": -0.23
+              },
+              {
+                "name": "LOW_FITNESS",
+                "result": "FAIL",
+                "limit": 1.0,
+                "value": -0.06
+              },
+              {
+                "name": "LOW_TURNOVER",
+                "result": "PASS",
+                "limit": 0.01,
+                "value": 0.209
+              },
+              {
+                "name": "HIGH_TURNOVER",
+                "result": "PASS",
+                "limit": 0.7,
+                "value": 0.209
+              },
+              {
+                "name": "CONCENTRATED_WEIGHT",
+                "result": "PASS"
+              },
+              {
+                "name": "LOW_RETURNS",
+                "result": "FAIL",
+                "limit": 0.08,
+                "value": -0.0162
+              },
+              {
+                "name": "LOW_SUB_UNIVERSE_SHARPE",
+                "result": "PASS",
+                "limit": -0.16,
+                "value": -0.07
+              },
+              {
+                "name": "LOW_ROBUST_UNIVERSE_SHARPE.WITH_RATIO",
+                "result": "PASS",
+                "ratio": 0.4,
+                "limit": -0.09,
+                "value": 0.19
+              },
+              {
+                "name": "LOW_ROBUST_UNIVERSE_RETURNS",
+                "result": "PASS",
+                "ratio": 0.4,
+                "limit": -0.0065,
+                "value": 0.0509
+              },
+              {
+                "name": "REVERSION_COMPONENT",
+                "result": "WARNING",
+                "message": "Alpha expression includes a reversion component so we may not accept these alphas in the future, try working on different alpha ideas"
+              },
+              {
+                "name": "SELF_CORRELATION",
+                "result": "PENDING"
+              },
+              {
+                "name": "DATA_DIVERSITY",
+                "result": "PENDING"
+              },
+              {
+                "name": "PROD_CORRELATION",
+                "result": "PENDING"
+              },
+              {
+                "name": "REGULAR_SUBMISSION",
+                "result": "PENDING"
+              },
+              {
+                "name": "LOW_2Y_SHARPE",
+                "result": "FAIL",
+                "value": 0.03,
+                "limit": 2.07
+              },
+              {
+                "result": "PASS",
+                "name": "MATCHES_PYRAMID",
+                "effective": 1,
+                "multiplier": 1.4,
+                "pyramids": [
+                  {
+                    "name": "CHN/D1/PV",
+                    "multiplier": 1.4
+                  }
+                ]
+              },
+              {
+                "result": "WARNING",
+                "name": "MATCHES_THEMES",
+                "themes": [
+                  {
+                    "id": "lyvRJ3y",
+                    "multiplier": 1.0,
+                    "name": "All regions/D0 Power Pool May`26"
+                  },
+                  {
+                    "id": "q4O05qy",
+                    "multiplier": 1.5,
+                    "name": "MEA Region Theme"
+                  },
+                  {
+                    "id": "ZywpJvB",
+                    "multiplier": 3.0,
+                    "name": "After Cost HTVR Theme"
+                  }
+                ]
+              }
+            ]
+          },
+          "os": null,
+          "train": {
+            "pnl": -1986107,
+            "bookSize": 20000000,
+            "longCount": 909,
+            "shortCount": 928,
+            "turnover": 0.2091,
+            "returns": -0.0243,
+            "drawdown": 0.3603,
+            "margin": -0.000232,
+            "fitness": -0.11,
+            "sharpe": -0.33,
+            "startDate": "2014-01-01",
+            "investabilityConstrained": {
+              "pnl": -2002951,
+              "bookSize": 20000000,
+              "longCount": 928,
+              "shortCount": 978,
+              "turnover": 0.2044,
+              "returns": -0.0245,
+              "drawdown": 0.3637,
+              "margin": -0.00024,
+              "fitness": -0.12,
+              "sharpe": -0.34
+            },
+            "riskNeutralized": {
+              "pnl": -7018598,
+              "bookSize": 20000000,
+              "longCount": 909,
+              "shortCount": 928,
+              "turnover": 0.2091,
+              "returns": -0.0858,
+              "drawdown": 0.7013,
+              "margin": -0.000821,
+              "fitness": -1.69,
+              "sharpe": -2.64
+            }
+          },
+          "test": {
+            "pnl": 382592,
+            "bookSize": 20000000,
+            "longCount": 964,
+            "shortCount": 964,
+            "turnover": 0.2087,
+            "returns": 0.0259,
+            "drawdown": 0.0538,
+            "margin": 0.000248,
+            "fitness": 0.18,
+            "sharpe": 0.5,
+            "startDate": "2022-06-30",
+            "investabilityConstrained": {
+              "pnl": 362246,
+              "bookSize": 20000000,
+              "longCount": 986,
+              "shortCount": 1018,
+              "turnover": 0.2071,
+              "returns": 0.0245,
+              "drawdown": 0.0576,
+              "margin": 0.000237,
+              "fitness": 0.16,
+              "sharpe": 0.47
+            },
+            "riskNeutralized": {
+              "pnl": -1089256,
+              "bookSize": 20000000,
+              "longCount": 964,
+              "shortCount": 964,
+              "turnover": 0.2087,
+              "returns": -0.0738,
+              "drawdown": 0.1232,
+              "margin": -0.000707,
+              "fitness": -1.96,
+              "sharpe": -3.3
+            }
+          },
+          "prod": null,
+          "competitions": null,
+          "themes": null,
+          "pyramids": null,
+          "pyramidThemes": null,
+          "team": null,
+          "osmosisPoints": null,
+          "origin": "PLATFORM"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "X-RateLimit-Remaining-Minute": "28",
+      "RateLimit-Remaining": "28",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 653
+  },
+  "test_results": [
+    {
+      "path": "/users/self/alphas",
+      "method": "GET",
+      "resolved_path": "/users/self/alphas",
+      "url": "https://api.worldquantbrain.com/users/self/alphas",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 626,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "author": "str",
+            "category": "null",
+            "classifications": [
+              "dict"
+            ],
+            "color": "null",
+            "competitions": "null",
+            "dateCreated": "str",
+            "dateModified": "str",
+            "dateSubmitted": "null",
+            "favorite": "bool",
+            "grade": "null",
+            "hidden": "bool",
+            "id": "str",
+            "is": {
+              "bookSize": "int",
+              "checks": "list",
+              "drawdown": "float",
+              "fitness": "float",
+              "investabilityConstrained": "dict",
+              "longCount": "int",
+              "margin": "float",
+              "pnl": "int",
+              "returns": "float",
+              "riskNeutralized": "dict",
+              "sharpe": "float",
+              "shortCount": "int",
+              "startDate": "str",
+              "turnover": "float"
+            },
+            "name": "null",
+            "origin": "str",
+            "os": "null",
+            "osmosisPoints": "null",
+            "prod": "null",
+            "pyramidThemes": "null",
+            "pyramids": "null",
+            "regular": {
+              "code": "str",
+              "description": "NoneType",
+              "operatorCount": "int"
+            },
+            "settings": {
+              "decay": "int",
+              "delay": "int",
+              "endDate": "str",
+              "instrumentType": "str",
+              "language": "str",
+              "maxPosition": "str",
+              "maxTrade": "str",
+              "nanHandling": "str",
+              "neutralization": "str",
+              "pasteurization": "str",
+              "region": "str",
+              "startDate": "str",
+              "truncation": "float",
+              "unitHandling": "str",
+              "universe": "str",
+              "visualization": "bool"
+            },
+            "stage": "str",
+            "status": "str",
+            "tags": [],
+            "team": "null",
+            "test": "null",
+            "themes": "null",
+            "train": "null",
+            "type": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

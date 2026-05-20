@@ -1,0 +1,57 @@
+{
+  "path": "/errors/api/2/envelope",
+  "url_template": "https://api.worldquantbrain.com/errors/api/2/envelope",
+  "methods": [
+    "POST"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": false,
+  "params": {
+    "sentry_client": "observed query parameter",
+    "sentry_key": "observed query parameter",
+    "sentry_version": "observed query parameter"
+  },
+  "request_body": "Observed request body shape in dynamic_capture.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "POST",
+      "observed_path": "/errors/api/2/envelope/",
+      "seen_count": 61,
+      "query_keys": [
+        "sentry_client",
+        "sentry_key",
+        "sentry_version"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": {
+        "raw_body": "non-json",
+        "length": 463
+      },
+      "response_shape": {}
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/errors/api/2/envelope",
+      "method": "POST",
+      "resolved_path": "/errors/api/2/envelope",
+      "url": "https://api.worldquantbrain.com/errors/api/2/envelope",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

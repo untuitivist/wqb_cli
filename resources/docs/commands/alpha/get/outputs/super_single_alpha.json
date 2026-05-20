@@ -1,0 +1,193 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/pwnkdErb",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1124,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": null,
+    "body": {
+      "id": "pwnkdErb",
+      "type": "SUPER",
+      "author": "JL40454",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "OFF",
+        "selectionHandling": "POSITIVE",
+        "selectionLimit": 10,
+        "maxTrade": "OFF",
+        "maxPosition": "OFF",
+        "language": "FASTEXPR",
+        "visualization": false,
+        "startDate": "2014-01-01",
+        "endDate": "2023-12-31",
+        "componentActivation": "IS"
+      },
+      "combo": {
+        "code": "1",
+        "description": null,
+        "operatorCount": null
+      },
+      "selection": {
+        "code": "own == 1",
+        "description": null,
+        "operatorCount": null
+      },
+      "dateCreated": "2026-05-19T21:02:30-04:00",
+      "dateSubmitted": null,
+      "dateModified": "2026-05-19T21:02:30-04:00",
+      "name": null,
+      "favorite": false,
+      "hidden": false,
+      "color": null,
+      "category": null,
+      "tags": [],
+      "classifications": [],
+      "grade": null,
+      "stage": "IS",
+      "status": "UNSUBMITTED",
+      "is": {
+        "pnl": 8286337,
+        "bookSize": 20000000,
+        "longCount": 1534,
+        "shortCount": 1530,
+        "turnover": 0.0908,
+        "returns": 0.1292,
+        "drawdown": 0.0485,
+        "margin": 0.002843,
+        "sharpe": 2.26,
+        "fitness": 2.3,
+        "startDate": "2014-01-01",
+        "investabilityConstrained": {
+          "pnl": 8052799,
+          "bookSize": 20000000,
+          "longCount": 1549,
+          "shortCount": 1586,
+          "turnover": 0.0806,
+          "returns": 0.1255,
+          "drawdown": 0.0403,
+          "margin": 0.003115,
+          "fitness": 2.28,
+          "sharpe": 2.28
+        },
+        "riskNeutralized": {
+          "pnl": 3228750,
+          "bookSize": 20000000,
+          "longCount": 1534,
+          "shortCount": 1530,
+          "turnover": 0.0908,
+          "returns": 0.0503,
+          "drawdown": 0.0253,
+          "margin": 0.001108,
+          "fitness": 1.24,
+          "sharpe": 1.96
+        },
+        "checks": [
+          {
+            "name": "LOW_SHARPE",
+            "result": "PASS",
+            "limit": 1.58,
+            "value": 2.26
+          },
+          {
+            "name": "LOW_FITNESS",
+            "result": "PASS",
+            "limit": 1,
+            "value": 2.3
+          },
+          {
+            "name": "LOW_TURNOVER",
+            "result": "PASS",
+            "limit": 0.02,
+            "value": 0.0908
+          },
+          {
+            "name": "HIGH_TURNOVER",
+            "result": "PASS",
+            "limit": 0.4,
+            "value": 0.0908
+          },
+          {
+            "name": "CONCENTRATED_WEIGHT",
+            "result": "PASS"
+          },
+          {
+            "name": "LOW_SUB_UNIVERSE_SHARPE",
+            "result": "PASS",
+            "limit": 0.98,
+            "value": 1.6
+          },
+          {
+            "name": "SELF_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "PROD_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "SUPER_SUBMISSION",
+            "result": "PENDING"
+          },
+          {
+            "name": "NON_SELF_SUPER_ALPHA",
+            "result": "PENDING"
+          },
+          {
+            "name": "IS_LADDER_SHARPE",
+            "result": "PASS",
+            "year": 2,
+            "startDate": "2024-01-02",
+            "endDate": "2022-01-03",
+            "limit": 2.02,
+            "value": 2.68
+          },
+          {
+            "name": "HT_TURNOVER",
+            "result": "WARNING",
+            "limit": 0.2,
+            "value": 0.0908
+          },
+          {
+            "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+            "result": "WARNING",
+            "limit": 0.75,
+            "value": 0.291
+          }
+        ]
+      },
+      "os": null,
+      "train": null,
+      "test": null,
+      "prod": null,
+      "competitions": null,
+      "themes": null,
+      "pyramids": null,
+      "pyramidThemes": null,
+      "team": null,
+      "osmosisPoints": null,
+      "origin": "PLATFORM"
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "path": "/search",
+  "url_template": "https://api.worldquantbrain.com/search",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Global search. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "query": "search text"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/search",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 400,
+    "reason": "Bad Request",
+    "response_shape": {
+      "query": [
+        "str"
+      ]
+    },
+    "response_sample": {
+      "query": [
+        "This field is required."
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 260
+  },
+  "test_results": [
+    {
+      "path": "/search",
+      "method": "GET",
+      "resolved_path": "/search",
+      "url": "https://api.worldquantbrain.com/search",
+      "executed": true,
+      "status": "tested",
+      "status_code": 400,
+      "reason": "Bad Request",
+      "ok": false,
+      "elapsed_ms": 264,
+      "content_type": "application/json",
+      "response_shape": {
+        "query": [
+          "str"
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

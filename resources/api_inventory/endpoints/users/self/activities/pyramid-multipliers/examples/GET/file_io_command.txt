@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /users/self/activities/pyramid-multipliers --input api_inventory\endpoints\users\self\activities\pyramid-multipliers\examples\GET\input.json --output api_inventory\endpoints\users\self\activities\pyramid-multipliers\examples\GET\file_output.json

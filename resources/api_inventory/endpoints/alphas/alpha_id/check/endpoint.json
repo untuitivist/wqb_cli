@@ -1,0 +1,58 @@
+{
+  "path": "/alphas/{alpha_id}/check",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/check",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "rocky-d/wqb"
+  ],
+  "description": "Alpha simulation check.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/check",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb/check",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/check",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 617,
+      "content_type": "application/json",
+      "response_shape": {
+        "is": {
+          "checks": [
+            {
+              "limit": "float",
+              "name": "str",
+              "result": "str",
+              "value": "float"
+            }
+          ]
+        }
+      },
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

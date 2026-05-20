@@ -1,0 +1,127 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/self/agreements",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/agreements",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 953,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      {
+        "agreement": {
+          "id": "account-details",
+          "name": "Account Details"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2026-03-19T23:12:37-04:00"
+      },
+      {
+        "agreement": {
+          "id": "user-agreement",
+          "name": "WorldQuant BRAIN User Agreement"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2026-03-19T23:12:37-04:00"
+      },
+      {
+        "agreement": {
+          "id": "terms-conditions",
+          "name": "Terms and Conditions"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2026-03-19T23:12:37-04:00"
+      },
+      {
+        "agreement": {
+          "id": "privacy-policy",
+          "name": "Privacy Policy"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2026-03-19T23:12:37-04:00"
+      },
+      {
+        "agreement": {
+          "id": "consultant-annex-a",
+          "name": "Base Fee Calculation"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-02-04T00:00:00-05:00"
+      },
+      {
+        "competition": {
+          "id": "challenge",
+          "name": "Challenge"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2024-12-28T08:16:48-05:00"
+      },
+      {
+        "competition": {
+          "id": "HCAC2025",
+          "name": "High Capacity Alphas Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-02-05T10:42:17-05:00"
+      },
+      {
+        "competition": {
+          "id": "PPAC2025",
+          "name": "Power Pool Alphas Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-03-20T09:47:39-04:00"
+      },
+      {
+        "competition": {
+          "id": "GAC2025",
+          "name": "Global Alpha Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-08-06T09:46:52-04:00"
+      },
+      {
+        "competition": {
+          "id": "MAPC2025",
+          "name": "Merged Alpha Performance Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-09-05T07:47:10-04:00"
+      },
+      {
+        "competition": {
+          "id": "AIAC2025",
+          "name": "AI Alphas Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-10-10T09:43:38-04:00"
+      },
+      {
+        "competition": {
+          "id": "OC2025",
+          "name": "Osmosis Competition 2025"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2025-12-12T07:59:30-05:00"
+      },
+      {
+        "competition": {
+          "id": "DCC2026",
+          "name": "Data Creation Challenge 2026"
+        },
+        "status": "ACCEPTED",
+        "statusDate": "2026-02-22T23:18:15-05:00"
+      }
+    ]
+  }
+}

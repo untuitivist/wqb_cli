@@ -1,0 +1,66 @@
+{
+  "path": "/alphas/{alpha_id}/correlations/self",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/correlations/self",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Self correlation.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/correlations/self",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb/correlations/self",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/correlations/self",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 261,
+      "content_type": "application/json",
+      "response_shape": {
+        "max": "float",
+        "min": "float",
+        "records": [
+          [
+            "str"
+          ]
+        ],
+        "schema": {
+          "name": "str",
+          "properties": [
+            {
+              "name": "str",
+              "title": "str",
+              "type": "str"
+            }
+          ],
+          "title": "str"
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

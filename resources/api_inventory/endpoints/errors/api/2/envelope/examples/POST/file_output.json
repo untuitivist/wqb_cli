@@ -1,0 +1,28 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/errors/api/2/envelope",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/errors/api/2/envelope",
+    "params": {
+      "sentry_client": "sample",
+      "sentry_key": "sample",
+      "sentry_version": "sample"
+    },
+    "mutating": true
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 1105,
+    "content_type": "application/json",
+    "allow": null,
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

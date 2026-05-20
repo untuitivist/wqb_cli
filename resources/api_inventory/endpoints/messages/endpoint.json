@@ -1,0 +1,61 @@
+{
+  "path": "/messages",
+  "url_template": "https://api.worldquantbrain.com/messages",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Message collection. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/messages",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 255
+  },
+  "test_results": [
+    {
+      "path": "/messages",
+      "method": "GET",
+      "resolved_path": "/messages",
+      "url": "https://api.worldquantbrain.com/messages",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 260,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,648 @@
+{
+  "path": "/users/self/consultant/summary",
+  "url_template": "https://api.worldquantbrain.com/users/self/consultant/summary",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend"
+  ],
+  "description": "Current consultant performance summary.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/consultant/summary",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "performance": {
+        "currentLevel": "str",
+        "bestLevel": "str",
+        "currentQuarter": {
+          "name": "str",
+          "startDate": "str",
+          "endDate": "str"
+        },
+        "current": {
+          "level": "NoneType",
+          "geniusLevel": "str",
+          "quarter": {
+            "name": "...",
+            "startDate": "...",
+            "endDate": "..."
+          },
+          "alphaCount": "int",
+          "pyramidCount": "int",
+          "combinedSelectedAlphaPerformance": "float",
+          "combinedAlphaPerformance": "float",
+          "operatorCount": "int",
+          "operatorAvg": "float",
+          "fieldCount": "int",
+          "fieldAvg": "float",
+          "communityActivity": "float",
+          "maxSimulationStreak": "int",
+          "extras": [],
+          "combinedPowerPoolAlphaPerformance": "float",
+          "combinedOsmosisPerformance": "float"
+        },
+        "previous": {
+          "level": "str",
+          "geniusLevel": "str",
+          "quarter": {
+            "name": "...",
+            "startDate": "...",
+            "endDate": "..."
+          },
+          "alphaCount": "int",
+          "pyramidCount": "int",
+          "combinedSelectedAlphaPerformance": "float",
+          "combinedAlphaPerformance": "float",
+          "operatorCount": "int",
+          "operatorAvg": "float",
+          "fieldCount": "int",
+          "fieldAvg": "float",
+          "communityActivity": "float",
+          "maxSimulationStreak": "int",
+          "extras": [],
+          "combinedPowerPoolAlphaPerformance": "float",
+          "combinedOsmosisPerformance": "float"
+        },
+        "history": [
+          {
+            "level": "...",
+            "geniusLevel": "...",
+            "quarter": "...",
+            "alphaCount": "...",
+            "pyramidCount": "...",
+            "combinedSelectedAlphaPerformance": "...",
+            "combinedAlphaPerformance": "...",
+            "operatorCount": "...",
+            "operatorAvg": "...",
+            "fieldCount": "...",
+            "fieldAvg": "...",
+            "communityActivity": "...",
+            "maxSimulationStreak": "...",
+            "extras": "..."
+          }
+        ]
+      },
+      "leaderboard": {
+        "rank": "int",
+        "user": "str",
+        "extras": [],
+        "geniusLevel": "str",
+        "bestLevel": "str",
+        "alphaCount": "int",
+        "pyramidCount": "int",
+        "combinedAlphaPerformance": "float",
+        "combinedPowerPoolAlphaPerformance": "float",
+        "combinedSelectedAlphaPerformance": "float",
+        "combinedOsmosisPerformance": "float",
+        "operatorCount": "int",
+        "operatorAvg": "float",
+        "fieldCount": "int",
+        "fieldAvg": "float",
+        "communityActivity": "float",
+        "maxSimulationStreak": "int",
+        "country": "str"
+      },
+      "osmosis": [
+        {
+          "region": "str",
+          "delay": "int",
+          "pointsAllocated": "int",
+          "alphas": "int"
+        }
+      ]
+    },
+    "response_sample": {
+      "performance": {
+        "currentLevel": "EXPERT",
+        "bestLevel": "MASTER",
+        "currentQuarter": {
+          "name": "2026-Q2",
+          "startDate": "2026-04-01",
+          "endDate": "2026-06-30"
+        },
+        "current": {
+          "level": null,
+          "geniusLevel": "EXPERT",
+          "quarter": {
+            "name": "2026-Q2",
+            "startDate": "2026-04-01",
+            "endDate": "2026-06-30"
+          },
+          "alphaCount": 47,
+          "pyramidCount": 7,
+          "combinedSelectedAlphaPerformance": 0.09,
+          "combinedAlphaPerformance": 1.7,
+          "operatorCount": 35,
+          "operatorAvg": 4.86,
+          "fieldCount": 43,
+          "fieldAvg": 2.27,
+          "communityActivity": 0.4,
+          "maxSimulationStreak": 18,
+          "extras": [],
+          "combinedPowerPoolAlphaPerformance": -0.21,
+          "combinedOsmosisPerformance": -1.81
+        },
+        "previous": {
+          "level": "EXPERT",
+          "geniusLevel": "MASTER",
+          "quarter": {
+            "name": "2026-Q1",
+            "startDate": "2026-01-01",
+            "endDate": "2026-03-31"
+          },
+          "alphaCount": 133,
+          "pyramidCount": 16,
+          "combinedSelectedAlphaPerformance": -0.09,
+          "combinedAlphaPerformance": 1.83,
+          "operatorCount": 73,
+          "operatorAvg": 4.62,
+          "fieldCount": 78,
+          "fieldAvg": 1.65,
+          "communityActivity": 14.1,
+          "maxSimulationStreak": 260,
+          "extras": [],
+          "combinedPowerPoolAlphaPerformance": -0.1,
+          "combinedOsmosisPerformance": -2.66
+        },
+        "history": [
+          {
+            "level": null,
+            "geniusLevel": "EXPERT",
+            "quarter": {
+              "name": "2026-Q2",
+              "startDate": "2026-04-01",
+              "endDate": "2026-06-30"
+            },
+            "alphaCount": 47,
+            "pyramidCount": 7,
+            "combinedSelectedAlphaPerformance": 0.09,
+            "combinedAlphaPerformance": 1.7,
+            "operatorCount": 35,
+            "operatorAvg": 4.86,
+            "fieldCount": 43,
+            "fieldAvg": 2.27,
+            "communityActivity": 0.4,
+            "maxSimulationStreak": 18,
+            "extras": []
+          },
+          {
+            "level": "EXPERT",
+            "geniusLevel": "MASTER",
+            "quarter": {
+              "name": "2026-Q1",
+              "startDate": "2026-01-01",
+              "endDate": "2026-03-31"
+            },
+            "alphaCount": 133,
+            "pyramidCount": 16,
+            "combinedSelectedAlphaPerformance": -0.09,
+            "combinedAlphaPerformance": 1.83,
+            "operatorCount": 73,
+            "operatorAvg": 4.62,
+            "fieldCount": 78,
+            "fieldAvg": 1.65,
+            "communityActivity": 14.1,
+            "maxSimulationStreak": 260,
+            "extras": []
+          },
+          {
+            "level": "MASTER",
+            "geniusLevel": "MASTER",
+            "quarter": {
+              "name": "2025-Q4",
+              "startDate": "2025-10-01",
+              "endDate": "2025-12-31"
+            },
+            "alphaCount": 375,
+            "pyramidCount": 42,
+            "combinedSelectedAlphaPerformance": 0.32,
+            "combinedAlphaPerformance": 1.28,
+            "operatorCount": 132,
+            "operatorAvg": 5.22,
+            "fieldCount": 232,
+            "fieldAvg": 1.43,
+            "communityActivity": 23.4,
+            "maxSimulationStreak": 189,
+            "extras": []
+          },
+          {
+            "level": "MASTER",
+            "geniusLevel": "MASTER",
+            "quarter": {
+              "name": "2025-Q3",
+              "startDate": "2025-07-01",
+              "endDate": "2025-09-30"
+            },
+            "alphaCount": 319,
+            "pyramidCount": 30,
+            "combinedSelectedAlphaPerformance": 1.01,
+            "combinedAlphaPerformance": 1.62,
+            "operatorCount": 74,
+            "operatorAvg": 4.7,
+            "fieldCount": 197,
+            "fieldAvg": 1.77,
+            "communityActivity": 33.0,
+            "maxSimulationStreak": 97,
+            "extras": []
+          },
+          {
+            "level": "MASTER",
+            "geniusLevel": "GOLD",
+            "quarter": {
+              "name": "2025-Q2",
+              "startDate": "2025-04-01",
+              "endDate": "2025-06-30"
+            },
+            "alphaCount": 232,
+            "pyramidCount": 20,
+            "combinedSelectedAlphaPerformance": 1.57,
+            "combinedAlphaPerformance": 0.52,
+            "operatorCount": 38,
+            "operatorAvg": 4.92,
+            "fieldCount": 178,
+            "fieldAvg": 1.57,
+            "communityActivity": 20.4,
+            "maxSimulationStreak": 96,
+            "extras": []
+          },
+          {
+            "level": "GOLD",
+            "geniusLevel": "GOLD",
+            "quarter": {
+              "name": "2025-Q1",
+              "startDate": "2025-01-01",
+              "endDate": "2025-03-31"
+            },
+            "alphaCount": 41,
+            "pyramidCount": 7,
+            "combinedSelectedAlphaPerformance": null,
+            "combinedAlphaPerformance": null,
+            "operatorCount": 28,
+            "operatorAvg": 7.0,
+            "fieldCount": 44,
+            "fieldAvg": 2.68,
+            "communityActivity": 1.0,
+            "maxSimulationStreak": 21,
+            "extras": [],
+            "completedReferrals": 0
+          }
+        ]
+      },
+      "leaderboard": {
+        "rank": 2687,
+        "user": "JL40454",
+        "extras": [],
+        "geniusLevel": "EXPERT",
+        "bestLevel": "MASTER",
+        "alphaCount": 47,
+        "pyramidCount": 7,
+        "combinedAlphaPerformance": 1.7,
+        "combinedPowerPoolAlphaPerformance": -0.21,
+        "combinedSelectedAlphaPerformance": 0.09,
+        "combinedOsmosisPerformance": -1.81,
+        "operatorCount": 35,
+        "operatorAvg": 4.86,
+        "fieldCount": 43,
+        "fieldAvg": 2.27,
+        "communityActivity": 0.4,
+        "maxSimulationStreak": 18,
+        "country": "CN"
+      },
+      "osmosis": [
+        {
+          "region": "USA",
+          "delay": 1,
+          "pointsAllocated": 100000,
+          "alphas": 25
+        },
+        {
+          "region": "USA",
+          "delay": 0,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "pointsAllocated": 100000,
+          "alphas": 29
+        },
+        {
+          "region": "EUR",
+          "delay": 0,
+          "pointsAllocated": 100000,
+          "alphas": 10
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "pointsAllocated": 100000,
+          "alphas": 8
+        },
+        {
+          "region": "CHN",
+          "delay": 0,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "CHN",
+          "delay": 1,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "JPN",
+          "delay": 0,
+          "pointsAllocated": 0,
+          "alphas": 0
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "pointsAllocated": 116235,
+          "alphas": 14
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "pointsAllocated": 0,
+          "alphas": 0
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 2553
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/consultant/summary",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "leaderboard": {
+          "alphaCount": "int",
+          "bestLevel": "str",
+          "combinedAlphaPerformance": "float",
+          "combinedOsmosisPerformance": "float",
+          "combinedPowerPoolAlphaPerformance": "float",
+          "combinedSelectedAlphaPerformance": "float",
+          "communityActivity": "float",
+          "country": "str",
+          "extras": [],
+          "fieldAvg": "float",
+          "fieldCount": "int",
+          "geniusLevel": "str",
+          "maxSimulationStreak": "int",
+          "operatorAvg": "float",
+          "operatorCount": "int",
+          "pyramidCount": "int",
+          "rank": "int",
+          "user": "str"
+        },
+        "osmosis": [
+          {
+            "alphas": "int",
+            "delay": "int",
+            "pointsAllocated": "int",
+            "region": "str"
+          }
+        ],
+        "performance": {
+          "bestLevel": "str",
+          "current": {
+            "alphaCount": "int",
+            "combinedAlphaPerformance": "float",
+            "combinedOsmosisPerformance": "float",
+            "combinedPowerPoolAlphaPerformance": "float",
+            "combinedSelectedAlphaPerformance": "float",
+            "communityActivity": "float",
+            "extras": [],
+            "fieldAvg": "float",
+            "fieldCount": "int",
+            "geniusLevel": "str",
+            "level": "null",
+            "maxSimulationStreak": "int",
+            "operatorAvg": "float",
+            "operatorCount": "int",
+            "pyramidCount": "int",
+            "quarter": {
+              "endDate": "str",
+              "name": "str",
+              "startDate": "str"
+            }
+          },
+          "currentLevel": "str",
+          "currentQuarter": {
+            "endDate": "str",
+            "name": "str",
+            "startDate": "str"
+          },
+          "history": [
+            {
+              "alphaCount": "int",
+              "combinedAlphaPerformance": "float",
+              "combinedSelectedAlphaPerformance": "float",
+              "communityActivity": "float",
+              "extras": "list",
+              "fieldAvg": "float",
+              "fieldCount": "int",
+              "geniusLevel": "str",
+              "level": "NoneType",
+              "maxSimulationStreak": "int",
+              "operatorAvg": "float",
+              "operatorCount": "int",
+              "pyramidCount": "int",
+              "quarter": "dict"
+            }
+          ],
+          "previous": {
+            "alphaCount": "int",
+            "combinedAlphaPerformance": "float",
+            "combinedOsmosisPerformance": "float",
+            "combinedPowerPoolAlphaPerformance": "float",
+            "combinedSelectedAlphaPerformance": "float",
+            "communityActivity": "float",
+            "extras": [],
+            "fieldAvg": "float",
+            "fieldCount": "int",
+            "geniusLevel": "str",
+            "level": "str",
+            "maxSimulationStreak": "int",
+            "operatorAvg": "float",
+            "operatorCount": "int",
+            "pyramidCount": "int",
+            "quarter": {
+              "endDate": "str",
+              "name": "str",
+              "startDate": "str"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/consultant/summary",
+      "method": "GET",
+      "resolved_path": "/users/self/consultant/summary",
+      "url": "https://api.worldquantbrain.com/users/self/consultant/summary",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 2442,
+      "content_type": "application/json",
+      "response_shape": {
+        "leaderboard": {
+          "alphaCount": "int",
+          "bestLevel": "str",
+          "combinedAlphaPerformance": "float",
+          "combinedOsmosisPerformance": "float",
+          "combinedPowerPoolAlphaPerformance": "float",
+          "combinedSelectedAlphaPerformance": "float",
+          "communityActivity": "float",
+          "country": "str",
+          "extras": [],
+          "fieldAvg": "float",
+          "fieldCount": "int",
+          "geniusLevel": "str",
+          "maxSimulationStreak": "int",
+          "operatorAvg": "float",
+          "operatorCount": "int",
+          "pyramidCount": "int",
+          "rank": "int",
+          "user": "str"
+        },
+        "osmosis": [
+          {
+            "alphas": "int",
+            "delay": "int",
+            "pointsAllocated": "int",
+            "region": "str"
+          }
+        ],
+        "performance": {
+          "bestLevel": "str",
+          "current": {
+            "alphaCount": "int",
+            "combinedAlphaPerformance": "float",
+            "combinedOsmosisPerformance": "float",
+            "combinedPowerPoolAlphaPerformance": "float",
+            "combinedSelectedAlphaPerformance": "float",
+            "communityActivity": "float",
+            "extras": [],
+            "fieldAvg": "float",
+            "fieldCount": "int",
+            "geniusLevel": "str",
+            "level": "null",
+            "maxSimulationStreak": "int",
+            "operatorAvg": "float",
+            "operatorCount": "int",
+            "pyramidCount": "int",
+            "quarter": {
+              "endDate": "str",
+              "name": "str",
+              "startDate": "str"
+            }
+          },
+          "currentLevel": "str",
+          "currentQuarter": {
+            "endDate": "str",
+            "name": "str",
+            "startDate": "str"
+          },
+          "history": [
+            {
+              "alphaCount": "int",
+              "combinedAlphaPerformance": "float",
+              "combinedSelectedAlphaPerformance": "float",
+              "communityActivity": "float",
+              "extras": "list",
+              "fieldAvg": "float",
+              "fieldCount": "int",
+              "geniusLevel": "str",
+              "level": "NoneType",
+              "maxSimulationStreak": "int",
+              "operatorAvg": "float",
+              "operatorCount": "int",
+              "pyramidCount": "int",
+              "quarter": "dict"
+            }
+          ],
+          "previous": {
+            "alphaCount": "int",
+            "combinedAlphaPerformance": "float",
+            "combinedOsmosisPerformance": "float",
+            "combinedPowerPoolAlphaPerformance": "float",
+            "combinedSelectedAlphaPerformance": "float",
+            "communityActivity": "float",
+            "extras": [],
+            "fieldAvg": "float",
+            "fieldCount": "int",
+            "geniusLevel": "str",
+            "level": "str",
+            "maxSimulationStreak": "int",
+            "operatorAvg": "float",
+            "operatorCount": "int",
+            "pyramidCount": "int",
+            "quarter": {
+              "endDate": "str",
+              "name": "str",
+              "startDate": "str"
+            }
+          }
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

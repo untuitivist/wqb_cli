@@ -1,0 +1,166 @@
+{
+  "path": "/achievements/{achievement_id}/icon",
+  "url_template": "https://api.worldquantbrain.com/achievements/{achievement_id}/icon",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/achievements/ALPHA_PERF_EXCELLENT/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/ALPHA_PERF_GOOD/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/ALPHA_PERF_SPECTACULAR/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/CONSULTANT_SUBMIT/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/SIMULATION_100/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/SIMULATION_20/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/SUBMIT_1/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/SUBMIT_10/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    },
+    {
+      "method": "GET",
+      "observed_path": "/achievements/SUPER_ALPHA/icon",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "image/svg+xml"
+      ],
+      "request_body_shape": null,
+      "response_shape": null
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/achievements/{achievement_id}/icon",
+      "method": "GET",
+      "resolved_path": "/achievements/ALPHA_PERF_EXCELLENT/icon",
+      "url": "https://api.worldquantbrain.com/achievements/ALPHA_PERF_EXCELLENT/icon",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 371,
+      "content_type": "image/svg+xml",
+      "response_shape": null,
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

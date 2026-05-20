@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /achievements/{achievement_id}/icon --input api_inventory\endpoints\achievements\achievement_id\icon\examples\GET\input.json --output api_inventory\endpoints\achievements\achievement_id\icon\examples\GET\file_output.json

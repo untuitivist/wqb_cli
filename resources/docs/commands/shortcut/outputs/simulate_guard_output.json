@@ -1,0 +1,35 @@
+{
+  "ok": false,
+  "create": {
+    "ok": false,
+    "reason": "mutating_method_requires_execute",
+    "request": {
+      "endpoint": "/simulations",
+      "method": "POST",
+      "url": "https://api.worldquantbrain.com/simulations",
+      "params": {},
+      "json_body": {
+        "type": "REGULAR",
+        "settings": {
+          "instrumentType": "EQUITY",
+          "region": "USA",
+          "universe": "TOP3000",
+          "delay": 1,
+          "decay": 4,
+          "neutralization": "SUBINDUSTRY",
+          "truncation": 0.08,
+          "pasteurization": "ON",
+          "unitHandling": "VERIFY",
+          "nanHandling": "OFF",
+          "language": "FASTEXPR",
+          "visualization": false
+        },
+        "regular": "rank(ts_delta(close, 1))"
+      },
+      "headers": {},
+      "mutating": true,
+      "executable": false,
+      "reason": "mutating_method_requires_execute"
+    }
+  }
+}

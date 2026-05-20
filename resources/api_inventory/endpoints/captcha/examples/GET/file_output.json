@@ -1,0 +1,28 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/captcha",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/captcha",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 993,
+    "content_type": "application/json",
+    "allow": "GET, POST, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "algorithm": "SHA-256",
+      "challenge": "d2475e3ca8d3c9fa72fb35ad89f725127d9ebf112f9912f826d7aa3524b8ddf6",
+      "maxNumber": 1000000,
+      "salt": "5a5e77725f068950f8a61da0?expires=1779219042&",
+      "signature": "336db600cbbb37dde181b470aaaaeabb687fd6b0a354735f4b9685e5b19225df"
+    }
+  }
+}

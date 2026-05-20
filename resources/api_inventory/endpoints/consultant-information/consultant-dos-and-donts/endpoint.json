@@ -1,0 +1,61 @@
+{
+  "path": "/consultant-information/consultant-dos-and-donts",
+  "url_template": "https://api.worldquantbrain.com/consultant-information/consultant-dos-and-donts",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Consultant information article. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/consultant-information/consultant-dos-and-donts",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 268
+  },
+  "test_results": [
+    {
+      "path": "/consultant-information/consultant-dos-and-donts",
+      "method": "GET",
+      "resolved_path": "/consultant-information/consultant-dos-and-donts",
+      "url": "https://api.worldquantbrain.com/consultant-information/consultant-dos-and-donts",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 258,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,692 @@
+{
+  "sqlite_path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_core\\dataset\\forum\\community.sqlite3",
+  "exists": true,
+  "tables": [
+    {
+      "name": "docs_articles",
+      "type": "table",
+      "row_count": 370,
+      "columns": [
+        {
+          "name": "category_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "section_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "article_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "author",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "datetime",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "article_content",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "last_crawled_at",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE docs_articles (\n            category_id TEXT NOT NULL,\n            section_id TEXT NOT NULL,\n            article_id TEXT NOT NULL,\n            title TEXT,\n            url TEXT,\n            author TEXT,\n            datetime TEXT,\n            article_content TEXT,\n            last_crawled_at TEXT,\n            raw_json TEXT NOT NULL,\n            PRIMARY KEY (category_id, section_id, article_id)\n        )"
+    },
+    {
+      "name": "docs_articles_fts",
+      "type": "table",
+      "row_count": 370,
+      "columns": [
+        {
+          "name": "category_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "section_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "article_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "title",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "author",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "article_content",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE VIRTUAL TABLE docs_articles_fts USING fts5(\n            category_id,\n            section_id,\n            article_id,\n            title,\n            author,\n            article_content,\n            content=''\n        )"
+    },
+    {
+      "name": "docs_articles_fts_config",
+      "type": "table",
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "k",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "v",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'docs_articles_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID"
+    },
+    {
+      "name": "docs_articles_fts_data",
+      "type": "table",
+      "row_count": 80,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "block",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'docs_articles_fts_data'(id INTEGER PRIMARY KEY, block BLOB)"
+    },
+    {
+      "name": "docs_articles_fts_docsize",
+      "type": "table",
+      "row_count": 370,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "sz",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'docs_articles_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)"
+    },
+    {
+      "name": "docs_articles_fts_idx",
+      "type": "table",
+      "row_count": 77,
+      "columns": [
+        {
+          "name": "segid",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "term",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "pgno",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'docs_articles_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID"
+    },
+    {
+      "name": "docs_categories",
+      "type": "table",
+      "row_count": 16,
+      "columns": [
+        {
+          "name": "category_id",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "last_crawled_at",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE docs_categories (\n            category_id TEXT PRIMARY KEY,\n            title TEXT,\n            url TEXT,\n            last_crawled_at TEXT,\n            raw_json TEXT NOT NULL\n        )"
+    },
+    {
+      "name": "docs_sections",
+      "type": "table",
+      "row_count": 52,
+      "columns": [
+        {
+          "name": "category_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "section_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE docs_sections (\n            category_id TEXT NOT NULL,\n            section_id TEXT NOT NULL,\n            title TEXT,\n            url TEXT,\n            PRIMARY KEY (category_id, section_id)\n        )"
+    },
+    {
+      "name": "forum_comments",
+      "type": "table",
+      "row_count": 77981,
+      "columns": [
+        {
+          "name": "community_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "topic_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "comment_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "author",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "comment_time",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "vote_num",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "comment_content",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE forum_comments (\n            community_id TEXT NOT NULL,\n            topic_id TEXT NOT NULL,\n            comment_id TEXT NOT NULL,\n            author TEXT,\n            comment_time TEXT,\n            vote_num INTEGER,\n            comment_content TEXT,\n            raw_json TEXT NOT NULL,\n            PRIMARY KEY (community_id, topic_id, comment_id)\n        )"
+    },
+    {
+      "name": "forum_comments_fts",
+      "type": "table",
+      "row_count": 77981,
+      "columns": [
+        {
+          "name": "community_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "topic_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "comment_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "author",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "comment_content",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE VIRTUAL TABLE forum_comments_fts USING fts5(\n            community_id,\n            topic_id,\n            comment_id,\n            author,\n            comment_content,\n            content=''\n        )"
+    },
+    {
+      "name": "forum_comments_fts_config",
+      "type": "table",
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "k",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "v",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_comments_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID"
+    },
+    {
+      "name": "forum_comments_fts_data",
+      "type": "table",
+      "row_count": 7534,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "block",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_comments_fts_data'(id INTEGER PRIMARY KEY, block BLOB)"
+    },
+    {
+      "name": "forum_comments_fts_docsize",
+      "type": "table",
+      "row_count": 77981,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "sz",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_comments_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)"
+    },
+    {
+      "name": "forum_comments_fts_idx",
+      "type": "table",
+      "row_count": 6406,
+      "columns": [
+        {
+          "name": "segid",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "term",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "pgno",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_comments_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID"
+    },
+    {
+      "name": "forum_communities",
+      "type": "table",
+      "row_count": 11,
+      "columns": [
+        {
+          "name": "community_id",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "posts",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "followers",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE forum_communities (\n            community_id TEXT PRIMARY KEY,\n            title TEXT,\n            url TEXT,\n            posts INTEGER,\n            followers INTEGER,\n            raw_json TEXT NOT NULL\n        )"
+    },
+    {
+      "name": "forum_topics",
+      "type": "table",
+      "row_count": 6333,
+      "columns": [
+        {
+          "name": "community_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "topic_id",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "title",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "url",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "comment_num",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "post_content",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "last_crawled_at",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "raw_json",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE forum_topics (\n            community_id TEXT NOT NULL,\n            topic_id TEXT NOT NULL,\n            title TEXT,\n            url TEXT,\n            comment_num INTEGER,\n            post_content TEXT,\n            last_crawled_at TEXT,\n            raw_json TEXT NOT NULL,\n            PRIMARY KEY (community_id, topic_id)\n        )"
+    },
+    {
+      "name": "forum_topics_fts",
+      "type": "table",
+      "row_count": 6333,
+      "columns": [
+        {
+          "name": "community_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "topic_id",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "title",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        },
+        {
+          "name": "post_content",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE VIRTUAL TABLE forum_topics_fts USING fts5(\n            community_id,\n            topic_id,\n            title,\n            post_content,\n            content=''\n        )"
+    },
+    {
+      "name": "forum_topics_fts_config",
+      "type": "table",
+      "row_count": 1,
+      "columns": [
+        {
+          "name": "k",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "v",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_topics_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID"
+    },
+    {
+      "name": "forum_topics_fts_data",
+      "type": "table",
+      "row_count": 3576,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "block",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_topics_fts_data'(id INTEGER PRIMARY KEY, block BLOB)"
+    },
+    {
+      "name": "forum_topics_fts_docsize",
+      "type": "table",
+      "row_count": 6333,
+      "columns": [
+        {
+          "name": "id",
+          "type": "INTEGER",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "sz",
+          "type": "BLOB",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_topics_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)"
+    },
+    {
+      "name": "forum_topics_fts_idx",
+      "type": "table",
+      "row_count": 2824,
+      "columns": [
+        {
+          "name": "segid",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "term",
+          "type": "",
+          "notnull": true,
+          "pk": true
+        },
+        {
+          "name": "pgno",
+          "type": "",
+          "notnull": false,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE 'forum_topics_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID"
+    },
+    {
+      "name": "metadata",
+      "type": "table",
+      "row_count": 2,
+      "columns": [
+        {
+          "name": "key",
+          "type": "TEXT",
+          "notnull": false,
+          "pk": true
+        },
+        {
+          "name": "value",
+          "type": "TEXT",
+          "notnull": true,
+          "pk": false
+        }
+      ],
+      "sql": "CREATE TABLE metadata (\n            key TEXT PRIMARY KEY,\n            value TEXT NOT NULL\n        )"
+    }
+  ]
+}

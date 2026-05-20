@@ -1,0 +1,96 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/{user_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/JL40454",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 957,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "JL40454",
+      "email": "2724386553@qq.com",
+      "telephone": "+8618280184585",
+      "firstName": "junyi",
+      "lastName": "Li",
+      "fullName": "junyi li",
+      "gender": "MALE",
+      "dateCreated": "2024-12-28T08:16:48-05:00",
+      "dateVerified": "2024-12-28T08:17:11-05:00",
+      "dateApproved": "2024-12-28T08:17:11-05:00",
+      "verified": true,
+      "approved": true,
+      "address": {
+        "street": null,
+        "city": "Chengdu",
+        "state": null,
+        "postalCode": null,
+        "country": "CN"
+      },
+      "education": {
+        "university": "Harbin Institute of Technology",
+        "major": "Artificial Intelligence",
+        "degree": "BACHELORS",
+        "stem": true,
+        "graduationYear": 2022,
+        "gpa": 3.5,
+        "maxGPA": 5.0
+      },
+      "employment": null,
+      "recruitment": {
+        "englishProficiency": "MEDIUM",
+        "codingProficiency": "HIGH",
+        "roleInterest": [
+          "RESEARCH",
+          "TECHNOLOGY"
+        ]
+      },
+      "resume": {
+        "dateCreated": "2026-03-19T23:12:37-04:00"
+      },
+      "image": {
+        "url": "https://api.worldquantbrain.com/users/JL40454/image"
+      },
+      "settings": {
+        "allowTracking": false,
+        "communication": {
+          "allowSMS": true
+        },
+        "privacy": {
+          "name": {
+            "visibility": "PRIVATE",
+            "moderation": "NONE"
+          },
+          "image": {
+            "visibility": "PUBLIC",
+            "moderation": "APPROVED"
+          }
+        },
+        "client": {}
+      },
+      "onboarding": {
+        "status": "CONSULTANT_APPROVED"
+      },
+      "auxiliary": {
+        "campaign": {
+          "campaign": "Brain",
+          "source": "Individual",
+          "medium": "referral",
+          "term": null,
+          "content": "ZQ95008"
+        }
+      },
+      "geniusLevel": "EXPERT"
+    }
+  }
+}

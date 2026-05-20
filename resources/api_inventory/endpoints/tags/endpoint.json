@@ -1,0 +1,537 @@
+{
+  "path": "/tags",
+  "url_template": "https://api.worldquantbrain.com/tags",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Tag list/search. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/tags",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "type": "str",
+          "name": "str",
+          "alphas": [
+            "..."
+          ]
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 14,
+      "next": "http://api.worldquantbrain.com:443/tags?limit=10&offset=10",
+      "previous": null,
+      "results": [
+        {
+          "id": "rJmbOvG",
+          "type": "LIST",
+          "name": "ppac0423-1",
+          "alphas": [
+            {
+              "id": "xrAR7bn",
+              "name": "ppc-61.03-xrAR7bn-[2025-08-01]"
+            },
+            {
+              "id": "LZQ6Qe9",
+              "name": "ppc-45.73-LZQ6Qe9-[2025-08-01]"
+            },
+            {
+              "id": "GWaOM7O",
+              "name": "ppc-61.03-GWaOM7O-[2025-08-01]"
+            },
+            {
+              "id": "1jA6MpJ",
+              "name": "ppc-15.60-1jA6MpJ-[2025-08-01]"
+            },
+            {
+              "id": "OJMaVgg",
+              "name": "ppc-57.13-OJMaVgg-[2025-08-01]"
+            },
+            {
+              "id": "5jd7rJN",
+              "name": "ppc-46.19-5jd7rJN-[2025-08-01]"
+            },
+            {
+              "id": "w92L2jv",
+              "name": "ppc-34.63-w92L2jv-[2025-08-01]"
+            },
+            {
+              "id": "j8KbGk5",
+              "name": "ppc-28.75-j8KbGk5-[2025-08-01]"
+            },
+            {
+              "id": "1jllO2Q",
+              "name": "ppc-36.99-1jllO2Q-[2025-08-01]"
+            },
+            {
+              "id": "8vYK6pq",
+              "name": "ppc-53.56-8vYK6pq-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "yqoJMmG",
+          "type": "LIST",
+          "name": "ppac0423-2",
+          "alphas": [
+            {
+              "id": "b815KZp",
+              "name": "ppc-39.34-b815KZp-[2025-08-01]"
+            },
+            {
+              "id": "eQGknZd",
+              "name": "ppc-84.77-eQGknZd-[2025-08-01]"
+            },
+            {
+              "id": "Wez1wGG",
+              "name": "ppc-84.77-Wez1wGG-[2025-08-01]"
+            },
+            {
+              "id": "GgW5WVJ",
+              "name": "ppc-14.00-GgW5WVJ-[2025-08-01]"
+            },
+            {
+              "id": "re881zE",
+              "name": "ppc-17.18-re881zE-[2025-08-01]"
+            },
+            {
+              "id": "ge7qQjQ",
+              "name": "ppc-41.70-ge7qQjQ-[2025-08-01]"
+            },
+            {
+              "id": "oo02Xwl",
+              "name": "ppc-46.19-oo02Xwl-[2025-08-01]"
+            },
+            {
+              "id": "LMLn7gn",
+              "name": "ppc-05.29-LMLn7gn-[2025-08-01]"
+            },
+            {
+              "id": "x1GdWoW",
+              "name": "ppc-53.56-x1GdWoW-[2025-08-01]"
+            },
+            {
+              "id": "Nekmq5e",
+              "name": "ppc-71.97-Nekmq5e-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "yDz3OoG",
+          "type": "LIST",
+          "name": "ppac0423-3",
+          "alphas": [
+            {
+              "id": "M3vGR59",
+              "name": "ppc-54.95-M3vGR59-[2025-08-01]"
+            },
+            {
+              "id": "p5pPKmg",
+              "name": "ppc-79.86-p5pPKmg-[2025-08-01]"
+            },
+            {
+              "id": "QKo7gXK",
+              "name": "ppc-79.86-QKo7gXK-[2025-08-01]"
+            },
+            {
+              "id": "XJMbWN8",
+              "name": "ppc-14.57-XJMbWN8-[2025-08-01]"
+            },
+            {
+              "id": "rRgYwl8",
+              "name": "ppc-82.79-rRgYwl8-[2025-08-01]"
+            },
+            {
+              "id": "pvMjdbV",
+              "name": "ppc-11.25-pvMjdbV-[2025-08-01]"
+            },
+            {
+              "id": "6AL3Lm7",
+              "name": "ppc-23.13-6AL3Lm7-[2025-08-01]"
+            },
+            {
+              "id": "M0QdLb9",
+              "name": "ppc-10.49-M0QdLb9-[2025-08-01]"
+            },
+            {
+              "id": "YxE8zMl",
+              "name": "ppc-40.49-YxE8zMl-[2025-08-01]"
+            },
+            {
+              "id": "aV9qP02",
+              "name": "ppc-39.34-aV9qP02-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "y6ZlOKy",
+          "type": "LIST",
+          "name": "ppac0423-4",
+          "alphas": [
+            {
+              "id": "bOmvvx6",
+              "name": "ppc-36.16-bOmvvx6-[2025-08-01]"
+            },
+            {
+              "id": "PM8gWjK",
+              "name": "ppc-09.68-PM8gWjK-[2025-08-01]"
+            },
+            {
+              "id": "QYN3rpM",
+              "name": "ppc-23.92-QYN3rpM-[2025-08-01]"
+            },
+            {
+              "id": "GO52xPJ",
+              "name": "ppc-55.72-GO52xPJ-[2025-08-01]"
+            },
+            {
+              "id": "3jOAmYz",
+              "name": "ppc-23.13-3jOAmYz-[2025-08-01]"
+            },
+            {
+              "id": "mok6Gk6",
+              "name": "ppc-71.97-mok6Gk6-[2025-08-01]"
+            },
+            {
+              "id": "Pg8MAV7",
+              "name": "ppc-18.04-Pg8MAV7-[2025-08-01]"
+            },
+            {
+              "id": "jeovqXZ",
+              "name": "ppc-04.91-jeovqXZ-[2025-08-01]"
+            },
+            {
+              "id": "kgvrRb6",
+              "name": "ppc=78.61-[2025-06-10]"
+            },
+            {
+              "id": "OJRANAY",
+              "name": "ppc-06.84-OJRANAY-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "r8zBOax",
+          "type": "LIST",
+          "name": "ppac0423-5",
+          "alphas": [
+            {
+              "id": "e6NRZkl",
+              "name": "ppc-22.22-e6NRZkl-[2025-08-01]"
+            },
+            {
+              "id": "rRgYe6d",
+              "name": "ppc-82.79-rRgYe6d-[2025-08-01]"
+            },
+            {
+              "id": "76lpwkv",
+              "name": "ppc-49.34-76lpwkv-[2025-08-01]"
+            },
+            {
+              "id": "xbW1qGl",
+              "name": "ppc-44.65-xbW1qGl-[2025-08-01]"
+            },
+            {
+              "id": "V0eKxeA",
+              "name": "ppc-94.27-V0eKxeA-[2025-08-01]"
+            },
+            {
+              "id": "j8k5Qk5",
+              "name": "ppc-55.72-j8k5Qk5-[2025-08-01]"
+            },
+            {
+              "id": "0jlMAp2",
+              "name": "ppc-13.62-0jlMAp2-[2025-08-01]"
+            },
+            {
+              "id": "OJG8Aep",
+              "name": "ppc-23.96-OJG8Aep-[2025-08-01]"
+            },
+            {
+              "id": "mYgZ272",
+              "name": "ppc-15.88-mYgZ272-[2025-08-01]"
+            },
+            {
+              "id": "XRmXMja",
+              "name": "ppc-15.71-XRmXMja-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "xa2lARG",
+          "type": "LIST",
+          "name": "ppac0423-6",
+          "alphas": [
+            {
+              "id": "763aZq2",
+              "name": "ppc-26.13-763aZq2-[2025-08-01]"
+            },
+            {
+              "id": "O8XNMmJ",
+              "name": "ppc-94.27-O8XNMmJ-[2025-08-01]"
+            },
+            {
+              "id": "6dV8NRO",
+              "name": "ppc-44.64-6dV8NRO-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "y3ewOLG",
+          "type": "LIST",
+          "name": "ppac0423-1-fitness",
+          "alphas": [
+            {
+              "id": "OJG8Aep",
+              "name": "ppc-23.96-OJG8Aep-[2025-08-01]"
+            },
+            {
+              "id": "76lpwkv",
+              "name": "ppc-49.34-76lpwkv-[2025-08-01]"
+            },
+            {
+              "id": "XJMbWN8",
+              "name": "ppc-14.57-XJMbWN8-[2025-08-01]"
+            },
+            {
+              "id": "Pg8MAV7",
+              "name": "ppc-18.04-Pg8MAV7-[2025-08-01]"
+            },
+            {
+              "id": "0jlMAp2",
+              "name": "ppc-13.62-0jlMAp2-[2025-08-01]"
+            },
+            {
+              "id": "1jA6MpJ",
+              "name": "ppc-15.60-1jA6MpJ-[2025-08-01]"
+            },
+            {
+              "id": "XRmXMja",
+              "name": "ppc-15.71-XRmXMja-[2025-08-01]"
+            },
+            {
+              "id": "V0eKxeA",
+              "name": "ppc-94.27-V0eKxeA-[2025-08-01]"
+            },
+            {
+              "id": "763aZq2",
+              "name": "ppc-26.13-763aZq2-[2025-08-01]"
+            },
+            {
+              "id": "5jd7rJN",
+              "name": "ppc-46.19-5jd7rJN-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "yvYEzPr",
+          "type": "LIST",
+          "name": "ppac0423-2-fitness",
+          "alphas": [
+            {
+              "id": "OJMaVgg",
+              "name": "ppc-57.13-OJMaVgg-[2025-08-01]"
+            },
+            {
+              "id": "b815KZp",
+              "name": "ppc-39.34-b815KZp-[2025-08-01]"
+            },
+            {
+              "id": "PM8gWjK",
+              "name": "ppc-09.68-PM8gWjK-[2025-08-01]"
+            },
+            {
+              "id": "3jOAmYz",
+              "name": "ppc-23.13-3jOAmYz-[2025-08-01]"
+            },
+            {
+              "id": "pvMjdbV",
+              "name": "ppc-11.25-pvMjdbV-[2025-08-01]"
+            },
+            {
+              "id": "aV9qP02",
+              "name": "ppc-39.34-aV9qP02-[2025-08-01]"
+            },
+            {
+              "id": "M0QdLb9",
+              "name": "ppc-10.49-M0QdLb9-[2025-08-01]"
+            },
+            {
+              "id": "LZQ6Qe9",
+              "name": "ppc-45.73-LZQ6Qe9-[2025-08-01]"
+            },
+            {
+              "id": "x1GdWoW",
+              "name": "ppc-53.56-x1GdWoW-[2025-08-01]"
+            },
+            {
+              "id": "rRgYwl8",
+              "name": "ppc-82.79-rRgYwl8-[2025-08-01]"
+            }
+          ]
+        },
+        {
+          "id": "yOKd9Ry",
+          "type": "LIST",
+          "name": "SAC-1",
+          "alphas": [
+            {
+              "id": "zgrWJrO",
+              "name": "pc=67.00-[2025-06-03]"
+            },
+            {
+              "id": "kvgr25g",
+              "name": "pc=98.30-[2025-06-05]"
+            },
+            {
+              "id": "QOKVxr5",
+              "name": "pc=77.71-[2025-06-05]"
+            },
+            {
+              "id": "LEZZdLv",
+              "name": "pc=59.91-[2025-06-05]"
+            },
+            {
+              "id": "W3eqMqZ",
+              "name": "pc=85.16-[2025-06-05]"
+            },
+            {
+              "id": "r9O32qj",
+              "name": "pc=59.12-[2025-06-05]"
+            },
+            {
+              "id": "0xRgd12",
+              "name": "pc=64.52-[2025-06-05]"
+            },
+            {
+              "id": "LENlnM2",
+              "name": "pc=68.31-[2025-06-03]"
+            },
+            {
+              "id": "LEGdaba",
+              "name": "pc=69.97-[2025-06-02]"
+            },
+            {
+              "id": "8VjYLAV",
+              "name": "pc=69.75-[2025-06-05]"
+            }
+          ]
+        },
+        {
+          "id": "Gmo10wy",
+          "type": "LIST",
+          "name": "SAC-2",
+          "alphas": [
+            {
+              "id": "zgrWJrO",
+              "name": "pc=67.00-[2025-06-03]"
+            },
+            {
+              "id": "kvgr25g",
+              "name": "pc=98.30-[2025-06-05]"
+            },
+            {
+              "id": "QOKVxr5",
+              "name": "pc=77.71-[2025-06-05]"
+            },
+            {
+              "id": "LEZZdLv",
+              "name": "pc=59.91-[2025-06-05]"
+            },
+            {
+              "id": "W3eqMqZ",
+              "name": "pc=85.16-[2025-06-05]"
+            },
+            {
+              "id": "r9O32qj",
+              "name": "pc=59.12-[2025-06-05]"
+            },
+            {
+              "id": "0xRgd12",
+              "name": "pc=64.52-[2025-06-05]"
+            },
+            {
+              "id": "oRLEpwn",
+              "name": "pc=68.71-[2025-06-05]"
+            },
+            {
+              "id": "w3Y2a3p",
+              "name": "pc=56.58-[2025-06-05]"
+            },
+            {
+              "id": "LENlnM2",
+              "name": "pc=68.31-[2025-06-03]"
+            }
+          ]
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, POST, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 281
+  },
+  "test_results": [
+    {
+      "path": "/tags",
+      "method": "GET",
+      "resolved_path": "/tags",
+      "url": "https://api.worldquantbrain.com/tags",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 274,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "alphas": [
+              "dict"
+            ],
+            "id": "str",
+            "name": "str",
+            "type": "str"
+          }
+        ]
+      },
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

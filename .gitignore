@@ -9,6 +9,8 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+build/
+dist/
 
 # Virtual environments
 .venv/
@@ -21,20 +23,11 @@ env/
 !.env.example
 .wqb_cli_auth/
 
-# Browser profiles and runtime caches
+# Local runtime data, credentials, WebDataScope exports, SQLite indexes, and data_all.
+local/
+
+# Browser/runtime caches
 .tmp_edge_profile/
-wqb_core/.tmp_edge_profile/
-
-# Workflow runtime outputs
-research_runs/
-research_runs/run_*/
-workflow/**/__pycache__/
-workflow/nodes/I_表达式候选集/当前operators使用情况.md
-
-# Large local data snapshots
-docs/data_all/all_data.pickle
-wqb_core/dataset/forum/*.sqlite3
-wqb_core/dataset/forum/WQPCommunityState_*.json
 
 # Local notebooks and editor state
 .ipynb_checkpoints/
@@ -45,5 +38,5 @@ wqb_core/dataset/forum/WQPCommunityState_*.json
 Thumbs.db
 .DS_Store
 
-# agent history
-智能体对话历史/
+# Legacy generated API inventory location. Packaged inventory lives under resources/api_inventory/.
+/api_inventory/

@@ -1,0 +1,59 @@
+{
+  "path": "/user/email/reverify",
+  "url_template": "https://api.worldquantbrain.com/user/email/reverify",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Reverify email. / Discovered from platform frontend bundle.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "Account mutation.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/user/email/reverify",
+      "method": "GET",
+      "resolved_path": "/user/email/reverify",
+      "url": "https://api.worldquantbrain.com/user/email/reverify",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 261,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "POST, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "POST",
+      "resolved_path": "/user/email/reverify",
+      "url": "https://api.worldquantbrain.com/user/email/reverify",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

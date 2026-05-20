@@ -1,0 +1,21 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}/check",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/YPNOpk3W/check",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 2008,
+    "content_type": "text/html",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": "1.0",
+    "retries": 0,
+    "location": null,
+    "body": ""
+  }
+}

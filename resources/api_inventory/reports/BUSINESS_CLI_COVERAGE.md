@@ -1,0 +1,134 @@
+# Business CLI Coverage
+
+- Endpoint count: `104`
+- Method cases: `126`
+- Missing: `0`
+
+## Commands
+
+- `GET /achievements` -> `wqb platform achievements`
+- `GET /achievements/{achievement_id}/icon` -> `wqb platform achievement-icon ALPHA_PERF_EXCELLENT`
+- `GET /agreements` -> `wqb platform agreements`
+- `GET /alphas` -> `wqb alpha all --limit 1`
+- `GET /alphas/distribution` -> `wqb alpha distribution`
+- `GET /alphas/lists` -> `wqb alpha lists`
+- `GET /alphas/sample-alpha-id-walkthrough` -> `wqb alpha walkthrough`
+- `GET /alphas/super-selection` -> `wqb alpha super-selection`
+- `GET /alphas/unsubmitted` -> `wqb alpha unsubmitted`
+- `GET /alphas/{alpha_id}` -> `wqb alpha get vR5p8vqb`
+- `PATCH /alphas/{alpha_id}` -> `wqb alpha patch vR5p8vqb --input api_inventory/examples/alpha_patch_color.json`
+- `GET /alphas/{alpha_id}/alphas` -> `wqb alpha related vR5p8vqb`
+- `GET /alphas/{alpha_id}/check` -> `wqb alpha check vR5p8vqb`
+- `GET /alphas/{alpha_id}/correlations` -> `wqb alpha correlation base vR5p8vqb`
+- `GET /alphas/{alpha_id}/correlations/power-pool` -> `wqb alpha correlation power-pool vR5p8vqb`
+- `GET /alphas/{alpha_id}/correlations/prod` -> `wqb alpha correlation prod vR5p8vqb`
+- `GET /alphas/{alpha_id}/correlations/self` -> `wqb alpha correlation self vR5p8vqb`
+- `GET /alphas/{alpha_id}/performance-comparison` -> `wqb alpha performance-comparison vR5p8vqb`
+- `GET /alphas/{alpha_id}/recordsets` -> `wqb alpha recordsets vR5p8vqb`
+- `GET /alphas/{alpha_id}/recordsets/pnl` -> `wqb alpha pnl vR5p8vqb`
+- `GET /alphas/{alpha_id}/recordsets/sharpe` -> `wqb alpha sharpe vR5p8vqb`
+- `GET /alphas/{alpha_id}/recordsets/yearly-stats` -> `wqb alpha yearly-stats vR5p8vqb`
+- `GET /alphas/{alpha_id}/recordsets/{record_set_name}` -> `wqb alpha recordset vR5p8vqb pnl`
+- `POST /alphas/{alpha_id}/submit` -> `wqb alpha submit vR5p8vqb`
+- `DELETE /authentication` -> `wqb auth logout`
+- `GET /authentication` -> `wqb auth status`
+- `HEAD /authentication` -> `wqb auth head`
+- `POST /authentication` -> `wqb auth login --input api_inventory/examples/auth_login.json`
+- `GET /authentication/brainlabs` -> `wqb auth brainlabs`
+- `GET /authentication/persona` -> `wqb auth persona`
+- `GET /authentication/support` -> `wqb auth support`
+- `GET /authentication/workday` -> `wqb auth workday`
+- `GET /captcha` -> `wqb platform captcha`
+- `GET /competition-levels` -> `wqb config competition-levels`
+- `GET /competition-levels/{competition_level_id}/icon` -> `wqb platform competition-level-icon none`
+- `GET /competitions` -> `wqb competition list --limit 1`
+- `GET /competitions/{competition_id}` -> `wqb competition get challenge`
+- `GET /competitions/{competition_id}/agreement` -> `wqb competition agreement challenge --method GET`
+- `POST /competitions/{competition_id}/agreement` -> `wqb competition agreement challenge --method POST`
+- `GET /configuration` -> `wqb config get`
+- `GET /consultant` -> `wqb consultant get`
+- `GET /consultant-datasets` -> `wqb consultant datasets`
+- `GET /consultant-information/consultant-dos-and-donts` -> `wqb consultant dos-and-donts`
+- `GET /consultant-information/consultant-faqs` -> `wqb consultant faqs`
+- `GET /consultant-information/osmosis-allocation-guide-consultants` -> `wqb consultant osmosis-guide`
+- `GET /consultant-information/visualization-tool` -> `wqb consultant visualization-tool`
+- `GET /consultant-program` -> `wqb consultant program`
+- `GET /consultant-program/{language}` -> `wqb consultant program-language en`
+- `GET /consultant/boards` -> `wqb consultant boards leader`
+- `GET /consultant/boards/leader` -> `wqb consultant boards leader`
+- `GET /consultant/summary` -> `wqb consultant summary`
+- `GET /data-categories` -> `wqb data categories`
+- `GET /data-fields` -> `wqb data fields --dataset analyst10 --limit 1`
+- `GET /data-fields/summary` -> `wqb data fields-summary`
+- `GET /data-fields/{field_id}` -> `wqb data field actual_update_flag_ebi`
+- `GET /data-sets` -> `wqb data datasets --limit 1`
+- `GET /data-sets/search` -> `wqb data dataset-search --method GET`
+- `POST /data-sets/search` -> `wqb data dataset-search --method POST`
+- `GET /data-sets/{dataset_id}` -> `wqb data dataset analyst10`
+- `POST /errors/api/2/envelope` -> `wqb errors envelope --input api_inventory/examples/error_envelope.json`
+- `GET /events` -> `wqb event list --limit 1`
+- `OPTIONS /events` -> `wqb event options`
+- `GET /events/{event_id}` -> `wqb event get zO8y3jm`
+- `GET /messages` -> `wqb platform messages`
+- `GET /operators` -> `wqb data operators`
+- `GET /search` -> `wqb search analyst`
+- `GET /simulations` -> `wqb sim list`
+- `OPTIONS /simulations` -> `wqb sim options`
+- `POST /simulations` -> `wqb sim create --input api_inventory/examples/simulation_regular_close.json`
+- `GET /simulations/super-selection` -> `wqb sim super-selection --method GET`
+- `POST /simulations/super-selection` -> `wqb sim super-selection --method POST`
+- `GET /simulations/{simulation_id}` -> `wqb sim get 2UnwIe7g5jEcCgDvI4GpqO`
+- `GET /suggest/examples` -> `wqb suggest examples --method GET`
+- `POST /suggest/examples` -> `wqb suggest examples --method POST`
+- `GET /suggest/expression` -> `wqb suggest expression --method GET`
+- `POST /suggest/expression` -> `wqb suggest expression --method POST`
+- `GET /suggest/fastexpr` -> `wqb suggest fastexpr --method GET`
+- `POST /suggest/fastexpr` -> `wqb suggest fastexpr --method POST`
+- `GET /suggest/fields` -> `wqb suggest fields --method GET`
+- `POST /suggest/fields` -> `wqb suggest fields --method POST`
+- `GET /tags` -> `wqb platform tags`
+- `GET /teams` -> `wqb platform teams`
+- `GET /tutorial-pages` -> `wqb tutorial pages`
+- `GET /tutorial-pages/{page_id}` -> `wqb tutorial page exclusive-events-and-support-for-consultants`
+- `GET /tutorial/{tutorial_slug}` -> `wqb tutorial slug exclusive-events-and-support-for-consultants`
+- `GET /tutorials` -> `wqb tutorial list --limit 1`
+- `GET /user/email/change` -> `wqb account email-change --method GET`
+- `POST /user/email/change` -> `wqb account email-change --method POST`
+- `GET /user/email/reverify` -> `wqb account email-reverify --method GET`
+- `POST /user/email/reverify` -> `wqb account email-reverify --method POST`
+- `GET /user/email/verify` -> `wqb account email-verify --method GET`
+- `POST /user/email/verify` -> `wqb account email-verify --method POST`
+- `GET /user/password/change` -> `wqb account password-change --method GET`
+- `POST /user/password/change` -> `wqb account password-change --method POST`
+- `GET /user/password/forgot` -> `wqb account password-forgot --method GET`
+- `POST /user/password/forgot` -> `wqb account password-forgot --method POST`
+- `GET /user/password/reset` -> `wqb account password-reset --method GET`
+- `POST /user/password/reset` -> `wqb account password-reset --method POST`
+- `GET /user/token` -> `wqb account token --method GET`
+- `POST /user/token` -> `wqb account token --method POST`
+- `GET /users` -> `wqb user list --limit 1`
+- `GET /users/self` -> `wqb user self`
+- `GET /users/self/achievements` -> `wqb user achievements`
+- `GET /users/self/activities/pyramid-alphas` -> `wqb user pyramid-alphas`
+- `GET /users/self/activities/pyramid-multipliers` -> `wqb user pyramid-multipliers`
+- `GET /users/self/activities/simulations` -> `wqb user simulation-activity`
+- `GET /users/self/agreements` -> `wqb user agreements`
+- `GET /users/self/alphas` -> `wqb alpha list --limit 1`
+- `GET /users/self/alphas/summary` -> `wqb user alphas-summary`
+- `GET /users/self/consultant/summary` -> `wqb user consultant-summary`
+- `GET /users/self/consultant/tutorial/summary` -> `wqb user consultant-tutorial-summary`
+- `PATCH /users/self/consultant/tutorial/summary` -> `wqb user consultant-tutorial-patch --input api_inventory/examples/user_consultant_tutorial_patch.json`
+- `GET /users/self/messages` -> `wqb user messages --limit 1`
+- `GET /users/self/messages/summary` -> `wqb user messages-summary`
+- `GET /users/self/pyramid/alphas` -> `wqb user pyramid-alpha-summary`
+- `GET /users/self/teams` -> `wqb user teams`
+- `GET /users/self/tutorial/steps` -> `wqb user tutorial-steps`
+- `GET /users/self/tutorial/summary` -> `wqb user tutorial-summary`
+- `GET /users/{user_id}` -> `wqb user get JL40454`
+- `GET /users/{user_id}/achievements` -> `wqb user user-achievements JL40454`
+- `GET /users/{user_id}/activities` -> `wqb user user-activities JL40454`
+- `GET /users/{user_id}/activities/diversity` -> `wqb user user-diversity JL40454`
+- `OPTIONS /users/{user_id}/alphas` -> `wqb user user-alphas-options JL40454`
+- `GET /users/{user_id}/competitions` -> `wqb user user-competitions JL40454`
+- `GET /users/{user_id}/settings/simulation` -> `wqb user user-simulation-settings JL40454`
+- `GET /video-courses` -> `wqb platform video-courses`

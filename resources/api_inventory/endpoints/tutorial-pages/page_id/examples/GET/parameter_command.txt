@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /tutorial-pages/{page_id} --var page_id=exclusive-events-and-support-for-consultants

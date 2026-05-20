@@ -1,175 +1,228 @@
 # WQB CLI
 
-这个仓库包含两部分：
+`wqb` is an agent-first WorldQuant BRAIN CLI.
+It provides two clearly separated capabilities:
 
-- `wqb_core/`：WorldQuant BRAIN 常用接口的 Python 源脚本和会话封装。
-- `workgraph/`：面向 agent 的 WQB alpha 研究工作图。
+- API commands call `https://api.worldquantbrain.com`.
+- Local-data commands read files under `local/`.
 
-旧的 `workflow/` 目录仍然保留，但它不是当前 workgraph 的 runner。
-不要把 `workflow/nodes/*/run.bat` 接入新的 `workgraph/regular`。
+Local data is produced outside this package by the WebDataScope browser plugin: [leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant).
+The CLI does not directly read browser/plugin cache.
 
-## 当前主线
-
-当前实现的是 REGULAR alpha 工作图：
-
-```text
-workgraph/regular/
-```
-
-每个节点的职责边界见：
+## Repository Layout
 
 ```text
-workgraph/regular/WORKGRAPH.md
+.
+  cli.py
+  commands/                 command groups
+  core/                     HTTP, auth, config, registry, IO, local data
+  resources/
+    api_inventory/          bundled endpoint registry and generated API docs
+    docs/
+      commands/             hand-authored CLI docs and real examples
+      generated/            generated notes
+  tests/                    CLI smoke tests
+  local/                    user-local runtime data, ignored by Git
+  pyproject.toml
 ```
 
-它的目标不是一次性生成一个 alpha，而是让 workagent 和 nodesubagent 在可审计、可恢复、可监督的约束下完成研究流程：
+The Python package name is still `wqb_cli`.
+`pyproject.toml` maps that package to this repository root.
 
-- 点塔是第一优先级。
-- 其次服务长期目标：高 Value Factor / VF、高 weight、Grand Master readiness。
-- 每个节点一次运行一个文件夹。
-- 节点过程、证据、校验、结果都要落盘，供后续节点读取。
-- 后续节点不能依赖聊天历史，只能依赖上游 artifact。
+## Install
 
-## 目录结构
-
-```text
-wqb_core/             BRAIN API 源脚本和 mixin
-workgraph/regular/    当前可用的 REGULAR 工作图
-workgraph/super/      未来 SUPER 工作图占位，当前不要使用
-workflow/             旧工作流，保留但不接入新 runner
-docs/data_all/        本地 dataset/datafield 元数据
-research_runs/        新 workgraph 的运行输出目录
-```
-
-## 运行目录约束
-
-每次 workgraph 运行只能写入一个目录：
-
-```text
-research_runs/run_YYYYMMDD_HHMMSS/
-```
-
-运行中的 workagent 和 nodesubagent 不应在其他位置创建或修改业务输出。
-开发 workgraph 源文件本身时除外。
-
-每个节点运行目录形如：
-
-```text
-research_runs/run_YYYYMMDD_HHMMSS/nodes/01_A_login_shared_auth/
-```
-
-节点必须产出公共 bundle：
-
-```text
-node_input.json
-node_result.json
-process_log.md
-handoff.md
-evidence_index.json
-validation_report.json
-outputs/
-```
-
-## Agent 分工
-
-### workagent
-
-workagent 只负责调度和监督：
-
-- 初始化 run 目录。
-- 创建节点任务。
-- 分配 nodesubagent。
-- 校验节点输出。
-- 更新 `graph_state.json`。
-- 决定下一节点或停止。
-
-workagent 不执行节点业务，不补写节点输出。
-
-### nodesubagent
-
-nodesubagent 一次只执行一个节点：
-
-- 只读 `node_input.json`、节点 contract、显式上游 artifact 和必要的只读源文件。
-- 只写自己的节点目录。
-- 必须记录过程、证据、输出和校验结果。
-- 不能修改 `graph_state.json`。
-- 不能运行后续节点。
-
-## 核心工具
-
-新 workgraph 应优先使用 `wqb_core` 里的源脚本，而不是临时创建 wrapper。
-
-常用入口：
+Python 3.11 or newer is expected.
+The local workflow has been run with a Conda environment named `WQBRAIN`.
 
 ```powershell
-python workgraph\regular\scripts\init_run.py
-python workgraph\regular\scripts\create_node_task.py ...
-python workgraph\regular\scripts\validate_node_bundle.py ...
-python workgraph\regular\scripts\validate_run_scope.py ...
-python workgraph\regular\scripts\update_graph_state.py ...
-python workgraph\regular\scripts\audit_run.py ...
-```
-
-节点业务脚本优先使用源脚本，例如：
-
-```powershell
-python wqb_core\user\get_authentication.py --output outputs\auth_status.json
-python wqb_core\user\get_pyramid_alphas.py --scope quarter --output outputs\current_quarter_pyramids.json
-python wqb_core\simulation\simulate.py --target @file:alpha.json --mode preview --output outputs\simulation_results.json
-python wqb_core\simulation\concurrent_simulate.py --targets @file:batch.json --mode preview --output outputs\simulation_results.json
-```
-
-## Python Alpha 约束
-
-当前 Python Alpha 支持范围较窄：
-
-- 只支持 REGULAR alpha。
-- 只走单 alpha 回测：`wqb_core/simulation/simulate.py`。
-- 不走 `concurrent_simulate.py` 批量路径。
-- 只能使用 `type = "MATRIX"` 的 datafield。
-- `@alpha(data=[...])` 中声明的字段必须来自 E 节点的 `available_datafields.json`。
-
-校验入口：
-
-```powershell
-python workgraph\regular\scripts\validate_python_alpha.py candidate.json --fields available_datafields.json --require-matrix-fields
-```
-
-是否启用 Python Alpha 必须在 E 节点之前确定：
-
-- D 或 BCD' 输出 `implementation_mode`。
-- E 根据 `implementation_mode` 筛字段类型。
-- I 只能按该模式生成 FASTEXPR 或 PYTHON candidate。
-
-## 安装
-
-建议使用本地 Conda 环境 `WQBRAIN`：
-
-```powershell
-conda create -n WQBRAIN python=3.12 -y
 conda activate WQBRAIN
 python -m pip install -e .
 ```
 
-创建本地凭据文件：
+## Authentication
+
+Create a local `.env` file:
 
 ```powershell
-Copy-Item .env.example .env
+Copy-Item .env.example local/.env
 ```
 
-然后编辑 `.env`，设置 `EMAIL` / `PASSWORD` 或 `WQB_EMAIL` / `WQB_PASSWORD`。
+Set either `EMAIL` / `PASSWORD` or `WQB_EMAIL` / `WQB_PASSWORD`.
 
-`wqb_core` 可复用 `.wqb_cli_auth/cookies.json` 中的登录状态。
-`.env` 和 `.wqb_cli_auth/` 都是本地状态，不应提交。
+Login:
 
-## 不应提交
+```powershell
+wqb auth login --execute
+```
 
-不要提交：
+Cookies are stored under:
+
+```text
+local/auth/cookies.json
+```
+
+## API Commands
+
+API commands use the bundled registry:
+
+```text
+resources/api_inventory/api_inventory_complete.json
+```
+
+Examples:
+
+```powershell
+wqb api stats
+wqb api list
+wqb api show /authentication
+wqb api call GET /authentication
+wqb auth status
+wqb sim options
+```
+
+Mutating requests require `--execute`.
+There is no dry-run mode.
+If a mutating command is run without `--execute`, the CLI returns `ok: false` with `reason: mutating_method_requires_execute`.
+
+## Local Data Import
+
+Local data is not bundled and must not be committed.
+All local data belongs under `local/`.
+
+Expected structure:
+
+```text
+local/
+  .env
+  config.json
+  auth/
+    cookies.json
+  community/
+    WQPCommunityState_*.json
+    WQPCommunityState_*.wqcs
+    community.sqlite3
+  data_all/
+    info_data.bin
+    all_data.pickle
+    main.ipynb
+```
+
+### data_all
+
+`data_all` comes from the WebDataScope plugin-provided network-disk data package.
+Download it separately and place the files directly under:
+
+```text
+local/data_all/
+```
+
+Expected files:
+
+```text
+local/data_all/
+  info_data.bin
+  all_data.pickle
+  main.ipynb
+```
+
+Use `scope` commands to inspect it:
+
+```powershell
+wqb scope files
+wqb scope list
+wqb scope top USA_1 --group datafield --min-count 5 --limit 10
+wqb scope pickle-summary USA_1 --sample 1
+wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,sharpe,fitness,turnover,margin
+```
+
+### community
+
+Community data is built from a WebDataScope export.
+The flow is:
+
+1. Use WebDataScope to export community data as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`.
+2. Put the exported file under `local/community/`.
+3. Run `wqb community export` to build `community.sqlite3`.
+4. Query the generated SQLite database.
+
+Build SQLite:
+
+```powershell
+wqb community export --source local/community/WQPCommunityState_20260520_103908.json
+```
+
+If `--source` is omitted, the CLI uses the newest `WQPCommunityState_*.json` or `*.wqcs` it can find in local export locations.
+
+Query examples:
+
+```powershell
+wqb community stats
+wqb community search alpha --limit 3
+wqb community search neutralization --scope docs --limit 2
+```
+
+## Command Documentation
+
+Command docs live under:
+
+```text
+resources/docs/commands/
+```
+
+Useful entry points:
+
+- `resources/docs/commands/README.md`
+- `resources/docs/commands/local-data/README.md`
+- `resources/docs/commands/community/README.md`
+- `resources/docs/commands/scope/README.md`
+- `resources/docs/commands/simulations/create/examples/backtest_modes.md`
+
+API inventory docs live under:
+
+```text
+resources/api_inventory/
+```
+
+## Simulation Rules
+
+Backtest modes and concurrency rules are documented in:
+
+```text
+resources/docs/commands/simulations/create/examples/backtest_modes.md
+```
+
+Current operating constraints:
+
+- `REGULAR_FASTEXPR_MULTI` single request supports up to 10 expressions.
+- Recommended `REGULAR_FASTEXPR_MULTI` batch size: 10 when `region != "GLB"`, 5 when `region == "GLB"`.
+- `REGULAR_PYTHON` cannot use multi-simulation.
+- `SUPER` uses one SUPER POST body per simulation.
+- Concurrent `SUPER` simulation requests: at most 3.
+- Concurrent `REGULAR` simulation requests: at most 8 when `region != "GLB"`, at most 4 when `region == "GLB"`.
+
+## Development
+
+Run smoke tests:
+
+```powershell
+python -m unittest discover -s tests
+```
+
+Build package:
+
+```powershell
+python -m build
+```
+
+Do not commit:
 
 - `.env`
-- `.wqb_cli_auth/`
-- `research_runs/`
-- `docs/research_runs/`
-- `__pycache__/`
-- 浏览器临时 profile，例如 `wqb_core/.tmp_edge_profile/`
-
+- `local/.env`
+- `local/auth/`
+- `local/community/*.sqlite3`
+- `local/community/WQPCommunityState_*.json`
+- `local/community/WQPCommunityState_*.wqcs`
+- `local/data_all/`
+- `dist/`
+- `build/`
+- `*.egg-info/`

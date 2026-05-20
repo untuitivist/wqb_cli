@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /authentication --input api_inventory\endpoints\authentication\examples\POST\input.json --execute --output api_inventory\endpoints\authentication\examples\POST\file_output.json --env-auth

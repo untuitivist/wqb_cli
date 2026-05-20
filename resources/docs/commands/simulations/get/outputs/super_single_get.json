@@ -1,0 +1,62 @@
+﻿{
+  "ok": true,
+  "endpoint": "/simulations/{simulation_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/simulations/41NcougeE57e8Ay3rfZderr",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 102904,
+    "content_type": "application/json",
+    "allow": "GET, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 2,
+    "wait_events": [
+      {
+        "retry_after": 5,
+        "sleep_seconds": 50,
+        "progress": 0.15,
+        "multiplier": 10
+      },
+      {
+        "retry_after": 5,
+        "sleep_seconds": 50,
+        "progress": 0.35,
+        "multiplier": 10
+      }
+    ],
+    "wait_timed_out": false,
+    "max_wait_seconds": 900,
+    "location": null,
+    "body": {
+      "id": "41NcougeE57e8Ay3rfZderr",
+      "type": "SUPER",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "OFF",
+        "selectionHandling": "POSITIVE",
+        "selectionLimit": 10,
+        "maxTrade": "OFF",
+        "maxPosition": "OFF",
+        "language": "FASTEXPR",
+        "visualization": false
+      },
+      "combo": "1",
+      "selection": "own == 1",
+      "status": "COMPLETE",
+      "alpha": "pwnkdErb"
+    }
+  }
+}

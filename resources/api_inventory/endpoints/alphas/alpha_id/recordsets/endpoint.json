@@ -1,0 +1,86 @@
+{
+  "path": "/alphas/{alpha_id}/recordsets",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/recordsets",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Alpha recordset index.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/recordsets",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb/recordsets",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/recordsets",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 289,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "name": "str",
+            "title": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ],
+  "official_doc": {
+    "summary": "列出 alpha 可用 record sets。",
+    "methods": {
+      "GET": {
+        "description": "返回 count 和 results，results 中包含 name 与 title。",
+        "known_recordsets": [
+          "pnl",
+          "sharpe",
+          "turnover",
+          "daily-pnl",
+          "yearly-stats",
+          "coverage",
+          "coverage-by-industry",
+          "coverage-by-sector",
+          "average-size-by-industry",
+          "average-size-by-sector",
+          "average-size-by-capitalization",
+          "pnl-by-industry",
+          "pnl-by-sector",
+          "pnl-by-capitalization",
+          "sharpe-by-industry",
+          "sharpe-by-sector",
+          "sharpe-by-capitalization",
+          "average-value-by-industry",
+          "average-value-by-sector"
+        ]
+      }
+    }
+  }
+}

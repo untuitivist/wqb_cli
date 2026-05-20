@@ -1,0 +1,96 @@
+{
+  "path": "/users/self/activities/pyramid-multipliers",
+  "url_template": "https://api.worldquantbrain.com/users/self/activities/pyramid-multipliers",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Current user's pyramid multipliers.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/activities/pyramid-multipliers",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "pyramids": [
+        {
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "multiplier": "float"
+        }
+      ]
+    },
+    "response_sample": {
+      "pyramids": [
+        {
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "multiplier": "float"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 296
+  },
+  "test_results": [
+    {
+      "path": "/users/self/activities/pyramid-multipliers",
+      "method": "GET",
+      "resolved_path": "/users/self/activities/pyramid-multipliers",
+      "url": "https://api.worldquantbrain.com/users/self/activities/pyramid-multipliers",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 274,
+      "content_type": "application/json",
+      "response_shape": {
+        "pyramids": [
+          {
+            "category": {
+              "id": "str",
+              "name": "str"
+            },
+            "delay": "int",
+            "multiplier": "float",
+            "region": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,93 @@
+{
+  "ok": true,
+  "sqlite_path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\community\\community.sqlite3",
+  "query": "alpha",
+  "scope": "all",
+  "forum_topics": [
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "13045420787607",
+      "title": "請問alpha介面中的程式碼與stimulate的結果的關係",
+      "url": "https://support.worldquantbrain.com/hc/en-us/community/posts/13045420787607-%E8%AB%8B%E5%95%8Falpha%E4%BB%8B%E9%9D%A2%E4%B8%AD%E7%9A%84%E7%A8%8B%E5%BC%8F%E7%A2%BC%E8%88%87stimulate%E7%9A%84%E7%B5%90%E6%9E%9C%E7%9A%84%E9%97%9C%E4%BF%82",
+      "comment_num": 2,
+      "last_crawled_at": "2026-05-05T05:34:49.941Z"
+    },
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "13098248439703",
+      "title": "请问该如何选择Setting里面的Neutralization呢？",
+      "url": "https://support.worldquantbrain.com/hc/en-us/community/posts/13098248439703-%E8%AF%B7%E9%97%AE%E8%AF%A5%E5%A6%82%E4%BD%95%E9%80%89%E6%8B%A9Setting%E9%87%8C%E9%9D%A2%E7%9A%84Neutralization%E5%91%A2",
+      "comment_num": 1,
+      "last_crawled_at": "2026-05-05T05:34:49.941Z"
+    },
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "13157186829847",
+      "title": "有的Alpha早年表现还不错，但近几年性能下降，如何让我的Alpha更稳健？",
+      "url": "https://support.worldquantbrain.com/hc/en-us/community/posts/13157186829847-%E6%9C%89%E7%9A%84Alpha%E6%97%A9%E5%B9%B4%E8%A1%A8%E7%8E%B0%E8%BF%98%E4%B8%8D%E9%94%99-%E4%BD%86%E8%BF%91%E5%87%A0%E5%B9%B4%E6%80%A7%E8%83%BD%E4%B8%8B%E9%99%8D-%E5%A6%82%E4%BD%95%E8%AE%A9%E6%88%91%E7%9A%84Alpha%E6%9B%B4%E7%A8%B3%E5%81%A5",
+      "comment_num": 1,
+      "last_crawled_at": "2026-05-05T05:34:49.941Z"
+    }
+  ],
+  "forum_comments": [
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "12989895266199",
+      "comment_id": "12994025388823",
+      "author": "WL13229",
+      "comment_time": "2023-03-13T03:13:44Z",
+      "vote_num": 0
+    },
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "12989895266199",
+      "comment_id": "13157187256215",
+      "author": "WR96679",
+      "comment_time": "2023-03-17T03:51:45Z",
+      "vote_num": 4
+    },
+    {
+      "community_id": "12913416465431",
+      "community_title": "中文论坛",
+      "topic_id": "12994392723735",
+      "comment_id": "13042825195031",
+      "author": "WL13229",
+      "comment_time": "2023-03-13T03:21:49Z",
+      "vote_num": 0
+    }
+  ],
+  "docs_articles": [
+    {
+      "category_id": "11773945689495",
+      "section_id": "11773947933079",
+      "article_id": "12199849474199",
+      "title": "[4/5] Quantitative Analysis",
+      "url": "https://support.worldquantbrain.com/hc/en-us/articles/12199849474199--4-5-Quantitative-Analysis",
+      "author": "KA64574",
+      "datetime": "2023-11-14T05:18:33Z"
+    },
+    {
+      "category_id": "11773945689495",
+      "section_id": "11773947933079",
+      "article_id": "12199858509719",
+      "title": "[3/5] How to Use the Brain Platform",
+      "url": "https://support.worldquantbrain.com/hc/en-us/articles/12199858509719--3-5-How-to-Use-the-Brain-Platform",
+      "author": "KA64574",
+      "datetime": "2024-07-05T06:02:21Z"
+    },
+    {
+      "category_id": "11773945689495",
+      "section_id": "11773947933079",
+      "article_id": "12199923438231",
+      "title": "[2/5] Methods of Analyzing the Stock Market",
+      "url": "https://support.worldquantbrain.com/hc/en-us/articles/12199923438231--2-5-Methods-of-Analyzing-the-Stock-Market",
+      "author": "KA64574",
+      "datetime": "2023-11-14T05:16:21Z"
+    }
+  ]
+}

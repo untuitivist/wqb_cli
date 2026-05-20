@@ -1,0 +1,24 @@
+﻿{
+  "ok": true,
+  "endpoint": "/simulations",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/simulations",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 201,
+    "reason": "Created",
+    "elapsed_ms": 1024,
+    "content_type": "text/html",
+    "allow": "POST, OPTIONS",
+    "retry_after": "5.0",
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": "https://api.worldquantbrain.com/simulations/41NcougeE57e8Ay3rfZderr",
+    "body": ""
+  }
+}

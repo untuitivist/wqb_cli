@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/authentication/brainlabs",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/authentication/brainlabs",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 302,
+    "reason": "Found",
+    "elapsed_ms": 961,
+    "content_type": "",
+    "allow": "GET, POST, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": "https://platform.worldquantbrain.com/profile/account/brainlabs",
+    "body": ""
+  }
+}

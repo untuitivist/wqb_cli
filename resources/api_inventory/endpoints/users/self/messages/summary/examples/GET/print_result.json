@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/self/messages/summary",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/messages/summary",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 933,
+    "content_type": "application/json",
+    "allow": "GET, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "announcement": {
+        "count": 322,
+        "read": 223,
+        "unread": 99
+      },
+      "notification": {
+        "count": 50,
+        "read": 48,
+        "unread": 2
+      }
+    }
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "path": "/users/self/activities/simulations",
+  "url_template": "https://api.worldquantbrain.com/users/self/activities/simulations",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {
+    "date>": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/activities/simulations",
+      "seen_count": 8,
+      "query_keys": [
+        "date>"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "current": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "previous": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "records": {
+          "records": [
+            [
+              "str"
+            ]
+          ],
+          "schema": {
+            "name": "str",
+            "properties": [
+              "dict"
+            ],
+            "title": "str"
+          }
+        },
+        "total": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "type": "str",
+        "yesterday": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "ytd": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/activities/simulations",
+      "method": "GET",
+      "resolved_path": "/users/self/activities/simulations",
+      "url": "https://api.worldquantbrain.com/users/self/activities/simulations",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 268,
+      "content_type": "application/json",
+      "response_shape": {
+        "current": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "previous": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "records": {
+          "records": [
+            [
+              "str"
+            ]
+          ],
+          "schema": {
+            "name": "str",
+            "properties": [
+              "dict"
+            ],
+            "title": "str"
+          }
+        },
+        "total": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "type": "str",
+        "yesterday": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        },
+        "ytd": {
+          "end": "str",
+          "start": "str",
+          "value": "int"
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

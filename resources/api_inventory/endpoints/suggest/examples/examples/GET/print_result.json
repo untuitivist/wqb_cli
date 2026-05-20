@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/suggest/examples",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/suggest/examples",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 959,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "count": 9,
+      "next": "http://api.worldquantbrain.com:443/suggest/examples?limit=1&offset=1",
+      "previous": null,
+      "results": [
+        {
+          "settings": {
+            "instrumentType": "EQUITY",
+            "region": "USA",
+            "universe": "TOP3000",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "SUBINDUSTRY",
+            "truncation": 0.08,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "OFF",
+            "language": "FASTEXPR",
+            "testPeriod": "P1Y",
+            "maxTrade": "OFF",
+            "maxPosition": "OFF"
+          },
+          "type": "REGULAR",
+          "regular": "/*\r\n HYPOTHESIS: If the operating income of a company is currently higher than its past 1 year history, buy the company's stock and vice-versa.\r\n \r\n IMPLEMENTATION: Using ts_rank to identify current performance of the company compared to its own history, using the fundamental data field \"operating_income\".\r\n \r\n HINT TO IMPROVE THE ALPHA: Rather than comparing the value directly, can calculating a ratio that includes stock market moves, improve the signal?\r\n */\r\n \r\n ts_rank(operating_income,252)"
+        }
+      ]
+    }
+  }
+}

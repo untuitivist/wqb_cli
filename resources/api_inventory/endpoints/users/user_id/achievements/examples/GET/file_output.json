@@ -1,0 +1,122 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/{user_id}/achievements",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/JL40454/achievements",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1284,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      {
+        "id": "SIMULATION_20",
+        "name": "20 Simulations",
+        "description": "Ran 20 Simulations",
+        "total": 20,
+        "achieved": "2025-01-02T01:32:04-05:00",
+        "value": 20,
+        "ratio": 0.7461
+      },
+      {
+        "id": "SIMULATION_100",
+        "name": "100 Simulations",
+        "description": "Ran 100 Simulations",
+        "total": 100,
+        "achieved": "2025-01-02T05:02:11-05:00",
+        "value": 100,
+        "ratio": 0.5235
+      },
+      {
+        "id": "SUBMIT_1",
+        "name": "First Submission",
+        "description": "Submitted your first alpha",
+        "total": 1,
+        "achieved": "2025-01-02T05:52:30-05:00",
+        "value": 1,
+        "ratio": 0.7152
+      },
+      {
+        "id": "SUBMIT_10",
+        "name": "10 Submissions",
+        "description": "Submitted 10 alphas",
+        "total": 10,
+        "achieved": "2025-01-13T08:03:59-05:00",
+        "value": 10,
+        "ratio": 0.2939
+      },
+      {
+        "id": "ALPHA_PERF_GOOD",
+        "name": "Good Alpha",
+        "description": "Made an alpha with Good performance",
+        "total": null,
+        "achieved": "2025-01-04T04:05:44-05:00",
+        "value": null,
+        "ratio": 0.6457
+      },
+      {
+        "id": "ALPHA_PERF_EXCELLENT",
+        "name": "Excellent Alpha",
+        "description": "Made an alpha with Excellent performance",
+        "total": null,
+        "achieved": "2025-01-21T06:11:14-05:00",
+        "value": null,
+        "ratio": 0.5002
+      },
+      {
+        "id": "ALPHA_PERF_SPECTACULAR",
+        "name": "Spectacular Alpha",
+        "description": "Made an alpha with Spectacular performance",
+        "total": null,
+        "achieved": "2025-01-21T06:11:14-05:00",
+        "value": null,
+        "ratio": 0.3847
+      },
+      {
+        "id": "SUPER_ALPHA",
+        "name": "SuperAlpha",
+        "description": "Unlocked consultant access to SuperAlpha",
+        "total": null,
+        "achieved": "2025-04-27T11:47:05-04:00",
+        "value": null,
+        "ratio": 0.0628
+      },
+      {
+        "id": "CONSULTANT_SUBMIT",
+        "name": "First Consultant Submission",
+        "description": "Submitted your first consultant alpha",
+        "total": null,
+        "achieved": "2025-03-01T01:52:52-05:00",
+        "value": null,
+        "ratio": 0.0888
+      },
+      {
+        "id": "TUTORIAL",
+        "name": "Complete Tutorial",
+        "description": "Completed tutorial and achieved GOLD level",
+        "total": null,
+        "achieved": null,
+        "value": null,
+        "ratio": 0.018
+      },
+      {
+        "id": "CONSULTANT_TUTORIAL",
+        "name": "Complete Consultant Tutorial",
+        "description": "Completed Consultant tutorial",
+        "total": null,
+        "achieved": null,
+        "value": null,
+        "ratio": 0.0062
+      }
+    ]
+  }
+}

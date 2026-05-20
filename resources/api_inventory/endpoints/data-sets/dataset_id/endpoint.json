@@ -1,0 +1,81 @@
+{
+  "path": "/data-sets/{dataset_id}",
+  "url_template": "https://api.worldquantbrain.com/data-sets/{dataset_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "rocky-d/wqb"
+  ],
+  "description": "Dataset details.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/data-sets/{dataset_id}",
+      "method": "GET",
+      "resolved_path": "/data-sets/analyst10",
+      "url": "https://api.worldquantbrain.com/data-sets/analyst10",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 5075,
+      "content_type": "application/json",
+      "response_shape": {
+        "category": {
+          "id": "str",
+          "name": "str"
+        },
+        "data": [
+          {
+            "alphaCount": "int",
+            "coverage": "float",
+            "dateCoverage": "float",
+            "delay": "int",
+            "fieldCount": "int",
+            "pyramidMultiplier": "float",
+            "region": "str",
+            "themes": [],
+            "universe": "str",
+            "userCount": "int",
+            "valueScore": "float"
+          }
+        ],
+        "description": "str",
+        "id": "str",
+        "name": "str",
+        "researchPapers": [
+          {
+            "title": "str",
+            "type": "str",
+            "url": "str"
+          }
+        ],
+        "subcategory": {
+          "id": "str",
+          "name": "str"
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/authentication/support",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/authentication/support",
+    "params": {
+      "query": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 302,
+    "reason": "Found",
+    "elapsed_ms": 1187,
+    "content_type": "",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": "https://worldquantbrain.zendesk.com/access/jwt?jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzkyMTg0MzcsImp0aSI6ImMzOTYzYmQ0M2FhZTRkMjg4MzRiZjY5NmM2MmY2OTgyIiwiZW1haWwiOiIyNzI0Mzg2NTUzQHFxLmNvbSIsIm5hbWUiOiJKTDQwNDU0IiwiZXh0ZXJuYWxfaWQiOjI3NjQyOCwicGhvbmUiOiIrODYxODI4MDE4NDU4NSIsInJvbGUiOiJ1c2VyIiwidGFncyI6WyJjb25zdWx0YW50IiwiY24iLCJjb25zdWx0YW50X2NuIiwiY29uc3VsdGFudF9kYXRhc2V0X2dyb3VwX2RlZmF1bHQiLCJjb21wZXRpdGlvbl9jaGFsbGVuZ2VfYnJvbnplX2xldmVsIiwiY29tcGV0aXRpb25fY2hhbGxlbmdlX3NpbHZlcl9sZXZlbCIsImNvbXBldGl0aW9uX2NoYWxsZW5nZV9nb2xkX2xldmVsIiwic3VwZXJfYWxwaGEiLCJhZHZpc29yeV9jb25zdWx0YW50X3dsMTMyMjlfZGVmYXVsdCIsImdlbml1c19leHBlcnQiLCJnZW5pdXNfZXhwZXJ0X2czIiwiY29tcGV0aXRpb25faGNhYzIwMjUiLCJjb21wZXRpdGlvbl9wcGFjMjAyNSIsImNvbXBldGl0aW9uX3NhYzIwMjUiLCJjb21wZXRpdGlvbl9zYWMyMDI1X2cyIiwiY29tcGV0aXRpb25fZ2FjMjAyNSIsImNvbXBldGl0aW9uX2dhYzIwMjVfbmV3X2NvbnN1bHRhbnQiLCJjb21wZXRpdGlvbl9tYXBjMjAyNSIsImNvbXBldGl0aW9uX2FpYWMyMDI1IiwiY29tcGV0aXRpb25fb2MyMDI1IiwiY29tcGV0aXRpb25fYWlhY3YyIiwiY29tcGV0aXRpb25fZGNjMjAyNiJdfQ.n3KVSwFI5KHtwk--JAiNlN6WnMdHsHXoDPIyN3Jdomk",
+    "body": ""
+  }
+}

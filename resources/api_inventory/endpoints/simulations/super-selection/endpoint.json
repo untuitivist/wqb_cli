@@ -1,0 +1,141 @@
+{
+  "path": "/simulations/super-selection",
+  "url_template": "https://api.worldquantbrain.com/simulations/super-selection",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "Super selection simulation. / Discovered from platform frontend bundle.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "POST creates simulation.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/simulations/super-selection",
+      "method": "GET",
+      "resolved_path": "/simulations/super-selection",
+      "url": "https://api.worldquantbrain.com/simulations/super-selection",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 1657,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "author": "null",
+            "category": "null",
+            "classifications": [
+              "dict"
+            ],
+            "color": "null",
+            "competitions": [],
+            "dateCreated": "str",
+            "dateModified": "str",
+            "dateSubmitted": "str",
+            "favorite": "null",
+            "grade": "null",
+            "hidden": "null",
+            "id": "str",
+            "is": {
+              "bookSize": "int",
+              "checks": "list",
+              "drawdown": "float",
+              "fitness": "float",
+              "investabilityConstrained": "dict",
+              "longCount": "int",
+              "margin": "float",
+              "pnl": "int",
+              "prodCorrelation": "float",
+              "returns": "float",
+              "riskNeutralized": "dict",
+              "selfCorrelation": "float",
+              "sharpe": "float",
+              "shortCount": "int",
+              "startDate": "str",
+              "turnover": "float"
+            },
+            "name": "null",
+            "origin": "str",
+            "os": {
+              "checks": "list",
+              "osISSharpeRatio": "NoneType",
+              "preCloseSharpeRatio": "NoneType",
+              "startDate": "str"
+            },
+            "osmosisPoints": "null",
+            "prod": "null",
+            "pyramidThemes": "null",
+            "pyramids": "null",
+            "regular": {
+              "code": "NoneType",
+              "description": "NoneType",
+              "operatorCount": "int"
+            },
+            "settings": {
+              "decay": "int",
+              "delay": "int",
+              "endDate": "str",
+              "instrumentType": "str",
+              "language": "str",
+              "maxPosition": "str",
+              "maxTrade": "str",
+              "nanHandling": "str",
+              "neutralization": "str",
+              "pasteurization": "str",
+              "region": "str",
+              "startDate": "str",
+              "truncation": "float",
+              "unitHandling": "str",
+              "universe": "str",
+              "visualization": "bool"
+            },
+            "stage": "str",
+            "status": "str",
+            "tags": [],
+            "team": "null",
+            "test": "null",
+            "themes": [],
+            "train": "null",
+            "type": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "POST",
+      "resolved_path": "/simulations/super-selection",
+      "url": "https://api.worldquantbrain.com/simulations/super-selection",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

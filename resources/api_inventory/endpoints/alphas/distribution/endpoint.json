@@ -1,0 +1,69 @@
+{
+  "path": "/alphas/distribution",
+  "url_template": "https://api.worldquantbrain.com/alphas/distribution",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Alpha distribution aggregate. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/alphas/distribution",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "RateLimit-Remaining": "1918",
+      "Allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 294
+  },
+  "test_results": [
+    {
+      "path": "/alphas/distribution",
+      "method": "GET",
+      "resolved_path": "/alphas/distribution",
+      "url": "https://api.worldquantbrain.com/alphas/distribution",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 271,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

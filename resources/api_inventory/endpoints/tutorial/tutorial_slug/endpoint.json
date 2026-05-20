@@ -1,0 +1,86 @@
+{
+  "path": "/tutorial/{tutorial_slug}",
+  "url_template": "https://api.worldquantbrain.com/tutorial/{tutorial_slug}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/tutorial/exclusive-events-and-support-for-consultants",
+      "seen_count": 8,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "category": "str",
+        "content": [
+          {
+            "id": "str",
+            "type": "str",
+            "value": {
+              "content": "str",
+              "level": "str"
+            }
+          }
+        ],
+        "id": "str",
+        "lastModified": "str",
+        "sequence": "int",
+        "title": "str"
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/tutorial/{tutorial_slug}",
+      "method": "GET",
+      "resolved_path": "/tutorial/exclusive-events-and-support-for-consultants",
+      "url": "https://api.worldquantbrain.com/tutorial/exclusive-events-and-support-for-consultants",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 289,
+      "content_type": "application/json",
+      "response_shape": {
+        "category": "str",
+        "content": [
+          {
+            "id": "str",
+            "type": "str",
+            "value": {
+              "content": "str",
+              "level": "str"
+            }
+          }
+        ],
+        "id": "str",
+        "lastModified": "str",
+        "sequence": "int",
+        "title": "str"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

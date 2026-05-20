@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/data-sets/search",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/data-sets/search",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 1217,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Malformed request."
+    }
+  }
+}

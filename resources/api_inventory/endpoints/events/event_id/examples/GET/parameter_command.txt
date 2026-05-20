@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /events/{event_id} --var event_id=zO8y3jm

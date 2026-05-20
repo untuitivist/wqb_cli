@@ -1,0 +1,26 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/users",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users",
+    "params": {
+      "limit": "1"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "elapsed_ms": 932,
+    "content_type": "application/json",
+    "allow": "POST, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Method \"GET\" not allowed."
+    }
+  }
+}

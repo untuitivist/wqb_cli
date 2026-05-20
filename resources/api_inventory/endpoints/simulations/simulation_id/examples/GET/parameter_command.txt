@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /simulations/{simulation_id} --var simulation_id=2UnwIe7g5jEcCgDvI4GpqO

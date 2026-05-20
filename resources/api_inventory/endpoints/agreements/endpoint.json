@@ -1,0 +1,67 @@
+{
+  "path": "/agreements",
+  "url_template": "https://api.worldquantbrain.com/agreements",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Agreements. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/agreements",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Method \"GET\" not allowed."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, POST, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 384
+  },
+  "test_results": [
+    {
+      "path": "/agreements",
+      "method": "GET",
+      "resolved_path": "/agreements",
+      "url": "https://api.worldquantbrain.com/agreements",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 262,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

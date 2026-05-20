@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "scope": "USA_1",
+  "group": "datafield",
+  "metric": "sharpe_ratio",
+  "results": [
+    {
+      "name": "anl69_security_typ",
+      "sharpe_ratio": 4.529530819818478,
+      "count": 31,
+      "fitness_ratio": 6.204714537370561
+    },
+    {
+      "name": "fnd72_a1_min_int_to_tot_liab_and_eqy",
+      "sharpe_ratio": 2.509253065774805,
+      "count": 7,
+      "fitness_ratio": 3.491441801493895
+    },
+    {
+      "name": "fnd91_topic_6",
+      "sharpe_ratio": 2.300213252453351,
+      "count": 5,
+      "fitness_ratio": 4.064285613403858
+    },
+    {
+      "name": "anl10_ebipast_det_estflag_1223",
+      "sharpe_ratio": 1.7135487365241155,
+      "count": 8,
+      "fitness_ratio": 2.3321767311623645
+    },
+    {
+      "name": "pv87_2_operatingprofit_qf_matrix_p1_number",
+      "sharpe_ratio": 1.6202646227971573,
+      "count": 7,
+      "fitness_ratio": 2.157253957889681
+    },
+    {
+      "name": "pv87_ann_matrix_return_on_assets_estimate_number",
+      "sharpe_ratio": 1.563513194659264,
+      "count": 8,
+      "fitness_ratio": 2.2298739235498894
+    },
+    {
+      "name": "mdl230_totalcap_cusip_astcomp",
+      "sharpe_ratio": 1.5283016544061858,
+      "count": 9,
+      "fitness_ratio": 1.9919722051954756
+    },
+    {
+      "name": "mdl262_aul3_compustatdeltapredict_annual_funda_predict",
+      "sharpe_ratio": 1.517258776405847,
+      "count": 5,
+      "fitness_ratio": 2.4442234353833694
+    },
+    {
+      "name": "snt21_7neg_min",
+      "sharpe_ratio": 1.4640405049495957,
+      "count": 6,
+      "fitness_ratio": 1.934995112414467
+    },
+    {
+      "name": "snt21neg_median_284",
+      "sharpe_ratio": 1.4438628154222144,
+      "count": 8,
+      "fitness_ratio": 1.9630670637030927
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "path": "/data-sets/search",
+  "url_template": "https://api.worldquantbrain.com/data-sets/search",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Dataset search helper. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/data-sets/search",
+    "usable": false,
+    "options": {
+      "status_code": 500,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 400,
+    "reason": "Bad Request",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Malformed request."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "RateLimit-Remaining": "0",
+      "X-RateLimit-Remaining-Minute": "24",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 357
+  },
+  "test_results": [
+    {
+      "path": "/data-sets/search",
+      "method": "GET",
+      "resolved_path": "/data-sets/search",
+      "url": "https://api.worldquantbrain.com/data-sets/search",
+      "executed": true,
+      "status": "tested",
+      "status_code": 400,
+      "reason": "Bad Request",
+      "ok": false,
+      "elapsed_ms": 259,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "POST",
+      "resolved_path": "/data-sets/search",
+      "url": "https://api.worldquantbrain.com/data-sets/search",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

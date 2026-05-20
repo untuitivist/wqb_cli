@@ -1,0 +1,130 @@
+{
+  "path": "/operators",
+  "url_template": "https://api.worldquantbrain.com/operators",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Operator list/search. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "instrumentType": "optional",
+    "region": "optional",
+    "delay": "optional"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/operators",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": [
+      {
+        "name": "str",
+        "category": "str",
+        "scope": [
+          "str"
+        ],
+        "definition": "str",
+        "description": "str",
+        "documentation": "str",
+        "level": "str"
+      }
+    ],
+    "response_sample": [
+      {
+        "name": "str",
+        "category": "str",
+        "scope": [
+          "str"
+        ],
+        "definition": "str",
+        "description": "str",
+        "documentation": "str",
+        "level": "str"
+      }
+    ],
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 292
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/operators",
+      "seen_count": 15,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": [
+        {
+          "category": "str",
+          "definition": "str",
+          "description": "str",
+          "documentation": "str",
+          "level": "str",
+          "name": "str",
+          "scope": [
+            "str"
+          ]
+        }
+      ]
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/operators",
+      "method": "GET",
+      "resolved_path": "/operators",
+      "url": "https://api.worldquantbrain.com/operators",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 298,
+      "content_type": "application/json",
+      "response_shape": [
+        {
+          "category": "str",
+          "definition": "str",
+          "description": "str",
+          "documentation": "str",
+          "level": "str",
+          "name": "str",
+          "scope": [
+            "str"
+          ]
+        }
+      ],
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

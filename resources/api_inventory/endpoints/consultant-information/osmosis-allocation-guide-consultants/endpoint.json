@@ -1,0 +1,61 @@
+{
+  "path": "/consultant-information/osmosis-allocation-guide-consultants",
+  "url_template": "https://api.worldquantbrain.com/consultant-information/osmosis-allocation-guide-consultants",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Osmosis allocation guide. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/consultant-information/osmosis-allocation-guide-consultants",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 281
+  },
+  "test_results": [
+    {
+      "path": "/consultant-information/osmosis-allocation-guide-consultants",
+      "method": "GET",
+      "resolved_path": "/consultant-information/osmosis-allocation-guide-consultants",
+      "url": "https://api.worldquantbrain.com/consultant-information/osmosis-allocation-guide-consultants",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 259,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

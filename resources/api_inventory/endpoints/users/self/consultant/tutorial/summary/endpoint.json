@@ -1,0 +1,114 @@
+{
+  "path": "/users/self/consultant/tutorial/summary",
+  "url_template": "https://api.worldquantbrain.com/users/self/consultant/tutorial/summary",
+  "methods": [
+    "GET",
+    "PATCH"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "Observed request body shape in dynamic_capture.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/consultant/tutorial/summary",
+      "seen_count": 22,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "active": "bool",
+        "currentStep": "int",
+        "status": "str",
+        "steps": [
+          {
+            "answer": "null",
+            "hint": "null",
+            "id": "int",
+            "name": "str",
+            "requirements": "null",
+            "slug": "str",
+            "status": "str",
+            "task": "null",
+            "visited": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "method": "PATCH",
+      "observed_path": "/users/self/consultant/tutorial/summary",
+      "seen_count": 8,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "text/html"
+      ],
+      "request_body_shape": {
+        "active": "bool"
+      },
+      "response_shape": null
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "GET",
+      "resolved_path": "/users/self/consultant/tutorial/summary",
+      "url": "https://api.worldquantbrain.com/users/self/consultant/tutorial/summary",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 302,
+      "content_type": "application/json",
+      "response_shape": {
+        "active": "bool",
+        "currentStep": "int",
+        "status": "str",
+        "steps": [
+          {
+            "answer": "null",
+            "hint": "null",
+            "id": "int",
+            "name": "str",
+            "requirements": "null",
+            "slug": "str",
+            "status": "str",
+            "task": "null",
+            "visited": "bool"
+          }
+        ]
+      },
+      "allow": "GET, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "PATCH",
+      "resolved_path": "/users/self/consultant/tutorial/summary",
+      "url": "https://api.worldquantbrain.com/users/self/consultant/tutorial/summary",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "PATCH may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

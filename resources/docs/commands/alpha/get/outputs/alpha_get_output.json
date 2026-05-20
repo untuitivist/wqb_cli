@@ -1,0 +1,216 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/YPNOpk3W",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1203,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "YPNOpk3W",
+      "type": "REGULAR",
+      "author": "JL40454",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "CHN",
+        "universe": "TOP2000U",
+        "delay": 1,
+        "decay": 60,
+        "neutralization": "NONE",
+        "truncation": 0.01,
+        "lookback": 3,
+        "pasteurization": "ON",
+        "maxTrade": "ON",
+        "maxPosition": "OFF",
+        "language": "PYTHON",
+        "visualization": true,
+        "startDate": "2014-01-01",
+        "endDate": "2023-12-31"
+      },
+      "regular": {
+        "code": "from brain.alphas import alpha\nimport numpy as np\nimport numpy.typing as npt\n\ndef _pasteurize(a, universe):\n    a = a.copy()\n    a[~universe.astype(bool)] = np.nan\n    return a\n\n@alpha(data=[\"close\", \"high\", \"low\", \"volume\"], store=[])\ndef alpha_smooth2_range_sqrt_invvol025(data, store) -> npt.NDArray[np.float32]:\n    if data.close.shape[0] < 3:\n        return np.full(data.close.shape[1], np.nan, dtype=np.float32)\n    spread = data.high - data.low\n    spread = np.where(spread == 0, np.nan, spread)\n    hl_diff = ((data.close - data.low) - (data.high - data.close)) / spread\n    delta_hl = hl_diff[1:, :] - hl_diff[:-1, :]\n    base = -np.nanmean(delta_hl[-2:, :], axis=0)\n    range_pct = np.where(data.close[-1] == 0, np.nan, spread[-1] / data.close[-1])\n    vol = np.where(data.volume[-1] <= 0, np.nan, data.volume[-1])\n    a = base * np.sqrt(np.maximum(range_pct, 0)) / np.power(vol, 0.25)\n    a = _pasteurize(a, data.close[-1])\n    return a.astype(np.float32)",
+        "description": "Idea: This alpha for machine alpha. This alpha for machine alpha.\nRationale for data used:  This alpha for machine alpha. This alpha for machine alpha.\nRationale for operators used:  This alpha for machine alpha. This alpha for machine alpha.",
+        "operatorCount": null
+      },
+      "dateCreated": "2026-05-19T19:13:28-04:00",
+      "dateSubmitted": null,
+      "dateModified": "2026-05-19T19:29:21-04:00",
+      "name": "pc-65.14-[2026-05-20]",
+      "favorite": false,
+      "hidden": false,
+      "color": "YELLOW",
+      "category": "PRICE_VOLUME",
+      "tags": [
+        "CHN/D1/PV",
+        "ATOM",
+        "full year"
+      ],
+      "classifications": [
+        {
+          "id": "DATA_USAGE:SINGLE_DATA_SET",
+          "name": "Single Data Set Alpha"
+        }
+      ],
+      "grade": null,
+      "stage": "IS",
+      "status": "UNSUBMITTED",
+      "is": {
+        "pnl": 22618839,
+        "bookSize": 20000000,
+        "longCount": 963,
+        "shortCount": 958,
+        "turnover": 0.5664,
+        "returns": 0.2343,
+        "drawdown": 0.1337,
+        "margin": 0.000828,
+        "sharpe": 2.72,
+        "fitness": 1.75,
+        "startDate": "2014-01-01",
+        "riskNeutralized": {
+          "pnl": 20054510,
+          "bookSize": 20000000,
+          "longCount": 963,
+          "shortCount": 958,
+          "turnover": 0.5664,
+          "returns": 0.2078,
+          "drawdown": 0.0674,
+          "margin": 0.000734,
+          "fitness": 2.62,
+          "sharpe": 4.32
+        },
+        "checks": [
+          {
+            "name": "LOW_SHARPE",
+            "result": "PASS",
+            "limit": 2.07,
+            "value": 2.72
+          },
+          {
+            "name": "LOW_FITNESS",
+            "result": "PASS",
+            "limit": 1,
+            "value": 1.75
+          },
+          {
+            "name": "LOW_TURNOVER",
+            "result": "PASS",
+            "limit": 0.01,
+            "value": 0.5664
+          },
+          {
+            "name": "HIGH_TURNOVER",
+            "result": "PASS",
+            "limit": 0.7,
+            "value": 0.5664
+          },
+          {
+            "name": "CONCENTRATED_WEIGHT",
+            "result": "PASS"
+          },
+          {
+            "name": "LOW_RETURNS",
+            "result": "PASS",
+            "limit": 0.08,
+            "value": 0.2343
+          },
+          {
+            "name": "LOW_SUB_UNIVERSE_SHARPE",
+            "result": "PASS",
+            "limit": 1.94,
+            "value": 2.36
+          },
+          {
+            "name": "LOW_ROBUST_UNIVERSE_SHARPE.WITH_RATIO",
+            "result": "PASS",
+            "ratio": 0.4,
+            "limit": 1.09,
+            "value": 2.73
+          },
+          {
+            "name": "LOW_ROBUST_UNIVERSE_RETURNS",
+            "result": "PASS",
+            "ratio": 0.4,
+            "limit": 0.0937,
+            "value": 0.234
+          },
+          {
+            "name": "SELF_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "DATA_DIVERSITY",
+            "result": "PENDING"
+          },
+          {
+            "name": "PROD_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "REGULAR_SUBMISSION",
+            "result": "PENDING"
+          },
+          {
+            "name": "LOW_2Y_SHARPE",
+            "result": "PASS",
+            "value": 2.19,
+            "limit": 2.07
+          },
+          {
+            "result": "PASS",
+            "name": "MATCHES_PYRAMID",
+            "effective": 1,
+            "multiplier": 1.4,
+            "pyramids": [
+              {
+                "name": "CHN/D1/PV",
+                "multiplier": 1.4
+              }
+            ]
+          },
+          {
+            "result": "WARNING",
+            "name": "MATCHES_THEMES",
+            "themes": [
+              {
+                "id": "lyvRJ3y",
+                "multiplier": 1,
+                "name": "All regions/D0 Power Pool May`26"
+              },
+              {
+                "id": "q4O05qy",
+                "multiplier": 1.5,
+                "name": "MEA Region Theme"
+              },
+              {
+                "id": "ZywpJvB",
+                "multiplier": 3,
+                "name": "After Cost HTVR Theme"
+              }
+            ]
+          }
+        ]
+      },
+      "os": null,
+      "train": null,
+      "test": null,
+      "prod": null,
+      "competitions": null,
+      "themes": null,
+      "pyramids": null,
+      "pyramidThemes": null,
+      "team": null,
+      "osmosisPoints": null,
+      "origin": "PLATFORM"
+    }
+  }
+}

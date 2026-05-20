@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /data-fields/{field_id} --var field_id=abnormal_news_sentiment_1d

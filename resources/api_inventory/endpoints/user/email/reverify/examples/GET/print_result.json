@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/user/email/reverify",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/user/email/reverify",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "elapsed_ms": 979,
+    "content_type": "application/json",
+    "allow": "POST, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Method \"GET\" not allowed."
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "path": "/users/self/pyramid/alphas",
+  "url_template": "https://api.worldquantbrain.com/users/self/pyramid/alphas",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Fallback pyramid alpha endpoint.",
+  "safe_probe": true,
+  "params": {
+    "startDate": "YYYY-MM-DD",
+    "endDate": "YYYY-MM-DD"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/pyramid/alphas",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 265
+  },
+  "test_results": [
+    {
+      "path": "/users/self/pyramid/alphas",
+      "method": "GET",
+      "resolved_path": "/users/self/pyramid/alphas",
+      "url": "https://api.worldquantbrain.com/users/self/pyramid/alphas",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 257,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

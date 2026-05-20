@@ -1,0 +1,57 @@
+{
+  "path": "/users/{user_id}/activities",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/activities",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "User activities by id.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/users/{user_id}/activities",
+      "method": "GET",
+      "resolved_path": "/users/JL40454/activities",
+      "url": "https://api.worldquantbrain.com/users/JL40454/activities",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 263,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "name": "str",
+            "title": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "info_data": {
+    "path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\data_all\\info_data.bin",
+    "exists": true,
+    "bytes": 14868174
+  },
+  "all_data": {
+    "path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\data_all\\all_data.pickle",
+    "exists": true,
+    "bytes": 2765460286
+  },
+  "meaning": {
+    "info_data": "Compressed msgpack quick index for scope summaries and ranking.",
+    "all_data": "Large pickle with per-scope alpha base/settings/IS/OS dataframes."
+  }
+}

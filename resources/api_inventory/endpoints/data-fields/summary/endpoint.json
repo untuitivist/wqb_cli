@@ -1,0 +1,69 @@
+{
+  "path": "/data-fields/summary",
+  "url_template": "https://api.worldquantbrain.com/data-fields/summary",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Data field summary aggregate. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/data-fields/summary",
+    "usable": false,
+    "options": {
+      "status_code": 500,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 429,
+    "reason": "Too Many Requests",
+    "response_shape": {
+      "message": "str"
+    },
+    "response_sample": {
+      "message": "API rate limit exceeded"
+    },
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8",
+      "RateLimit-Remaining": "0",
+      "Retry-After": "1",
+      "X-RateLimit-Remaining-Minute": "28"
+    },
+    "error": null,
+    "elapsed_ms": 243
+  },
+  "test_results": [
+    {
+      "path": "/data-fields/summary",
+      "method": "GET",
+      "resolved_path": "/data-fields/summary",
+      "url": "https://api.worldquantbrain.com/data-fields/summary",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 1334,
+      "content_type": "application/json",
+      "response_shape": [
+        {
+          "id": "str"
+        }
+      ],
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

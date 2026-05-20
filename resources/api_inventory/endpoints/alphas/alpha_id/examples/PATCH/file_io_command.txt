@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call PATCH /alphas/{alpha_id} --input api_inventory\endpoints\alphas\alpha_id\examples\PATCH\input.json --execute --output api_inventory\endpoints\alphas\alpha_id\examples\PATCH\file_output.json

@@ -1,0 +1,13 @@
+{
+  "path_vars": {},
+  "params": {
+    "dataset.id": "sample",
+    "search": "analyst",
+    "limit": 1,
+    "offset": 0,
+    "delay": "sample",
+    "instrumentType": "sample",
+    "region": "sample",
+    "universe": "sample"
+  }
+}

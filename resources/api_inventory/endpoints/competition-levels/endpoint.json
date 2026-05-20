@@ -1,0 +1,137 @@
+{
+  "path": "/competition-levels",
+  "url_template": "https://api.worldquantbrain.com/competition-levels",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend"
+  ],
+  "description": "Competition levels. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/competition-levels",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": [
+      {
+        "id": "str",
+        "name": "str"
+      }
+    ],
+    "response_sample": [
+      {
+        "id": "MACH_1",
+        "name": "Gold Level 3"
+      },
+      {
+        "id": "MACH_2",
+        "name": "Gold Level 2"
+      },
+      {
+        "id": "MACH_3",
+        "name": "Gold Level 1"
+      },
+      {
+        "id": "LEVEL_3",
+        "name": "Gold Level 3"
+      },
+      {
+        "id": "LEVEL_2",
+        "name": "Gold Level 2"
+      },
+      {
+        "id": "LEVEL_1",
+        "name": "Gold Level 1"
+      },
+      {
+        "id": "TOP_SCORER",
+        "name": "Top Scorer"
+      },
+      {
+        "id": "BRONZE",
+        "name": "Bronze"
+      },
+      {
+        "id": "SILVER",
+        "name": "Silver"
+      },
+      {
+        "id": "GOLD",
+        "name": "Gold"
+      },
+      {
+        "id": "NONE",
+        "name": "No Level"
+      }
+    ],
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 255
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/competition-levels",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": [
+        {
+          "id": "str",
+          "name": "str"
+        }
+      ]
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/competition-levels",
+      "method": "GET",
+      "resolved_path": "/competition-levels",
+      "url": "https://api.worldquantbrain.com/competition-levels",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 372,
+      "content_type": "application/json",
+      "response_shape": [
+        {
+          "id": "str",
+          "name": "str"
+        }
+      ],
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

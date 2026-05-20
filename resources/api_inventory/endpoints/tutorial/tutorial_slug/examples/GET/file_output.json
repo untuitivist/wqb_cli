@@ -1,0 +1,119 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/tutorial/{tutorial_slug}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/tutorial/exclusive-events-and-support-for-consultants",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 977,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "exclusive-events-and-support-for-consultants",
+      "title": "🧭 Exclusive events and support for Consultants",
+      "lastModified": "2025-07-08T07:59:56.528098-04:00",
+      "content": [
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "🔥Competitions for Consultants"
+          },
+          "id": "8fab1c41-8d6a-4823-be86-9dbb9045a3c7"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p>The BRAIN platform regularly organizes competitions for consultants.</p><p>For example, a consultant usually start with the <b>Merged Alpha Performance Competition</b> (which is similar to the IQC scoring system but for consultants only), followed by other types of competitions that focus on different types of Alphas (e.g. <b>Power Pool Alpha Competition</b>, <b>ATOM Competition</b>, <b>SuperAlpha Competition</b>) and <b>ACE(Alpha Creating Engine) Competition</b> that focuses on building your own Alpha researcher automation framework using BRAIN API.</p><p>The themes and specific rules of each competition are determined based on the company's needs at each time. By actively participating in these competitions, you can create Alpha that aligns well with the company's research direction while having the opportunity to earn extra stipends for winning these competitions!</p>",
+          "id": "5e17d3f5-bf41-4ebe-a236-7ceedc1eed0f"
+        },
+        {
+          "type": "IMAGE",
+          "value": {
+            "title": "Consultant_Tutorial_Competitions.png",
+            "width": 473,
+            "height": 300,
+            "fileSize": 99068,
+            "url": "https://api.worldquantbrain.com/content/images/MsehqTvZcZOxwHm6ch1t0XjfJ7E=/396/original/Consultant_Tutorial_Competitions.png"
+          },
+          "id": "e62b2c5f-7a22-4619-8e8f-d7186a129e10"
+        },
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "🧑‍🏫 Advisory Program"
+          },
+          "id": "9c5fc451-d864-41d0-8d17-91b375726d4d"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p>Consultants can receive direct advising and mentoring from WorldQuant's active BRAIN Researchers in various countries.</p><p>Whether you're tackling a challenging problem that’s difficult to solve on your own, aiming to rank highly in competitions of consultants, or reconsidering the direction of your Alpha research, you can request regular webinars or one-to-one online advisory meetings with BRAIN Researchers to get direct support.</p>",
+          "id": "d907e198-6757-4c85-97f7-a8572e73a83e"
+        },
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "💻 Opportunity Webinar for Consultants"
+          },
+          "id": "3fba7539-07f0-4388-95b2-5b756d4687e9"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p>As part of the regular webinars offered by the BRAIN platform, the Global Opportunity Webinar is held monthly.</p><p>This webinar delivers important announcements and updates for consultants, highlighting new opportunities consultants can exploit.</p><p>For example, it may include updates on new implementations in the Genius Program, upcoming competitions, themes, and other opportunities.</p>",
+          "id": "f763edb3-c41b-486e-9961-72c49e35e20e"
+        },
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "🏢 Local Offline Meetups"
+          },
+          "id": "616f5d92-2827-421d-b86c-234e8c80f8d5"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p>In addition to online webinars and meetings, there are regular opportunities to meet WorldQuant's BRAIN team and other consultants offline in various regions.</p><p>Typically, these gatherings are announced by the BRAIN Country Manager of the respective region, and consultants can attend upon receiving the notice.</p><p>At these Meetup events, participants can engage in networking with other consultants, seminars, team-building activities, mini challenges, and various other events.</p>",
+          "id": "3d92885a-2599-473c-811b-32e2066953c2"
+        },
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "🌏 Global Consultant Community for Staying Ahead"
+          },
+          "id": "57f6d332-e987-403c-9bb5-b5cb644c6e27"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p>You can also connect with the <a href=\"https://support.worldquantbrain.com/hc/en-us/community/topics/20933777451031-Global-Consultant-Community-for-Staying-Ahead\">global consultant community</a> as well as with the WorldQuant BRAIN internal team through the <a href=\"https://support.worldquantbrain.com/hc/en-us/community/topics\">Community Forum</a> within the platform.</p><p>If you have a question, try looking up first in the global/local community forums or the <a href=\"https://support.worldquantbrain.com/hc/en-us\">FAQs page</a> to see if there are answers, and if not don't hesitate to be the first one to ask!</p><p>You may also reach out to the BRAIN team directly by raising a ticket <a href=\"https://support.worldquantbrain.com/hc/en-us/requests/new\">here</a>.</p><p>Attendance in various events for consultants—such as global/local webinars, advisory sessions, and offline meetups—and online community activities will directly impact the \"<a href=\"https://support.worldquantbrain.com/hc/en-us/articles/31743652246551-What-is-the-Genius-Community-Activity-criteria\">Community Activity Score</a>\" in the Genius Program.</p><p>To ensure your attendance is reflected in your Community Activity Score, please register for each event using your BRAIN platform email account and attend for more than 30 minutes.</p><p>We look forward to seeing you actively engaged as a consultant!</p>",
+          "id": "e5a33f64-27f7-48c0-8ec3-b1d894f98cfa"
+        },
+        {
+          "type": "HEADING",
+          "value": {
+            "level": "1",
+            "content": "🔖Useful Link for more info"
+          },
+          "id": "9df63e05-5b93-43f7-a5c6-ccb72d4833e9"
+        },
+        {
+          "type": "TEXT",
+          "value": "<p><a href=\"https://platform.worldquantbrain.com/competitions\">Consultant Competitions</a></p><p><a href=\"https://platform.worldquantbrain.com/learn/documentation/consultant-information/brains-new-advisory-program\">Research Advisory Program</a></p><p><a href=\"https://platform.worldquantbrain.com/messages/announcements\">Announcement board</a></p><p><a href=\"https://platform.worldquantbrain.com/events\">Events Calendar</a></p><p><a href=\"https://support.worldquantbrain.com/hc/en-us/community/topics/20933777451031-Global-Consultant-Community-for-Staying-Ahead\">Global Consultant Community for Staying Ahead</a></p>",
+          "id": "bd98e0da-4496-4c50-9036-a93a76eeb416"
+        }
+      ],
+      "sequence": 1318,
+      "category": "Tutorial"
+    }
+  }
+}

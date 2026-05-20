@@ -1,0 +1,386 @@
+{
+  "path": "/simulations",
+  "url_template": "https://api.worldquantbrain.com/simulations",
+  "methods": [
+    "GET",
+    "OPTIONS",
+    "POST"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Simulation collection and simulation creation. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": "POST creates simulation. Do not auto-probe POST.",
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/simulations",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "POST, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Method \"GET\" not allowed."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "POST, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 261
+  },
+  "dynamic_capture": [
+    {
+      "method": "OPTIONS",
+      "observed_path": "/simulations",
+      "seen_count": 22,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "actions": {
+          "POST": {
+            "alpha": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "children": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "combo": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "is": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "links": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "location": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "message": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "origin": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "parent": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "progress": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "regular": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "selection": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "settings": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "status": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "visualizations": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/simulations",
+      "method": "GET",
+      "resolved_path": "/simulations",
+      "url": "https://api.worldquantbrain.com/simulations",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 257,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "POST, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/simulations",
+      "method": "OPTIONS",
+      "resolved_path": "/simulations",
+      "url": "https://api.worldquantbrain.com/simulations",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 270,
+      "content_type": "application/json",
+      "response_shape": {
+        "actions": {
+          "POST": {
+            "alpha": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "children": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "combo": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "is": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "links": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "location": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "message": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "origin": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "parent": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "progress": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "regular": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "selection": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "settings": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "status": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "visualizations": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      },
+      "allow": "POST, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/simulations",
+      "method": "POST",
+      "resolved_path": "/simulations",
+      "url": "https://api.worldquantbrain.com/simulations",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ],
+  "official_doc": {
+    "summary": "创建 simulation 或获取 simulation endpoint 的 OPTIONS schema。",
+    "methods": {
+      "OPTIONS": {
+        "description": "返回 POST 可用字段、类型、必填项和允许值。"
+      },
+      "POST": {
+        "description": "创建一个 REGULAR 或 SUPER simulation。",
+        "request_body": {
+          "type": "REGULAR or SUPER",
+          "settings": {
+            "instrumentType": "EQUITY etc.",
+            "region": "region",
+            "universe": "universe",
+            "delay": "0 or 1",
+            "decay": "number",
+            "neutralization": "neutralization",
+            "truncation": "number",
+            "pasteurization": "pasteurization",
+            "testPeriod": "ISO-8601 duration, e.g. P1Y6M",
+            "unitHandling": "unit handling",
+            "nanHandling": "nan handling",
+            "selectionHandling": "SUPER only",
+            "selectionLimit": "SUPER only",
+            "language": "FASTEXPR or PYTHON",
+            "visualization": "boolean"
+          },
+          "regular": "REGULAR expression code",
+          "combo": "SUPER combo code",
+          "selection": "SUPER selection code"
+        },
+        "multi_simulation": "POST body can be an array of 2..10 compatible simulation objects when permission allows.",
+        "responses": [
+          {
+            "status": "201 Created",
+            "meaning": "Location header points to /simulations/<simulation_id>."
+          },
+          {
+            "status": "400 Bad Request",
+            "meaning": "Validation errors by field."
+          }
+        ]
+      }
+    }
+  }
+}

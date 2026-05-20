@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /user/email/change --input api_inventory\endpoints\user\email\change\examples\POST\input.json --execute --output api_inventory\endpoints\user\email\change\examples\POST\file_output.json

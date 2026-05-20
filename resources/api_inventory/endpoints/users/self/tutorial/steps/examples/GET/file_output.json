@@ -1,0 +1,239 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/self/tutorial/steps",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/tutorial/steps",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 934,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      {
+        "name": "Hello Quants!",
+        "task": "Try entering the code <code>-returns</code> in the left screen and press the Simulate button. Once you've run the simulation, make sure to click the RESULTS checkbox to view your backtest results. Don't forget to check your performance!",
+        "hint": "Enter <code>-returns</code> and run the simulation.",
+        "answer": "<code>-returns</code>",
+        "slug": "hello-quants",
+        "stepIndex": 0
+      },
+      {
+        "name": "What is an Alpha?",
+        "task": "Try simulating an Alpha by applying <code>rank()</code> to <code>-returns</code>.",
+        "hint": "Enter <code>rank(-returns)</code> and run the simulation.",
+        "answer": "<code>rank(-returns)</code>",
+        "slug": "what-alpha",
+        "stepIndex": 1
+      },
+      {
+        "name": "What is an Alpha? (2)",
+        "task": "Simulate any Alpha you want and check the results.",
+        "hint": "Click on the 'Example' button in the bottom left corner for an example Alpha. Simulate and check the results.",
+        "answer": "<code>vwap/close</code>",
+        "slug": "what-alpha-2",
+        "stepIndex": 2
+      },
+      {
+        "name": "What's going on in the platform?",
+        "task": "Change Neutralization to None in Settings and check the results.",
+        "hint": "Set Neutralization to None in Settings and simulate the alpha.",
+        "answer": "<code>rank(-returns)<br />\r\n# Neutralization: None</code>",
+        "slug": "whats-going-platform",
+        "stepIndex": 3
+      },
+      {
+        "name": "What's going on in the platform? (2)",
+        "task": "In Settings, set Neutralization to Market and apply a value of 3 or higher for Decay, then simulate the Alpha.",
+        "hint": "Set Neutralization to Market and Decay to 3 or higher in Settings.",
+        "answer": "<code>rank(-returns)<br />\r\n# Neutralization: Market, Decay > 5</code>",
+        "slug": "whats-going-platform-2",
+        "stepIndex": 4
+      },
+      {
+        "name": "Settings",
+        "task": "Simulate any Alpha you want and check the results.",
+        "hint": "Click on the 'Example' button in the bottom left corner for an example Alpha. Simulate and check the results.",
+        "answer": "<code>vwap/close</code>",
+        "slug": "settings",
+        "stepIndex": 5
+      },
+      {
+        "name": "Finding data fields",
+        "task": "Try simulating an Alpha using data fields other than returns.",
+        "hint": "You can explore data fields by clicking Data at the top of the screen.<br />\r\nThe simulator also provides auto-completion when you start typing the data field.",
+        "answer": "<code>vwap/close</code>",
+        "slug": "finding-data-fields",
+        "stepIndex": 6
+      },
+      {
+        "name": "Finding Operators",
+        "task": "Try simulating an Alpha using a Time Series operator.",
+        "hint": "Click Learn at the top of the screen and go to Operator to see available operators.<br />\r\nThey are categorized by type, and Time Series operators are grouped together.<br />\r\nMost time series operators start with <code>ts_</code>.",
+        "answer": "<code>-ts_delta(close,5)</code>",
+        "slug": "finding-operators",
+        "stepIndex": 7
+      },
+      {
+        "name": "About Price Volume Alpha",
+        "task": "Try simulating an Alpha that includes <code>vwap/close</code> and has a <strong>turnover below 70%</strong>.",
+        "hint": "Simulate an alpha that includes <code>vwap/close</code>.<br />\r\nYou can control alpha's turnover through various methods like Decay, <code>trade_when</code>, etc.",
+        "answer": "<code># DECAY 10<br />\r\nvwap/close</code>",
+        "slug": "about-price-volume-alpha",
+        "stepIndex": 8
+      },
+      {
+        "name": "About Close Location Value",
+        "task": "Create an Alpha with a Sharpe ratio above 1.4 using all four data fields: <code>high, low, close, volume</code>.",
+        "hint": "The CLV expression has a range of -1 to 1.<br />\r\nWrite an alpha that allocates more positions to stocks with higher volume.",
+        "answer": "<code>#DECAY 0<br />\r\nclv = ((close-low)-(high-close))/(high-low);<br />\r\n-zscore(clv) * rank(volume)</code>",
+        "slug": "about-close-location-value",
+        "stepIndex": 9
+      },
+      {
+        "name": "About Momentum Effect",
+        "task": "Try using the count of days with price increases over a year in your Alpha.",
+        "hint": "Follow the instructions step by step to create positive days.",
+        "answer": "<code>ts_sum(returns>0? 1:0, 252)</code>",
+        "slug": "about-momentum-effect",
+        "stepIndex": 10
+      },
+      {
+        "name": "About Logical Operators",
+        "task": "Try creating an Alpha using <code>trade_when</code> and positive_days.",
+        "hint": "Positive days work better with conditions. Try adding a volume-related condition.",
+        "answer": "<code>positive_days=ts_sum(returns>0? 1:0, 250);<br />\r\ntrade_when(volume>adv20,positive_days,-1)</code>",
+        "slug": "about-logical-operators",
+        "stepIndex": 11
+      },
+      {
+        "name": "About Alpha Submit Criteria",
+        "task": "Try creating a submittable Alpha!",
+        "hint": "Review everything you've learned so far and create a submittable alpha.",
+        "answer": "We encourage you to work through this problem on your own!",
+        "slug": "about-alpha-submit-criteria",
+        "stepIndex": 12
+      },
+      {
+        "name": "About Fundamental Data",
+        "task": "<strong>Assets, equity, and debt</strong>are basic fundamental data fields from the balance sheet. Come up with alpha ideas related to these three data fields, and simulate an alpha that includes at least one of these data fields.",
+        "hint": "Simulate an alpha using one or more data fields among assets, equity, and debt.",
+        "answer": "<code>equity/assets</code>",
+        "slug": "about-fundamental-data",
+        "stepIndex": 13
+      },
+      {
+        "name": "About Combining PV and Fundamental Data",
+        "task": "Create an Alpha using <code>operating_income</code> and market capitalization (<code>cap</code>) with your preferred comparison method.",
+        "hint": "Divide <code>operating_income</code> by <code>cap</code>.",
+        "answer": "<code>operating_income/cap</code>",
+        "slug": "about-combining-pv-and-fundamental-data",
+        "stepIndex": 14
+      },
+      {
+        "name": "About Combining PV and Fundamental Data (2)",
+        "task": "Create an Alpha using EBITDA and Enterprise Value.",
+        "hint": "Simulate an alpha using <code>ebitda</code> and <code>enterprise_value</code>.",
+        "answer": "<code>ebitda/enterprise_value</code>",
+        "slug": "about-combining-pv-and-fundamental-data-2",
+        "stepIndex": 15
+      },
+      {
+        "name": "About TS & CS Operators",
+        "task": "Create and simulate an Alpha comparing OEY using <code>ts_rank()</code>.",
+        "hint": "Apply <code>ts_rank()</code> to OEY.",
+        "answer": "<code>ts_rank(operating_income/cap,250)</code>",
+        "slug": "about-ts-cs-operators",
+        "stepIndex": 16
+      },
+      {
+        "name": "About Universe",
+        "task": "Simulate an Alpha in various universes such as TOP1000, TOP500, TOP200.",
+        "hint": "Apply <code>ts_rank()</code> to OEY and simulate in a universe other than TOP3000.",
+        "answer": "<code># TOP500<br />\r\nts_rank(operating_income/cap,250)</code>",
+        "slug": "about-universe",
+        "stepIndex": 17
+      },
+      {
+        "name": "Summary: Fundamental Alpha",
+        "task": "Try creating a submittable Alpha!<br />\r\nAlso check if the same formula is working well in other delay settings or universes",
+        "hint": "Review everything you've learned so far and create a submittable alpha.",
+        "answer": "Try solving this problem on your own!",
+        "slug": "summary-fundamental-alpha",
+        "stepIndex": 18
+      },
+      {
+        "name": "About Option Alpha",
+        "task": "Try creating an Alpha using implied volatility (<code>implied_volatility_</code>~).",
+        "hint": "You can access data fields by appending option type and maturity, such as <code>implied_volatility_call_120</code>, <code>implied_volatility_put_180</code>.",
+        "answer": "<code>ts_rank(implied_volatility_call_120,20)</code>",
+        "slug": "about-option-alpha",
+        "stepIndex": 19
+      },
+      {
+        "name": "About Option Alpha (2)",
+        "task": "Create an Alpha comparing call option implied volatility (<code>implied_volatility_call_{expiry}</code>) and put option implied volatility (<code>implied_volatility_put_{expiry}</code>).",
+        "hint": "Comparing options with the same maturity, like <code>implied_volatility_call_120 - implied_volatility_put_120</code>, provides more accurate comparisons.",
+        "answer": "<code>implied_volatility_call_120 - implied_volatility_put_120</code> or <code>implied_volatility_call_120 / implied_volatility_put_120</code>",
+        "slug": "about-option-alpha-2",
+        "stepIndex": 20
+      },
+      {
+        "name": "About Neutralization",
+        "task": "<p>Create an Alpha incorporating all of these elements!</p>",
+        "hint": "Try creating groups using <code>rank(historical_volatility_120)</code> with <code>bucket()</code>.",
+        "answer": "<code>iv_difference = implied_volatility_call_120 - implied_volatility_put_120;<br />\r\ncap_group = bucket(rank(cap),range=\"0.1,1,0.1\");</code><br />\r\n<code>group_neutralize(iv_difference,cap_group)</code>",
+        "slug": "about-neutralization",
+        "stepIndex": 21
+      },
+      {
+        "name": "Summary: Option Alpha",
+        "task": "Try creating a submittable Alpha!",
+        "hint": "Review everything you've learned so far and create a submittable alpha.",
+        "answer": "We encourage you to work through this problem on your own!",
+        "slug": "summary-option-alpha",
+        "stepIndex": 22
+      },
+      {
+        "name": "About Sentiment Alpha",
+        "task": "Try simulating an Alpha comparing the two data fields <code>scl12_buzz</code> and <code>volume</code> using <code>ts_regression</code>.",
+        "hint": "To understand the relative size of <code>scl12_buzz</code> compared to <code>volume</code>, in <code>ts_regression(y,x,lookback_days)</code>, <code>scl12_buzz</code> should be y and volume should be x.",
+        "answer": "<code>ts_regression(-scl12_buzz,volume,250)</code>",
+        "slug": "about-sentiment-alpha",
+        "stepIndex": 23
+      },
+      {
+        "name": "About News Alpha",
+        "task": "Use <code>vec_avg(nws12_afterhsz_sl)</code> to calculate the average sentiment from news data for each company.<br />\r\nUse <code>ts_sum</code> or <code>ts_mean</code> (ts operator) and rank to set proper condition.<br />\r\nUse <code>if_else</code> or form of <code><condition>?<if_true>:<if_false></if_false></if_true></condition></code> to implement the Alpha idea.",
+        "hint": "Rank the sum of news sentiment (<code>nws12_afterhsz_sl</code>) over time.<br />\r\n- High ranked stocks ? +1 (momentum)<br />\r\n- Low ranked stocks ? short position based on recent returns (reversion)",
+        "answer": "<code>rank(ts_sum(vec_avg(nws12_afterhsz_sl),60)) > 0.5 ? 1: rank(-ts_delta(close, 2))</code>",
+        "slug": "about-news-alpha",
+        "stepIndex": 24
+      },
+      {
+        "name": "About Sentiment & News data",
+        "task": "Try creating a submittable Alpha!",
+        "hint": "Review everything you've learned so far and create a submittable alpha.",
+        "answer": "We encourage you to work through this problem on your own!",
+        "slug": "about-sentiment-news-data",
+        "stepIndex": 25
+      },
+      {
+        "name": "Expanding Alpha Ideas",
+        "task": "Submit your Alphas to reach Gold level! You can achieve Gold level when you reach 10,000 challenge points.",
+        "hint": "Try looking for Alpha ideas or examples from the Learn section or Community forums.",
+        "answer": "If you don't have any more Alpha ideas, you can refer to the Alpha examples in the Learn Documentation section, as well as try clicking the \"Example\" button on the bottom left corner of the simulate window.",
+        "slug": "expanding-alpha-ideas",
+        "stepIndex": 26
+      }
+    ]
+  }
+}

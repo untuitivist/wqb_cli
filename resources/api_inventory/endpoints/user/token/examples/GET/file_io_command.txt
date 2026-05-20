@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /user/token --input api_inventory\endpoints\user\token\examples\GET\input.json --output api_inventory\endpoints\user\token\examples\GET\file_output.json

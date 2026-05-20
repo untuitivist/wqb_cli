@@ -1,0 +1,99 @@
+{
+  "path": "/users/self/activities/pyramid-alphas",
+  "url_template": "https://api.worldquantbrain.com/users/self/activities/pyramid-alphas",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Current user's pyramid alpha counts.",
+  "safe_probe": true,
+  "params": {
+    "startDate": "YYYY-MM-DD",
+    "endDate": "YYYY-MM-DD"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/activities/pyramid-alphas",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "pyramids": [
+        {
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "alphaCount": "int"
+        }
+      ]
+    },
+    "response_sample": {
+      "pyramids": [
+        {
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "alphaCount": "int"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 264
+  },
+  "test_results": [
+    {
+      "path": "/users/self/activities/pyramid-alphas",
+      "method": "GET",
+      "resolved_path": "/users/self/activities/pyramid-alphas",
+      "url": "https://api.worldquantbrain.com/users/self/activities/pyramid-alphas",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 270,
+      "content_type": "application/json",
+      "response_shape": {
+        "pyramids": [
+          {
+            "alphaCount": "int",
+            "category": {
+              "id": "str",
+              "name": "str"
+            },
+            "delay": "int",
+            "region": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/suggest/examples",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/suggest/examples",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "elapsed_ms": 982,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Method \"POST\" not allowed."
+    }
+  }
+}

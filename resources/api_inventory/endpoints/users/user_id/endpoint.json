@@ -1,0 +1,210 @@
+{
+  "path": "/users/{user_id}",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "rocky-d/wqb"
+  ],
+  "description": "User profile by id.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/JL40454",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "address": {
+          "city": "str",
+          "country": "str",
+          "postalCode": "null",
+          "state": "null",
+          "street": "null"
+        },
+        "approved": "bool",
+        "auxiliary": {
+          "campaign": {
+            "campaign": "str",
+            "content": "str",
+            "medium": "str",
+            "source": "str",
+            "term": "null"
+          }
+        },
+        "dateApproved": "str",
+        "dateCreated": "str",
+        "dateVerified": "str",
+        "education": {
+          "degree": "str",
+          "gpa": "float",
+          "graduationYear": "int",
+          "major": "str",
+          "maxGPA": "float",
+          "stem": "bool",
+          "university": "str"
+        },
+        "email": "str",
+        "employment": "null",
+        "firstName": "str",
+        "fullName": "str",
+        "gender": "str",
+        "geniusLevel": "str",
+        "id": "str",
+        "image": {
+          "url": "str"
+        },
+        "lastName": "str",
+        "onboarding": {
+          "status": "str"
+        },
+        "recruitment": {
+          "codingProficiency": "str",
+          "englishProficiency": "str",
+          "roleInterest": [
+            "str"
+          ]
+        },
+        "resume": {
+          "dateCreated": "str"
+        },
+        "settings": {
+          "allowTracking": "bool",
+          "client": {},
+          "communication": {
+            "allowSMS": "bool"
+          },
+          "privacy": {
+            "image": {
+              "moderation": "str",
+              "visibility": "str"
+            },
+            "name": {
+              "moderation": "str",
+              "visibility": "str"
+            }
+          }
+        },
+        "telephone": "str",
+        "verified": "bool"
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/{user_id}",
+      "method": "GET",
+      "resolved_path": "/users/JL40454",
+      "url": "https://api.worldquantbrain.com/users/JL40454",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 307,
+      "content_type": "application/json",
+      "response_shape": {
+        "address": {
+          "city": "str",
+          "country": "str",
+          "postalCode": "null",
+          "state": "null",
+          "street": "null"
+        },
+        "approved": "bool",
+        "auxiliary": {
+          "campaign": {
+            "campaign": "str",
+            "content": "str",
+            "medium": "str",
+            "source": "str",
+            "term": "null"
+          }
+        },
+        "dateApproved": "str",
+        "dateCreated": "str",
+        "dateVerified": "str",
+        "education": {
+          "degree": "str",
+          "gpa": "float",
+          "graduationYear": "int",
+          "major": "str",
+          "maxGPA": "float",
+          "stem": "bool",
+          "university": "str"
+        },
+        "email": "str",
+        "employment": "null",
+        "firstName": "str",
+        "fullName": "str",
+        "gender": "str",
+        "geniusLevel": "str",
+        "id": "str",
+        "image": {
+          "url": "str"
+        },
+        "lastName": "str",
+        "onboarding": {
+          "status": "str"
+        },
+        "recruitment": {
+          "codingProficiency": "str",
+          "englishProficiency": "str",
+          "roleInterest": [
+            "str"
+          ]
+        },
+        "resume": {
+          "dateCreated": "str"
+        },
+        "settings": {
+          "allowTracking": "bool",
+          "client": {},
+          "communication": {
+            "allowSMS": "bool"
+          },
+          "privacy": {
+            "image": {
+              "moderation": "str",
+              "visibility": "str"
+            },
+            "name": {
+              "moderation": "str",
+              "visibility": "str"
+            }
+          }
+        },
+        "telephone": "str",
+        "verified": "bool"
+      },
+      "allow": "GET, PUT, PATCH, DELETE, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

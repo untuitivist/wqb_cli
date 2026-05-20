@@ -1,0 +1,976 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/simulations",
+  "request": {
+    "method": "OPTIONS",
+    "url": "https://api.worldquantbrain.com/simulations",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1003,
+    "content_type": "application/json",
+    "allow": "POST, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "actions": {
+        "POST": {
+          "id": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Id"
+          },
+          "parent": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Parent"
+          },
+          "children": {
+            "type": "list",
+            "required": false,
+            "readOnly": false,
+            "label": "Children",
+            "child": {
+              "type": "string",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "type": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false,
+            "label": "Type",
+            "choices": [
+              {
+                "value": "REGULAR",
+                "label": "Regular"
+              },
+              {
+                "value": "SUPER",
+                "label": "Super"
+              }
+            ]
+          },
+          "settings": {
+            "type": "nested object",
+            "required": true,
+            "readOnly": false,
+            "label": "Settings",
+            "children": {
+              "instrumentType": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Instrument type",
+                "choices": [
+                  {
+                    "value": "EQUITY",
+                    "label": "Equity"
+                  }
+                ]
+              },
+              "region": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Region",
+                "choices": {
+                  "instrumentType": {
+                    "EQUITY": [
+                      {
+                        "value": "USA",
+                        "label": "USA"
+                      },
+                      {
+                        "value": "GLB",
+                        "label": "GLB"
+                      },
+                      {
+                        "value": "EUR",
+                        "label": "EUR"
+                      },
+                      {
+                        "value": "ASI",
+                        "label": "ASI"
+                      },
+                      {
+                        "value": "CHN",
+                        "label": "CHN"
+                      },
+                      {
+                        "value": "JPN",
+                        "label": "JPN"
+                      },
+                      {
+                        "value": "IND",
+                        "label": "IND"
+                      },
+                      {
+                        "value": "MEA",
+                        "label": "MEA"
+                      }
+                    ]
+                  }
+                }
+              },
+              "universe": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Universe",
+                "choices": {
+                  "instrumentType": {
+                    "EQUITY": {
+                      "region": {
+                        "USA": [
+                          {
+                            "value": "TOP3000",
+                            "label": "TOP3000"
+                          },
+                          {
+                            "value": "TOP2000",
+                            "label": "TOP2000"
+                          },
+                          {
+                            "value": "TOP1000",
+                            "label": "TOP1000"
+                          },
+                          {
+                            "value": "TOP500",
+                            "label": "TOP500"
+                          },
+                          {
+                            "value": "TOP200",
+                            "label": "TOP200"
+                          },
+                          {
+                            "value": "ILLIQUID_MINVOL1M",
+                            "label": "ILLIQUID_MINVOL1M"
+                          },
+                          {
+                            "value": "TOPSP500",
+                            "label": "TOPSP500"
+                          }
+                        ],
+                        "GLB": [
+                          {
+                            "value": "TOP3000",
+                            "label": "TOP3000"
+                          },
+                          {
+                            "value": "MINVOL1M",
+                            "label": "MINVOL1M"
+                          },
+                          {
+                            "value": "MINVOL10M",
+                            "label": "MINVOL10M"
+                          },
+                          {
+                            "value": "TOPDIV3000",
+                            "label": "TOPDIV3000"
+                          }
+                        ],
+                        "EUR": [
+                          {
+                            "value": "TOP2500",
+                            "label": "TOP2500"
+                          },
+                          {
+                            "value": "TOP1200",
+                            "label": "TOP1200"
+                          },
+                          {
+                            "value": "TOP800",
+                            "label": "TOP800"
+                          },
+                          {
+                            "value": "TOP400",
+                            "label": "TOP400"
+                          },
+                          {
+                            "value": "ILLIQUID_MINVOL1M",
+                            "label": "ILLIQUID_MINVOL1M"
+                          },
+                          {
+                            "value": "TOPCS1600",
+                            "label": "TOPCS1600"
+                          }
+                        ],
+                        "ASI": [
+                          {
+                            "value": "MINVOL1M",
+                            "label": "MINVOL1M"
+                          },
+                          {
+                            "value": "MINVOL10M",
+                            "label": "MINVOL10M"
+                          },
+                          {
+                            "value": "ILLIQUID_MINVOL1M",
+                            "label": "ILLIQUID_MINVOL1M"
+                          },
+                          {
+                            "value": "TOP500",
+                            "label": "TOP500"
+                          }
+                        ],
+                        "CHN": [
+                          {
+                            "value": "TOP2000U",
+                            "label": "TOP2000U"
+                          }
+                        ],
+                        "JPN": [
+                          {
+                            "value": "TOP1600",
+                            "label": "TOP1600"
+                          },
+                          {
+                            "value": "TOP1200",
+                            "label": "TOP1200"
+                          }
+                        ],
+                        "IND": [
+                          {
+                            "value": "TOP500",
+                            "label": "TOP500"
+                          }
+                        ],
+                        "MEA": [
+                          {
+                            "value": "TOP400",
+                            "label": "TOP400"
+                          },
+                          {
+                            "value": "TOP300",
+                            "label": "TOP300"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "delay": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Delay",
+                "choices": {
+                  "instrumentType": {
+                    "EQUITY": {
+                      "region": {
+                        "USA": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          },
+                          {
+                            "value": 0,
+                            "label": "0"
+                          }
+                        ],
+                        "GLB": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          }
+                        ],
+                        "EUR": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          },
+                          {
+                            "value": 0,
+                            "label": "0"
+                          }
+                        ],
+                        "ASI": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          }
+                        ],
+                        "CHN": [
+                          {
+                            "value": 0,
+                            "label": "0"
+                          },
+                          {
+                            "value": 1,
+                            "label": "1"
+                          }
+                        ],
+                        "JPN": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          },
+                          {
+                            "value": 0,
+                            "label": "0"
+                          }
+                        ],
+                        "IND": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          }
+                        ],
+                        "MEA": [
+                          {
+                            "value": 1,
+                            "label": "1"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "decay": {
+                "type": "integer",
+                "required": true,
+                "readOnly": false,
+                "label": "Decay",
+                "minValue": 0,
+                "maxValue": 512
+              },
+              "neutralization": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Neutralization",
+                "choices": {
+                  "instrumentType": {
+                    "EQUITY": {
+                      "region": {
+                        "USA": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "STATISTICAL",
+                            "label": "Statistical"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "GLB": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "STATISTICAL",
+                            "label": "Statistical"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "COUNTRY",
+                            "label": "Country / Region"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "EUR": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "STATISTICAL",
+                            "label": "Statistical"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "COUNTRY",
+                            "label": "Country / Region"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "ASI": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "STATISTICAL",
+                            "label": "Statistical"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "COUNTRY",
+                            "label": "Country / Region"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "CHN": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "JPN": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "IND": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "REVERSION_AND_MOMENTUM",
+                            "label": "RAM"
+                          },
+                          {
+                            "value": "CROWDING",
+                            "label": "Crowding Factors"
+                          },
+                          {
+                            "value": "FAST",
+                            "label": "Fast Factors"
+                          },
+                          {
+                            "value": "SLOW",
+                            "label": "Slow Factors"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "SLOW_AND_FAST",
+                            "label": "Slow + Fast Factors"
+                          }
+                        ],
+                        "MEA": [
+                          {
+                            "value": "NONE",
+                            "label": "None"
+                          },
+                          {
+                            "value": "MARKET",
+                            "label": "Market"
+                          },
+                          {
+                            "value": "SECTOR",
+                            "label": "Sector"
+                          },
+                          {
+                            "value": "INDUSTRY",
+                            "label": "Industry"
+                          },
+                          {
+                            "value": "SUBINDUSTRY",
+                            "label": "Subindustry"
+                          },
+                          {
+                            "value": "COUNTRY",
+                            "label": "Country / Region"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              },
+              "truncation": {
+                "type": "float",
+                "required": true,
+                "readOnly": false,
+                "label": "Truncation",
+                "minValue": 0,
+                "maxValue": 1
+              },
+              "lookback": {
+                "type": "integer",
+                "required": false,
+                "readOnly": false,
+                "label": "Lookback",
+                "minValue": 0,
+                "maxValue": 1024
+              },
+              "pasteurization": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Pasteurization",
+                "choices": [
+                  {
+                    "value": "ON",
+                    "label": "On"
+                  },
+                  {
+                    "value": "OFF",
+                    "label": "Off"
+                  }
+                ]
+              },
+              "unitHandling": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Unit handling",
+                "choices": [
+                  {
+                    "value": "VERIFY",
+                    "label": "Verify"
+                  }
+                ]
+              },
+              "nanHandling": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Nan handling",
+                "choices": [
+                  {
+                    "value": "ON",
+                    "label": "On"
+                  },
+                  {
+                    "value": "OFF",
+                    "label": "Off"
+                  }
+                ]
+              },
+              "selectionHandling": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Selection handling",
+                "choices": [
+                  {
+                    "value": "POSITIVE",
+                    "label": "Positive"
+                  },
+                  {
+                    "value": "NON_ZERO",
+                    "label": "Non-Zero"
+                  },
+                  {
+                    "value": "NON_NAN",
+                    "label": "Non-Nan"
+                  }
+                ]
+              },
+              "selectionLimit": {
+                "type": "integer",
+                "required": true,
+                "readOnly": false,
+                "label": "Selection limit",
+                "minValue": 10,
+                "maxValue": 1000
+              },
+              "maxTrade": {
+                "type": "choice",
+                "required": false,
+                "readOnly": false,
+                "label": "Max trade",
+                "choices": [
+                  {
+                    "value": "OFF",
+                    "label": "Off"
+                  },
+                  {
+                    "value": "ON",
+                    "label": "On"
+                  }
+                ]
+              },
+              "maxPosition": {
+                "type": "choice",
+                "required": false,
+                "readOnly": false,
+                "label": "Max position",
+                "choices": [
+                  {
+                    "value": "OFF",
+                    "label": "Off"
+                  },
+                  {
+                    "value": "ON",
+                    "label": "On"
+                  }
+                ]
+              },
+              "language": {
+                "type": "choice",
+                "required": true,
+                "readOnly": false,
+                "label": "Language",
+                "choices": [
+                  {
+                    "value": "PYTHON",
+                    "label": "Python"
+                  },
+                  {
+                    "value": "FASTEXPR",
+                    "label": "Fast Expression"
+                  }
+                ]
+              },
+              "visualization": {
+                "type": "boolean",
+                "required": true,
+                "readOnly": false,
+                "label": "Visualization"
+              },
+              "testPeriod": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "label": "Test period",
+                "minValue": "P0Y0M0D",
+                "maxValue": "P6Y0M0D"
+              },
+              "componentActivation": {
+                "type": "choice",
+                "required": false,
+                "readOnly": false,
+                "label": "Component activation",
+                "choices": [
+                  {
+                    "value": "IS",
+                    "label": "IS"
+                  },
+                  {
+                    "value": "OS",
+                    "label": "OS"
+                  }
+                ],
+                "default": "IS"
+              }
+            }
+          },
+          "regular": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Regular",
+            "maxLength": 60000
+          },
+          "combo": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Combo"
+          },
+          "selection": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Selection"
+          },
+          "status": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Status"
+          },
+          "message": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Message"
+          },
+          "location": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": true,
+            "label": "Location",
+            "child": {
+              "type": "field",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "links": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": true,
+            "label": "Links",
+            "child": {
+              "type": "field",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "progress": {
+            "type": "float",
+            "required": false,
+            "readOnly": true,
+            "label": "Progress"
+          },
+          "alpha": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Alpha"
+          },
+          "visualizations": {
+            "type": "list",
+            "required": false,
+            "readOnly": true,
+            "label": "Visualizations",
+            "child": {
+              "type": "field",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "is": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": true,
+            "label": "Is ",
+            "child": {
+              "type": "field",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "origin": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "label": "Origin"
+          }
+        }
+      }
+    }
+  }
+}

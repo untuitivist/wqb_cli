@@ -1,0 +1,215 @@
+{
+  "path": "/authentication",
+  "url_template": "https://api.worldquantbrain.com/authentication",
+  "methods": [
+    "DELETE",
+    "GET",
+    "HEAD",
+    "POST"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Authentication session endpoint. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/authentication",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, POST, DELETE, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "DELETE",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "user": {
+        "id": "str"
+      },
+      "token": {
+        "expiry": "float"
+      },
+      "permissions": [
+        "str"
+      ]
+    },
+    "response_sample": {
+      "user": {
+        "id": "JL40454"
+      },
+      "token": {
+        "expiry": 21577.557019
+      },
+      "permissions": [
+        "BEFORE_AND_AFTER_PERFORMANCE_V2",
+        "BRAIN_LABS",
+        "BRAIN_LABS_JUPYTER_LAB",
+        "CONSULTANT",
+        "MULTI_SIMULATION",
+        "PROD_ALPHAS",
+        "REFERRAL",
+        "SUPER_ALPHA",
+        "VISUALIZATION",
+        "WORKDAY"
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, POST, DELETE, HEAD, OPTIONS"
+    },
+    "error": null,
+    "elapsed_ms": 266
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/authentication",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "permissions": [
+          "str"
+        ],
+        "token": {
+          "expiry": "float"
+        },
+        "user": {
+          "id": "str"
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/authentication",
+      "method": "DELETE",
+      "resolved_path": "/authentication",
+      "url": "https://api.worldquantbrain.com/authentication",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "DELETE may mutate remote state; not executed by inventory test."
+    },
+    {
+      "path": "/authentication",
+      "method": "GET",
+      "resolved_path": "/authentication",
+      "url": "https://api.worldquantbrain.com/authentication",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 261,
+      "content_type": "application/json",
+      "response_shape": {
+        "permissions": [
+          "str"
+        ],
+        "token": {
+          "expiry": "float"
+        },
+        "user": {
+          "id": "str"
+        }
+      },
+      "allow": "GET, POST, DELETE, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/authentication",
+      "method": "HEAD",
+      "resolved_path": "/authentication",
+      "url": "https://api.worldquantbrain.com/authentication",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 268,
+      "content_type": "application/json",
+      "response_shape": null,
+      "allow": "GET, POST, DELETE, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/authentication",
+      "method": "POST",
+      "resolved_path": "/authentication",
+      "url": "https://api.worldquantbrain.com/authentication",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ],
+  "official_doc": {
+    "summary": "管理当前客户端认证状态。",
+    "methods": {
+      "GET": {
+        "description": "获取当前认证状态。",
+        "request": "GET /authentication with Cookie t=<JWT>.",
+        "responses": [
+          {
+            "status": "204 No Content",
+            "meaning": "客户端当前未认证。"
+          },
+          {
+            "status": "200 OK",
+            "meaning": "客户端已认证，返回 user、token.expiry 和 permissions。"
+          }
+        ]
+      },
+      "POST": {
+        "description": "使用 Basic Auth 登录。可能要求 reCAPTCHA 或浏览器/persona 认证。",
+        "request_body": {
+          "recaptcha": "string, optional when required",
+          "expiry": "number, seconds, 1..14400"
+        },
+        "responses": [
+          {
+            "status": "201 Created",
+            "meaning": "登录成功，设置 t cookie。"
+          },
+          {
+            "status": "401 Unauthorized",
+            "meaning": "凭证错误或需要额外认证。"
+          }
+        ]
+      },
+      "DELETE": {
+        "description": "删除认证状态，清空认证 cookie 并使 JWT 失效。",
+        "responses": [
+          {
+            "status": "204 OK",
+            "meaning": "登出成功。"
+          },
+          {
+            "status": "401 Unauthorized",
+            "meaning": "当前认证状态无效。"
+          }
+        ]
+      }
+    }
+  }
+}

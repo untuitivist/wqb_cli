@@ -1,0 +1,72 @@
+{
+  "path": "/alphas",
+  "url_template": "https://api.worldquantbrain.com/alphas",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Alpha collection. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "limit": "1..100",
+    "offset": "0..10000",
+    "query": "limit=5"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/alphas?limit=1",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "POST, PUT, PATCH, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "POST",
+      "PUT",
+      "PATCH",
+      "OPTIONS"
+    ],
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Method \"GET\" not allowed."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "POST, PUT, PATCH, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 254
+  },
+  "test_results": [
+    {
+      "path": "/alphas",
+      "method": "GET",
+      "resolved_path": "/alphas",
+      "url": "https://api.worldquantbrain.com/alphas",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 270,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "POST, PUT, PATCH, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

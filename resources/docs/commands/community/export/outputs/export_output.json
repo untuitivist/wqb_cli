@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "source_file": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\community\\WQPCommunityState_20260505_141911.json",
+  "source_format": "json",
+  "sqlite_path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\community\\community.sqlite3",
+  "json_path": null,
+  "payload_stats": {
+    "communities": 11,
+    "topics": 6333,
+    "comments": 77981,
+    "categories": 16,
+    "sections": 52,
+    "articles": 370
+  },
+  "counts": {
+    "forum_communities": 11,
+    "forum_topics": 6333,
+    "forum_comments": 77981,
+    "docs_categories": 16,
+    "docs_sections": 52,
+    "docs_articles": 370
+  }
+}

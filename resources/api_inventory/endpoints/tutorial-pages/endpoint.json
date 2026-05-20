@@ -1,0 +1,66 @@
+{
+  "path": "/tutorial-pages",
+  "url_template": "https://api.worldquantbrain.com/tutorial-pages",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Tutorial pages. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/tutorial-pages",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "message": "str"
+    },
+    "response_sample": {
+      "message": "No Reference matches the given query."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 287
+  },
+  "test_results": [
+    {
+      "path": "/tutorial-pages",
+      "method": "GET",
+      "resolved_path": "/tutorial-pages",
+      "url": "https://api.worldquantbrain.com/tutorial-pages",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 255,
+      "content_type": "application/json",
+      "response_shape": {
+        "message": "str"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "path": "/consultant-program",
+  "url_template": "https://api.worldquantbrain.com/consultant-program",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/consultant-program",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 256
+  },
+  "test_results": [
+    {
+      "path": "/consultant-program",
+      "method": "GET",
+      "resolved_path": "/consultant-program",
+      "url": "https://api.worldquantbrain.com/consultant-program",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 258,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

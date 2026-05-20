@@ -1,0 +1,32 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/users/self/activities/pyramid-alphas",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/activities/pyramid-alphas",
+    "params": {
+      "startDate": "sample",
+      "endDate": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 926,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "startDate": [
+        "Date has wrong format. Use one of these formats instead: YYYY-MM-DD."
+      ],
+      "endDate": [
+        "Date has wrong format. Use one of these formats instead: YYYY-MM-DD."
+      ]
+    }
+  }
+}

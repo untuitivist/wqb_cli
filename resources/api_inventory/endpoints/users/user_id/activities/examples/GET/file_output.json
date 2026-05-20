@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/{user_id}/activities",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/JL40454/activities",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 970,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "count": 5,
+      "next": null,
+      "previous": null,
+      "results": [
+        {
+          "name": "base-payment",
+          "title": "Base Payment"
+        },
+        {
+          "name": "other-payment",
+          "title": "Other Payment"
+        },
+        {
+          "name": "referrals",
+          "title": "Referrals"
+        },
+        {
+          "name": "simulations",
+          "title": "Simulated Alphas"
+        },
+        {
+          "name": "submissions",
+          "title": "Submitted Alphas"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "path": "/users",
+  "url_template": "https://api.worldquantbrain.com/users",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Users collection. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "POST, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Method \"GET\" not allowed."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "POST, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 257
+  },
+  "test_results": [
+    {
+      "path": "/users",
+      "method": "GET",
+      "resolved_path": "/users",
+      "url": "https://api.worldquantbrain.com/users",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 268,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "POST, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

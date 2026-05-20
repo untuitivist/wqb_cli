@@ -1,0 +1,111 @@
+{
+  "path": "/video-courses",
+  "url_template": "https://api.worldquantbrain.com/video-courses",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Video courses. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/video-courses",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "category": "str",
+          "videos": [
+            "..."
+          ],
+          "title": "str",
+          "sequence": "int",
+          "description": "str",
+          "lastModified": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "category": "str",
+          "videos": [
+            "..."
+          ],
+          "title": "str",
+          "sequence": "int",
+          "description": "str",
+          "lastModified": "str"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 476
+  },
+  "test_results": [
+    {
+      "path": "/video-courses",
+      "method": "GET",
+      "resolved_path": "/video-courses",
+      "url": "https://api.worldquantbrain.com/video-courses",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 421,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "category": "str",
+            "description": "str",
+            "id": "str",
+            "lastModified": "str",
+            "sequence": "int",
+            "title": "str",
+            "videos": [
+              "dict"
+            ]
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/simulations/{simulation_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/simulations/2UnwIe7g5jEcCgDvI4GpqO",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 986,
+    "content_type": "application/json",
+    "allow": "GET, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

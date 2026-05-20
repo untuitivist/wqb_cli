@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/performance-comparison --input api_inventory\endpoints\alphas\alpha_id\performance-comparison\examples\GET\input.json --output api_inventory\endpoints\alphas\alpha_id\performance-comparison\examples\GET\file_output.json

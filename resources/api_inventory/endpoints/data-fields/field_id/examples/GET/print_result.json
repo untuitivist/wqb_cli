@@ -1,0 +1,294 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/data-fields/{field_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/data-fields/abnormal_news_sentiment_1d",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1169,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "abnormal_news_sentiment_1d",
+      "dataset": {
+        "id": "model109",
+        "name": "Fundamentals and Technical Indicators Model"
+      },
+      "category": {
+        "id": "model",
+        "name": "Model"
+      },
+      "subcategory": {
+        "id": "model-valuation-models",
+        "name": "Valuation Models"
+      },
+      "description": "Abnormal sentiment score for novel, relevant, and non-neutral news for the past one day relative to past year baseline",
+      "type": "MATRIX",
+      "visualizable": true,
+      "data": [
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP200",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP500",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP1000",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP2000",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "ILLIQUID_MINVOL1M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOPSP500",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "TOP400",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "TOP800",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "TOP1200",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "ILLIQUID_MINVOL1M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "TOP2500",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 2,
+          "alphaCount": 2,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "universe": "TOPCS1600",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7943,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "universe": "TOP500",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6897,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.3,
+          "themes": []
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "universe": "MINVOL1M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6897,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.3,
+          "themes": []
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "universe": "MINVOL10M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6897,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.3,
+          "themes": []
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "universe": "ILLIQUID_MINVOL1M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6897,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.3,
+          "themes": []
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "universe": "TOP1600",
+          "dateCoverage": 0.9507,
+          "coverage": 0.8504,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.8,
+          "themes": []
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "universe": "TOP1200",
+          "dateCoverage": 0.9507,
+          "coverage": 0.8504,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.8,
+          "themes": []
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "universe": "TOP3000",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7206,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "universe": "MINVOL1M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7206,
+          "userCount": 2,
+          "alphaCount": 2,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "universe": "MINVOL10M",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7206,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "universe": "TOPDIV3000",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7206,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        }
+      ]
+    }
+  }
+}

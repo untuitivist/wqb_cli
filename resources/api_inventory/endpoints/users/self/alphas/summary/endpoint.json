@@ -1,0 +1,62 @@
+{
+  "path": "/users/self/alphas/summary",
+  "url_template": "https://api.worldquantbrain.com/users/self/alphas/summary",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/alphas/summary",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "active": "int",
+        "decommissioned": "int",
+        "unsubmitted": "int"
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/alphas/summary",
+      "method": "GET",
+      "resolved_path": "/users/self/alphas/summary",
+      "url": "https://api.worldquantbrain.com/users/self/alphas/summary",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 514,
+      "content_type": "application/json",
+      "response_shape": {
+        "is": "int",
+        "os": "int",
+        "prod": "int"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

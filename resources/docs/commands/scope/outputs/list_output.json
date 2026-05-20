@@ -1,0 +1,261 @@
+{
+  "ok": true,
+  "scopes": [
+    {
+      "scope": "AMR_0",
+      "region": "AMR",
+      "delay": 0,
+      "sub_beg_time": "2024-04-17",
+      "sub_end_time": "2026-02-13",
+      "total_count": 552,
+      "mean": {
+        "sharpe_ratio": 0.22982824671120747,
+        "fitness_ratio": 0.2189548577529587
+      },
+      "datafield_count": 347,
+      "dataset_count": 47,
+      "category_count": 10,
+      "neutralization_count": 6
+    },
+    {
+      "scope": "AMR_1",
+      "region": "AMR",
+      "delay": 1,
+      "sub_beg_time": "2024-04-17",
+      "sub_end_time": "2026-02-13",
+      "total_count": 26427,
+      "mean": {
+        "sharpe_ratio": 0.30622462466449063,
+        "fitness_ratio": 0.2836735898897045
+      },
+      "datafield_count": 6483,
+      "dataset_count": 156,
+      "category_count": 16,
+      "neutralization_count": 6
+    },
+    {
+      "scope": "ASI_1",
+      "region": "ASI",
+      "delay": 1,
+      "sub_beg_time": "2022-02-04",
+      "sub_end_time": "2026-02-19",
+      "total_count": 508339,
+      "mean": {
+        "sharpe_ratio": 0.4793125171772138,
+        "fitness_ratio": 0.4399670489421685
+      },
+      "datafield_count": 9764,
+      "dataset_count": 165,
+      "category_count": 16,
+      "neutralization_count": 12
+    },
+    {
+      "scope": "CHN_0",
+      "region": "CHN",
+      "delay": 0,
+      "sub_beg_time": "2022-11-25",
+      "sub_end_time": "2026-01-04",
+      "total_count": 4752,
+      "mean": {
+        "sharpe_ratio": 0.784291488611202,
+        "fitness_ratio": 0.7256635713121278
+      },
+      "datafield_count": 1467,
+      "dataset_count": 30,
+      "category_count": 8,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "CHN_1",
+      "region": "CHN",
+      "delay": 1,
+      "sub_beg_time": "2022-10-09",
+      "sub_end_time": "2026-01-18",
+      "total_count": 48127,
+      "mean": {
+        "sharpe_ratio": 0.3491840105047061,
+        "fitness_ratio": 0.27307714640184777
+      },
+      "datafield_count": 5708,
+      "dataset_count": 91,
+      "category_count": 12,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "EUR_0",
+      "region": "EUR",
+      "delay": 0,
+      "sub_beg_time": "2022-12-27",
+      "sub_end_time": "2026-02-17",
+      "total_count": 48614,
+      "mean": {
+        "sharpe_ratio": 0.5820004893305918,
+        "fitness_ratio": 0.528044552702489
+      },
+      "datafield_count": 3906,
+      "dataset_count": 70,
+      "category_count": 13,
+      "neutralization_count": 12
+    },
+    {
+      "scope": "EUR_1",
+      "region": "EUR",
+      "delay": 1,
+      "sub_beg_time": "2022-02-07",
+      "sub_end_time": "2026-02-19",
+      "total_count": 467628,
+      "mean": {
+        "sharpe_ratio": 0.47816781322963076,
+        "fitness_ratio": 0.45284098070222156
+      },
+      "datafield_count": 20548,
+      "dataset_count": 189,
+      "category_count": 16,
+      "neutralization_count": 12
+    },
+    {
+      "scope": "GLB_1",
+      "region": "GLB",
+      "delay": 1,
+      "sub_beg_time": "2023-10-16",
+      "sub_end_time": "2026-02-17",
+      "total_count": 414472,
+      "mean": {
+        "sharpe_ratio": 0.4393689112992187,
+        "fitness_ratio": 0.4265793608899139
+      },
+      "datafield_count": 12515,
+      "dataset_count": 145,
+      "category_count": 14,
+      "neutralization_count": 12
+    },
+    {
+      "scope": "HKG_1",
+      "region": "HKG",
+      "delay": 1,
+      "sub_beg_time": "2023-02-14",
+      "sub_end_time": "2026-02-15",
+      "total_count": 24084,
+      "mean": {
+        "sharpe_ratio": 0.39034494394691566,
+        "fitness_ratio": 0.3395525583445348
+      },
+      "datafield_count": 4493,
+      "dataset_count": 136,
+      "category_count": 15,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "IND_1",
+      "region": "IND",
+      "delay": 1,
+      "sub_beg_time": "2025-11-01",
+      "sub_end_time": "2026-02-15",
+      "total_count": 140279,
+      "mean": {
+        "sharpe_ratio": 0.667511530344246,
+        "fitness_ratio": 0.619838205829886
+      },
+      "datafield_count": 5928,
+      "dataset_count": 124,
+      "category_count": 15,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "JPN_0",
+      "region": "JPN",
+      "delay": 0,
+      "sub_beg_time": "2025-08-03",
+      "sub_end_time": "2026-02-14",
+      "total_count": 259,
+      "mean": {
+        "sharpe_ratio": 0.1718052701523906,
+        "fitness_ratio": 0.1766022569276658
+      },
+      "datafield_count": 169,
+      "dataset_count": 28,
+      "category_count": 9,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "JPN_1",
+      "region": "JPN",
+      "delay": 1,
+      "sub_beg_time": "2024-05-28",
+      "sub_end_time": "2026-02-15",
+      "total_count": 24032,
+      "mean": {
+        "sharpe_ratio": 0.31451676837363635,
+        "fitness_ratio": 0.2739307166477425
+      },
+      "datafield_count": 5136,
+      "dataset_count": 146,
+      "category_count": 16,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "KOR_1",
+      "region": "KOR",
+      "delay": 1,
+      "sub_beg_time": "2023-02-14",
+      "sub_end_time": "2026-02-16",
+      "total_count": 46113,
+      "mean": {
+        "sharpe_ratio": 0.3501132661484667,
+        "fitness_ratio": 0.32504639522330525
+      },
+      "datafield_count": 5600,
+      "dataset_count": 123,
+      "category_count": 15,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "TWN_1",
+      "region": "TWN",
+      "delay": 1,
+      "sub_beg_time": "2023-02-15",
+      "sub_end_time": "2026-02-15",
+      "total_count": 24149,
+      "mean": {
+        "sharpe_ratio": 0.31015010061384746,
+        "fitness_ratio": 0.2521160354658065
+      },
+      "datafield_count": 4382,
+      "dataset_count": 129,
+      "category_count": 16,
+      "neutralization_count": 10
+    },
+    {
+      "scope": "USA_0",
+      "region": "USA",
+      "delay": 0,
+      "sub_beg_time": "2023-01-09",
+      "sub_end_time": "2026-02-15",
+      "total_count": 29727,
+      "mean": {
+        "sharpe_ratio": 0.31731460503006514,
+        "fitness_ratio": 0.33603688631567935
+      },
+      "datafield_count": 5215,
+      "dataset_count": 138,
+      "category_count": 15,
+      "neutralization_count": 11
+    },
+    {
+      "scope": "USA_1",
+      "region": "USA",
+      "delay": 1,
+      "sub_beg_time": "2022-02-05",
+      "sub_end_time": "2026-02-17",
+      "total_count": 901969,
+      "mean": {
+        "sharpe_ratio": 0.3582910607648559,
+        "fitness_ratio": 0.3534920561336977
+      },
+      "datafield_count": 39910,
+      "dataset_count": 350,
+      "category_count": 16,
+      "neutralization_count": 11
+    }
+  ]
+}

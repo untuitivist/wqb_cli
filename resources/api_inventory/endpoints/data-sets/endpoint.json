@@ -1,0 +1,196 @@
+{
+  "path": "/data-sets",
+  "url_template": "https://api.worldquantbrain.com/data-sets",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Data set search. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "instrumentType": "EQUITY",
+    "region": "region",
+    "delay": "delay",
+    "universe": "universe",
+    "limit": "1..100",
+    "offset": "0..10000",
+    "theme": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/data-sets?instrumentType=EQUITY&region=USA&delay=1&universe=TOP3000&limit=1",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "results": [
+        {
+          "id": "str",
+          "name": "str",
+          "description": "str",
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "subcategory": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "universe": "str",
+          "dateCoverage": "float",
+          "coverage": "float",
+          "valueScore": "float",
+          "userCount": "int",
+          "alphaCount": "int",
+          "fieldCount": "int",
+          "pyramidMultiplier": "float",
+          "themes": [],
+          "researchPapers": [
+            "..."
+          ]
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 298,
+      "results": [
+        {
+          "id": "analyst10",
+          "name": "Performance-Weighted Analyst Estimates",
+          "description": "This dataset applies an enhanced version of the StarMine SmartEstimate model to a broad universe of stocks and financial metrics, leveraging analyst estimate data from IBES. It calculates a performance score for each analyst based on their historical forecasting accuracy and incorporates the recency of their estimates. By combining these two factors, the model generates \"smart estimates\" that are more predictive than simple consensus means. The dataset includes modules for analyst innovation, outlier handling, and time-series feature generation, making it a robust tool for identifying which analyst forecasts are likely to be most accurate. This can help investors and researchers anticipate earnings surprises and price movements, as changes in smart estimates often precede market reactions.",
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "dateCoverage": 1.0,
+          "coverage": 0.8069,
+          "valueScore": 3.0,
+          "userCount": 970,
+          "alphaCount": 3220,
+          "fieldCount": 2258,
+          "pyramidMultiplier": 1.2,
+          "themes": [],
+          "researchPapers": [
+            {
+              "type": "discussion",
+              "title": "Getting started with Analyst Datasets",
+              "url": "https://support.worldquantbrain.com/hc/en-us/community/posts/25238159368215-Getting-started-with-Analyst-Datasets"
+            }
+          ]
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "RateLimit-Remaining": "0",
+      "X-RateLimit-Remaining-Minute": "27",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 1014
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/data-sets",
+      "seen_count": 2,
+      "query_keys": [
+        "delay",
+        "instrumentType",
+        "limit",
+        "offset",
+        "region",
+        "theme",
+        "universe"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "results": []
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/data-sets",
+      "method": "GET",
+      "resolved_path": "/data-sets",
+      "url": "https://api.worldquantbrain.com/data-sets",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 1032,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "results": [
+          {
+            "alphaCount": "int",
+            "category": {
+              "id": "str",
+              "name": "str"
+            },
+            "coverage": "float",
+            "dateCoverage": "float",
+            "delay": "int",
+            "description": "str",
+            "fieldCount": "int",
+            "id": "str",
+            "name": "str",
+            "pyramidMultiplier": "float",
+            "region": "str",
+            "researchPapers": [
+              "dict"
+            ],
+            "subcategory": {
+              "id": "str",
+              "name": "str"
+            },
+            "themes": [],
+            "universe": "str",
+            "userCount": "int",
+            "valueScore": "float"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

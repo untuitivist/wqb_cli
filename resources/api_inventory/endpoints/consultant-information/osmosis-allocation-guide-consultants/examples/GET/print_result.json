@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/consultant-information/osmosis-allocation-guide-consultants",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/consultant-information/osmosis-allocation-guide-consultants",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 1038,
+    "content_type": "application/json",
+    "allow": null,
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

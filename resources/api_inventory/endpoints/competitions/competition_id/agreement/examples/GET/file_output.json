@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/competitions/{competition_id}/agreement",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/competitions/challenge/agreement",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 989,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "competition-agreement",
+      "title": "WorldQuant Challenge Guidelines",
+      "lastModified": "2023-10-18T23:41:59.643105-04:00",
+      "content": [
+        {
+          "type": "TEXT",
+          "value": "<p>Through our ongoing Alpha building competition, also referred to as the WorldQuant Challenge, users participate and are provided with skill-building opportunities to create high performing algorithms.</p><p>Below are some operating guidelines and rewards for participating in the competition:</p><ol><li>An individual participant who wishes to join in the competition (\"you\" or the \"participant\") must be eighteen (18) years of age or older and not prohibited from participating by any law, agreement, binding obligation or policy. You are responsible for obtaining any permissions necessary for you to participate. You must first register as a WorldQuant BRAIN user and be approved by the system. Existing users meeting the other requirements detailed here may also compete by visiting the Competitions tab after logging into the WorldQuant BRAIN platform (the “Platform”).</li><li>There is no fee to register for a WorldQuant BRAIN account. Each participant should register only once and a participant's account or ID may not be shared.</li><li>The participant accumulates points by building predictive models (alphas) using historical market data and predefined operators to simulate equity positions, assigning weights to securities based on a prediction of the expected returns in the next defined time period. Alphas are considered for scoring if they qualify for out-of-sample testing. Each qualifying alpha is scored based on its performance against other alphas in the system.</li><li>Alphas submitted before registering for the competition will not be considered for scoring.</li><li>Scores associated with existing alphas can go up or stay the same based on out-of-sample performance of alphas on a weekly basis (or any other selected evaluation interval).</li><li>Participation, including achieving a certain level (Bronze, Silver or Gold), does not entitle participants to claim any item of value or other consideration. Please visit the Help section on the Platform dashboard to learn more about achieving Bronze, Silver or Gold level.</li><li>A leaderboard will show the ranking of each participant in the competition and include information, such as the participant’s user ID, total score, total alpha count and average turnover throughout the applicable competition. Filters are based on information provided by participants. It is each participant's responsibility to ensure their profile information is accurate. Participant further agrees not to use any illegal, offensive, inflammatory, abusive, libelous, defamatory, discriminatory, obscene or otherwise inappropriate image, language or other content in their profile or to post such content on the site.</li><li>By participating in the competition, you agree to grant the rights to your alphas and other Input as set forth herein and to comply with these guidelines and the <a href=\"https://platform.worldquantbrain.com/agreements/user-agreement\">WorldQuant BRAIN User Agreement</a> (incorporated herein by reference). By participating in any competition available on the Platform, a participant represents and warrants that any alpha submitted by participant is participant's own original work. No part of the alpha can be subject to the rights of any other person or entity.</li><li>Existing Research Consultants are not allowed to participate in any competition administered on the Platform unless the terms of such competition expressly permit such participation. Violation of this rule will lead to disqualification of any such participant and may also lead to the termination of such Research Consultant’s engagement with WorldQuant.</li><li>We reserve the right to change the scoring algorithm at any time. We reserve the right to amend the site, any elements of the competition or these guidelines at any time in our sole discretion with or without notice to participants, and to cancel, change or terminate the competition or disqualify any participants without any compensation.</li><li>We reserve the right to review any submitted alpha and disqualify the alpha or terminate the participant’s account without any notice if we find the deliberate introduction of “noise” to subvert our scoring systems.</li><li>Participation on the Platform and any competitions administered through the Platform does not entitle any participant to claim any item of value or other consideration.</li><li>Further, if we detect any signs of “gaming”, sharing/cheating or any other unethical or dishonest behavior, we will terminate the participant’s account and may report the matter as necessary.</li><li>Users should only have one active WorldQuant BRAIN account. Duplicate accounts are grounds for suspension not just from this competition but also from the Platform entirely. Please ensure you deactivate any duplicate accounts you may knowingly or accidentally create by emailing support@worldquantbrain.com requesting assistance in deactivating such accounts.</li></ol><p><b>Consulting Opportunity</b></p><ol><li>At our discretion, we may offer research consulting opportunities to some participants who achieve Silver and Gold levels.</li><li><b>No consulting opportunity or any compensation is guaranteed; any engagement as a Research Consultant is subject to satisfactory completion of a background check, execution of a consulting agreement and any other applicable requirements in the discretion of WorldQuant.</b></li></ol><p>© 2022 Virtual Research Center LLC. All Rights Reserved</p>",
+          "id": "a90faadf-70f6-47d4-885e-ab27df6b10bf"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "path": "/competitions/{competition_id}/agreement",
+  "url_template": "https://api.worldquantbrain.com/competitions/{competition_id}/agreement",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Competition agreement.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "POST may accept agreement.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "GET",
+      "resolved_path": "/competitions/challenge/agreement",
+      "url": "https://api.worldquantbrain.com/competitions/challenge/agreement",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 269,
+      "content_type": "application/json",
+      "response_shape": {
+        "content": [
+          {
+            "id": "str",
+            "type": "str",
+            "value": "str"
+          }
+        ],
+        "id": "str",
+        "lastModified": "str",
+        "title": "str"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "POST",
+      "resolved_path": "/competitions/challenge/agreement",
+      "url": "https://api.worldquantbrain.com/competitions/challenge/agreement",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

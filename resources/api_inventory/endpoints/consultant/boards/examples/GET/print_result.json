@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/consultant/boards",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/consultant/boards",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 982,
+    "content_type": "application/json",
+    "allow": null,
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "ok": true,
+  "scope": "USA_1",
+  "region": "USA",
+  "delay": 1,
+  "sub_beg_time": "2022-02-05",
+  "sub_end_time": "2026-02-17",
+  "total_count": 901969,
+  "mean": {
+    "sharpe_ratio": 0.3582910607648559,
+    "fitness_ratio": 0.3534920561336977
+  },
+  "dimensions": {
+    "datafield": 39910,
+    "dataset": 350,
+    "category": 16,
+    "neutralization": 11
+  },
+  "neutralization_mean": {
+    "CROWDING": {
+      "count": 27941,
+      "sharpe_ratio": 0.3333967647449856,
+      "osis_count": 27195,
+      "fitness_ratio": 0.3276816720004635
+    },
+    "FAST": {
+      "count": 29214,
+      "sharpe_ratio": 0.35014544667402575,
+      "osis_count": 28423,
+      "fitness_ratio": 0.35736633189506833
+    },
+    "INDUSTRY": {
+      "count": 175310,
+      "sharpe_ratio": 0.3582522252009101,
+      "osis_count": 174243,
+      "fitness_ratio": 0.35212182770461925
+    },
+    "MARKET": {
+      "count": 115306,
+      "sharpe_ratio": 0.23519993638144804,
+      "osis_count": 114653,
+      "fitness_ratio": 0.2186163022272538
+    },
+    "NONE": {
+      "count": 5173,
+      "sharpe_ratio": 0.2801617630164239,
+      "osis_count": 5134,
+      "fitness_ratio": 0.25903881303350446
+    },
+    "REVERSION_AND_MOMENTUM": {
+      "count": 30836,
+      "sharpe_ratio": 0.22931499469578087,
+      "osis_count": 29730,
+      "fitness_ratio": 0.22787992626118514
+    },
+    "SECTOR": {
+      "count": 65314,
+      "sharpe_ratio": 0.23234826177669946,
+      "osis_count": 63274,
+      "fitness_ratio": 0.21249516964210127
+    },
+    "SLOW": {
+      "count": 41420,
+      "sharpe_ratio": 0.3465875581519381,
+      "osis_count": 40989,
+      "fitness_ratio": 0.32361917213076524
+    },
+    "SLOW_AND_FAST": {
+      "count": 19559,
+      "sharpe_ratio": 0.2215094654223845,
+      "osis_count": 19255,
+      "fitness_ratio": 0.22177058562032428
+    },
+    "STATISTICAL": {
+      "count": 113379,
+      "sharpe_ratio": 0.46082832654366984,
+      "osis_count": 109165,
+      "fitness_ratio": 0.47389165562496127
+    },
+    "SUBINDUSTRY": {
+      "count": 292144,
+      "sharpe_ratio": 0.4243551206351948,
+      "osis_count": 289908,
+      "fitness_ratio": 0.42266089668678364
+    }
+  }
+}

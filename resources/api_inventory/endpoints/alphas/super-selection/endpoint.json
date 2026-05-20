@@ -1,0 +1,68 @@
+{
+  "path": "/alphas/super-selection",
+  "url_template": "https://api.worldquantbrain.com/alphas/super-selection",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Super selection alpha endpoint. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/alphas/super-selection",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 266
+  },
+  "test_results": [
+    {
+      "path": "/alphas/super-selection",
+      "method": "GET",
+      "resolved_path": "/alphas/super-selection",
+      "url": "https://api.worldquantbrain.com/alphas/super-selection",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 290,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /users/self/alphas --input api_inventory\endpoints\users\self\alphas\examples\GET\input.json --output api_inventory\endpoints\users\self\alphas\examples\GET\file_output.json

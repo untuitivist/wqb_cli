@@ -1,0 +1,29 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/user/password/forgot",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/user/password/forgot",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 923,
+    "content_type": "application/json",
+    "allow": "POST, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "email": [
+        "This field is required."
+      ],
+      "example": [
+        "Unexpected property."
+      ]
+    }
+  }
+}

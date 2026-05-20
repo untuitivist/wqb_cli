@@ -1,0 +1,5 @@
+{
+  "ok": true,
+  "path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\docs\\commands\\shortcut\\README.md",
+  "text": "# shortcut\n\nShortcut commands wrap common agent tasks so callers do not need to compose low-level API calls directly.\n\nCommands:\n\n- `wqb shortcut whoami`: check current authentication session.\n- `wqb shortcut simulate`: create a simulation and optionally wait for completion.\n- `wqb shortcut alpha-report`: fetch alpha details, checks, correlations, and yearly stats.\n- `wqb shortcut data-fields`: search data fields with common settings.\n\nAlias:\n\n```powershell\nwqb quick <command>\n```\n\n"
+}

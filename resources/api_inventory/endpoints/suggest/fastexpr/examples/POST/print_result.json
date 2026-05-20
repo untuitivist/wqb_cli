@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/suggest/fastexpr",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/suggest/fastexpr",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 958,
+    "content_type": "application/json",
+    "allow": null,
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

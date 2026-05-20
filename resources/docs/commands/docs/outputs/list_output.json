@@ -1,0 +1,134 @@
+{
+  "ok": true,
+  "docs_root": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\resources\\docs\\commands",
+  "nodes": [
+    {
+      "node": "alpha/check",
+      "readme": "alpha/check/README.md",
+      "examples": [
+        "alpha/check/examples/args.md",
+        "alpha/check/examples/io.md"
+      ]
+    },
+    {
+      "node": "alpha/get",
+      "readme": "alpha/get/README.md",
+      "examples": [
+        "alpha/get/examples/args.md",
+        "alpha/get/examples/io.md"
+      ]
+    },
+    {
+      "node": "alpha/recordsets",
+      "readme": "alpha/recordsets/README.md",
+      "examples": [
+        "alpha/recordsets/examples/args.md",
+        "alpha/recordsets/examples/io.md"
+      ]
+    },
+    {
+      "node": "auth/login",
+      "readme": "auth/login/README.md",
+      "examples": [
+        "auth/login/examples/args.md",
+        "auth/login/examples/io.md"
+      ]
+    },
+    {
+      "node": "auth/status",
+      "readme": "auth/status/README.md",
+      "examples": [
+        "auth/status/examples/args.md",
+        "auth/status/examples/io.md"
+      ]
+    },
+    {
+      "node": "community/export",
+      "readme": "community/export/README.md",
+      "examples": [
+        "community/export/examples/args.md",
+        "community/export/examples/io.md"
+      ]
+    },
+    {
+      "node": "community",
+      "readme": "community/README.md",
+      "examples": []
+    },
+    {
+      "node": "community/search",
+      "readme": "community/search/README.md",
+      "examples": [
+        "community/search/examples/args.md",
+        "community/search/examples/io.md"
+      ]
+    },
+    {
+      "node": "community/stats",
+      "readme": "community/stats/README.md",
+      "examples": [
+        "community/stats/examples/args.md",
+        "community/stats/examples/io.md"
+      ]
+    },
+    {
+      "node": "config",
+      "readme": "config/README.md",
+      "examples": [
+        "config/examples/args.md"
+      ]
+    },
+    {
+      "node": "docs",
+      "readme": "docs/README.md",
+      "examples": [
+        "docs/examples/args.md"
+      ]
+    },
+    {
+      "node": "README.md",
+      "readme": "README.md",
+      "examples": []
+    },
+    {
+      "node": "search/query",
+      "readme": "search/query/README.md",
+      "examples": [
+        "search/query/examples/args.md",
+        "search/query/examples/io.md"
+      ]
+    },
+    {
+      "node": "shortcut",
+      "readme": "shortcut/README.md",
+      "examples": [
+        "shortcut/examples/args.md"
+      ]
+    },
+    {
+      "node": "simulations/create",
+      "readme": "simulations/create/README.md",
+      "examples": [
+        "simulations/create/examples/args.md",
+        "simulations/create/examples/backtest_modes.md",
+        "simulations/create/examples/io.md"
+      ]
+    },
+    {
+      "node": "simulations/get",
+      "readme": "simulations/get/README.md",
+      "examples": [
+        "simulations/get/examples/args.md",
+        "simulations/get/examples/io.md"
+      ]
+    },
+    {
+      "node": "simulations/options",
+      "readme": "simulations/options/README.md",
+      "examples": [
+        "simulations/options/examples/args.md",
+        "simulations/options/examples/io.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "path": "/users/{user_id}/settings/simulation",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/settings/simulation",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/JL40454/settings/simulation",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "componentActivation": "str",
+        "decay": "int",
+        "delay": "int",
+        "instrumentType": "str",
+        "language": "str",
+        "lookback": "int",
+        "maxPosition": "str",
+        "maxTrade": "str",
+        "neutralization": "str",
+        "region": "str",
+        "selectionHandling": "str",
+        "selectionLimit": "int",
+        "testPeriod": "str",
+        "truncation": "float",
+        "universe": "str",
+        "visualization": "bool"
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/{user_id}/settings/simulation",
+      "method": "GET",
+      "resolved_path": "/users/JL40454/settings/simulation",
+      "url": "https://api.worldquantbrain.com/users/JL40454/settings/simulation",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 262,
+      "content_type": "application/json",
+      "response_shape": {
+        "componentActivation": "str",
+        "decay": "int",
+        "delay": "int",
+        "instrumentType": "str",
+        "language": "str",
+        "lookback": "int",
+        "maxPosition": "str",
+        "maxTrade": "str",
+        "neutralization": "str",
+        "region": "str",
+        "selectionHandling": "str",
+        "selectionLimit": "int",
+        "testPeriod": "str",
+        "truncation": "float",
+        "universe": "str",
+        "visualization": "bool"
+      },
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

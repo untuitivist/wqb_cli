@@ -1,0 +1,87 @@
+{
+  "path": "/simulations/{simulation_id}",
+  "url_template": "https://api.worldquantbrain.com/simulations/{simulation_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Simulation status/details.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/simulations/{simulation_id}",
+      "method": "GET",
+      "resolved_path": "/simulations/2UnwIe7g5jEcCgDvI4GpqO",
+      "url": "https://api.worldquantbrain.com/simulations/2UnwIe7g5jEcCgDvI4GpqO",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 275,
+      "content_type": "application/json",
+      "response_shape": {
+        "alpha": "str",
+        "id": "str",
+        "links": {
+          "linkToCommonErrorMessages": "str"
+        },
+        "location": {
+          "property": "str",
+          "type": "str"
+        },
+        "message": "str",
+        "regular": "str",
+        "settings": {
+          "decay": "int",
+          "delay": "int",
+          "instrumentType": "str",
+          "language": "str",
+          "maxPosition": "str",
+          "maxTrade": "str",
+          "nanHandling": "str",
+          "neutralization": "str",
+          "pasteurization": "str",
+          "region": "str",
+          "truncation": "float",
+          "unitHandling": "str",
+          "universe": "str",
+          "visualization": "bool"
+        },
+        "status": "str",
+        "type": "str"
+      },
+      "allow": "GET, DELETE, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ],
+  "official_doc": {
+    "summary": "获取 simulation 当前状态。",
+    "methods": {
+      "GET": {
+        "description": "查询 simulation 进度或完成结果。",
+        "in_progress": "返回 Retry-After 和 progress。",
+        "complete": "返回 id、parent、children、status、message、location、progress、alpha 等字段。"
+      }
+    }
+  }
+}

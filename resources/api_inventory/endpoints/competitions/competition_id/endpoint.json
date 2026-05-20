@@ -1,0 +1,69 @@
+{
+  "path": "/competitions/{competition_id}",
+  "url_template": "https://api.worldquantbrain.com/competitions/{competition_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Competition details.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/competitions/{competition_id}",
+      "method": "GET",
+      "resolved_path": "/competitions/challenge",
+      "url": "https://api.worldquantbrain.com/competitions/challenge",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 278,
+      "content_type": "application/json",
+      "response_shape": {
+        "countries": "null",
+        "description": "str",
+        "endDate": "null",
+        "excludedCountries": "null",
+        "faq": "str",
+        "id": "str",
+        "leaderboard": "null",
+        "name": "str",
+        "prizeBoard": "bool",
+        "progress": "null",
+        "scoring": "str",
+        "signUpDate": "null",
+        "signUpEndDate": "null",
+        "signUpStartDate": "null",
+        "startDate": "null",
+        "status": "str",
+        "submissions": "bool",
+        "team": "null",
+        "teamBased": "bool",
+        "universities": "null",
+        "universityBoard": "bool"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

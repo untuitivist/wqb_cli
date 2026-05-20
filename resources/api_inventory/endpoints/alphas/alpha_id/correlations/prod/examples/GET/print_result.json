@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}/correlations/prod",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/correlations/prod",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 979,
+    "content_type": "text/html",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": "1.0",
+    "retries": 0,
+    "location": null,
+    "body": ""
+  }
+}

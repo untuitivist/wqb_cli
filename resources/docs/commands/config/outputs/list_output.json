@@ -1,0 +1,27 @@
+{
+  "ok": true,
+  "config_path": null,
+  "config": {
+    "auth": {
+      "email": "",
+      "keyring_service": "wqb-cli",
+      "keyring_username": ""
+    },
+    "defaults": {
+      "instrumentType": "EQUITY",
+      "region": "USA",
+      "universe": "TOP3000",
+      "delay": 1,
+      "language": "FASTEXPR"
+    },
+    "simulation": {
+      "regular_concurrency_non_glb": 8,
+      "regular_concurrency_glb": 4,
+      "super_concurrency": 3,
+      "fastexpr_multi_batch_non_glb": 10,
+      "fastexpr_multi_batch_glb": 5,
+      "max_wait_seconds": 900
+    }
+  },
+  "keyring_available": true
+}

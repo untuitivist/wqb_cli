@@ -1,0 +1,8 @@
+{
+  "path_vars": {},
+  "params": {
+    "limit": 1,
+    "offset": 0,
+    "query": "sample"
+  }
+}

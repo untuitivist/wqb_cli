@@ -1,0 +1,1638 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/operators",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/operators",
+    "params": {
+      "instrumentType": "sample",
+      "region": "sample",
+      "delay": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1057,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      {
+        "name": "add",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "add(x, y, filter = false), x + y",
+        "description": "Adds two or more inputs element wise. Set filter=true to treat NaNs as 0 before summing.",
+        "documentation": "/operators/add",
+        "level": "ALL"
+      },
+      {
+        "name": "multiply",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "multiply(x ,y, ... , filter=false), x * y",
+        "description": "Multiplies two or more inputs element wise. Set filter=true to treat NaNs as 0 before multiplication",
+        "documentation": "/operators/multiply",
+        "level": "ALL"
+      },
+      {
+        "name": "sign",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "sign(x)",
+        "description": "Returns the sign of a number: +1 for positive, -1 for negative, and 0 for zero. If the input is NaN, returns NaN.\r\n\r\nInput: Value of 7 instruments at day t: (2, -3, 5, 6, 3, NaN, -10)\r\nOutput: (1, -1, 1, 1, 1, NaN, -1)",
+        "documentation": "/operators/sign",
+        "level": "ALL"
+      },
+      {
+        "name": "subtract",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "subtract(x, y, filter=false), x - y",
+        "description": "Subtracts inputs left to right: x ? y ? … Supports two or more inputs. Set filter=true to treat NaNs as 0 before subtraction.",
+        "documentation": "/operators/subtract",
+        "level": "ALL"
+      },
+      {
+        "name": "pasteurize",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "pasteurize(x)",
+        "description": "Set to NaN if x is INF or if the underlying instrument is not in the Alpha universe. This operator may help reduce outliers.\r\n\r\nInput: Value of 7 instruments at day t: (2, 3, 5, INF, 3, 8, 10), where value 10 does not belong in Alpha universe\r\nOutput: (2, 3, 5, NaN, 3, 8, NaN)",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "log",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "log(x)",
+        "description": "Calculates the natural logarithm of the input value. Commonly used to transform data that has positive values.",
+        "documentation": "/operators/log",
+        "level": "ALL"
+      },
+      {
+        "name": "purify",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "purify(x)",
+        "description": "Clear infinities (+inf, -inf) by replacing with NaN",
+        "documentation": "/operators/purify",
+        "level": null
+      },
+      {
+        "name": "arc_tan",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "arc_tan(x)",
+        "description": "This operator does inverse tangent of input",
+        "documentation": "/operators/arc_tan",
+        "level": null
+      },
+      {
+        "name": "max",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "max(x, y, ..)",
+        "description": "Maximum value of all inputs. At least 2 inputs are required",
+        "documentation": "/operators/max",
+        "level": "ALL"
+      },
+      {
+        "name": "abs",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "abs(x)",
+        "description": "Returns the absolute value of a number, removing any negative sign.",
+        "documentation": "/operators/abs",
+        "level": "ALL"
+      },
+      {
+        "name": "sigmoid",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "sigmoid(x)",
+        "description": "Returns 1 / (1 + exp(-x))",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "divide",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "divide(x, y), x / y",
+        "description": "x / y",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "min",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "min(x, y ..)",
+        "description": "Minimum value of all inputs. At least 2 inputs are required",
+        "documentation": "/operators/min",
+        "level": "ALL"
+      },
+      {
+        "name": "tanh",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "tanh(x)",
+        "description": "Hyperbolic tangent of x",
+        "documentation": "/operators/tanh",
+        "level": null
+      },
+      {
+        "name": "nan_out",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "nan_out(x, lower=0, upper=0)",
+        "description": "If x < lower or x > upper return NaN, else return x. At least one of \"lower\", \"upper\" is required",
+        "documentation": "/operators/nan_out",
+        "level": null
+      },
+      {
+        "name": "signed_power",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "signed_power(x, y)",
+        "description": "x raised to the power of y such that final result preserves sign of x",
+        "documentation": "/operators/signed_power",
+        "level": "ALL"
+      },
+      {
+        "name": "inverse",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "inverse(x)",
+        "description": "1 / x",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "round",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "round(x)",
+        "description": "Round input to closest integer.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "sqrt",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "sqrt(x)",
+        "description": "Returns the non negative square root of x. Equivalent to power(x, 0.5); for signed roots use signed_power(x, 0.5).",
+        "documentation": "/operators/sqrt",
+        "level": "ALL"
+      },
+      {
+        "name": "reverse",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "reverse(x)",
+        "description": " - x",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "power",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "power(x, y)",
+        "description": "x ^ y",
+        "documentation": "/operators/power",
+        "level": "ALL"
+      },
+      {
+        "name": "densify",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "densify(x)",
+        "description": "Converts a grouping field of many buckets into lesser number of only available buckets so as to make working with grouping fields computationally efficient",
+        "documentation": "/operators/densify",
+        "level": "ALL"
+      },
+      {
+        "name": "floor",
+        "category": "Arithmetic",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "floor(x)",
+        "description": "Nearest smaller integer",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "or",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "or(input1, input2)",
+        "description": "Returns 1 if either input is true (either input1 or input2 has a value of 1), otherwise it returns 0.",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "and",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "and(input1, input2)",
+        "description": "Returns 1 ('true') if both inputs are 1 ('true'). Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "not",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "not(x)",
+        "description": "Returns the logical negation of x. Returns 0 when x is 1 (‘true’) and 1 when x is 0 (‘false’).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "is_nan",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "is_nan(input)",
+        "description": "If (input == NaN) return 1 else return 0",
+        "documentation": "/operators/is_nan",
+        "level": "ALL"
+      },
+      {
+        "name": "is_not_nan",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "is_not_nan(input)",
+        "description": "If (input != NaN) return 1 else return 0",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "less",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1 < input2",
+        "description": "Returns 1 ('true') if input1 is a smaller than input2. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "equal",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1 == input2",
+        "description": "Returns 1 ('true') if input1 and input2 are the same. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "greater",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1 > input2",
+        "description": "Returns 1 ('true') if input1 is a larger than input2. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "is_finite",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "is_finite(input)",
+        "description": "If (input NaN or input == INF) return 0, else return 1",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "if_else",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "if_else(input1, input2, input 3)",
+        "description": "The if_else operator returns one of two values based on a condition. If the condition is true, it returns the first value; if false, it returns the second value.",
+        "documentation": "/operators/if_else",
+        "level": "ALL"
+      },
+      {
+        "name": "not_equal",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1!= input2",
+        "description": "Returns 1 ('true') if input1 and input2 are different numbers. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "less_equal",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1 <= input2",
+        "description": "Returns 1 ('true') if input1 is a smaller or the same as input2. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "greater_equal",
+        "category": "Logical",
+        "scope": [
+          "COMBO",
+          "REGULAR",
+          "SELECTION"
+        ],
+        "definition": "input1 >= input2",
+        "description": "Returns 1 ('true') if input1 is a larger or the same as input2. Otherwise, returns 0 ('false').",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "ts_corr",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_corr(x, y, d)",
+        "description": "Calculates the Pearson correlation between two variables, x and y, over the past d days, showing how closely they move together.",
+        "documentation": "/operators/ts_corr",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_zscore",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_zscore(x, d)",
+        "description": "Calculates the Z-score of a time series, showing how far today's value is from the recent average, measured in standard deviations. Useful for standardizing and comparing values over time.",
+        "documentation": "/operators/ts_zscore",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_returns",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_returns (x, d, mode = 1)",
+        "description": "Returns the relative change in the x value",
+        "documentation": "/operators/ts_returns",
+        "level": null
+      },
+      {
+        "name": "ts_product",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_product(x, d)",
+        "description": "Returns the product of the values of x over the past d days. Useful for calculating geometric means and compounding returns or growth rates.",
+        "documentation": "/operators/ts_product",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_std_dev",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_std_dev(x, d)",
+        "description": "Calculates the standard deviation of a data series x over the past d days, measuring how much the values deviate from their mean during that period.",
+        "documentation": "/operators/ts_std_dev",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_backfill",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_backfill(x,lookback = d, k=1)",
+        "description": "Replaces missing (NaN) values in a time series with the most recent valid value from a specified lookback window, improving data coverage and reducing risk from missing data.",
+        "documentation": "/operators/ts_backfill",
+        "level": "ALL"
+      },
+      {
+        "name": "days_from_last_change",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "days_from_last_change(x)",
+        "description": "Calculates the number of days since the last change in the value of a given variable.",
+        "documentation": "/operators/days_from_last_change",
+        "level": "ALL"
+      },
+      {
+        "name": "last_diff_value",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "last_diff_value(x, d)",
+        "description": "Returns the most recent value of x from the past d days that is different from the current value of x.",
+        "documentation": "/operators/last_diff_value",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_scale",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_scale(x, d, constant = 0)",
+        "description": "Scales a time series to a 0–1 range based on its minimum and maximum values over a specified period, with an optional constant shift.",
+        "documentation": "/operators/ts_scale",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_entropy",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_entropy(x,d)",
+        "description": "For each instrument, we collect values of input in the past d days and calculate the probability distribution then the information entropy via a histogram as a result",
+        "documentation": "/operators/ts_entropy",
+        "level": null
+      },
+      {
+        "name": "ts_step",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_step(1)",
+        "description": "Returns a counter of days, incrementing by one each day.",
+        "documentation": "/operators/ts_step",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_sum",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_sum(x, d)",
+        "description": "Sum values of x for the past d days.",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "ts_co_kurtosis",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_co_kurtosis(y, x, d)",
+        "description": "Returns cokurtosis of y and x for the past d days",
+        "documentation": "/operators/ts_co_kurtosis",
+        "level": null
+      },
+      {
+        "name": "ts_decay_exp_window",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_decay_exp_window(x, d, factor = f)",
+        "description": "Returns exponential decay of x with smoothing factor for the past d days",
+        "documentation": "/operators/ts_decay_exp_window",
+        "level": null
+      },
+      {
+        "name": "ts_av_diff",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_av_diff(x, d)",
+        "description": "Calculates the difference between a value and its mean over a specified period, ignoring NaN values in the mean calculation. In short, it returns x – ts_mean(x, d) with NaNs ignored.",
+        "documentation": "/operators/ts_av_diff",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_kurtosis",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_kurtosis(x, d)",
+        "description": "Returns kurtosis of x for the last d days",
+        "documentation": "/operators/ts_kurtosis",
+        "level": null
+      },
+      {
+        "name": "ts_mean",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_mean(x, d)",
+        "description": "Calculates the simple average (mean) value of a variable x over the past d days.",
+        "documentation": "/operators/ts_mean",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_min_max_diff",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_min_max_diff(x, d, f = 0.5)",
+        "description": "Returns x - f * (ts_min(x, d) + ts_max(x, d)). If not specified, by default f = 0.5",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_arg_max",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_arg_max(x, d)",
+        "description": "Returns the number of days since the maximum value occurred in the last d days of a time series. If today's value is the maximum, returns 0; if it was yesterday, returns 1, and so on.",
+        "documentation": "/operators/ts_arg_max",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_min_max_cps",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_min_max_cps(x, d, f = 2)",
+        "description": "Returns (ts_min(x, d) + ts_max(x, d)) - f * x. If not specified, by default f = 2",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_rank",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_rank(x, d, constant = 0)",
+        "description": "Ranks the value of a variable for each instrument over a specified number of past days, returning the rank of the current value (optionally adjusted by a constant). Useful for normalizing time-series data and highlighting relative performance over time.",
+        "documentation": "/operators/ts_rank",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_ir",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_ir(x, d)",
+        "description": "Return information ratio ts_mean(x, d) / ts_std_dev(x, d)",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_delay",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_delay(x, d)",
+        "description": "Returns the value of a variable x from d days ago. Use this operator to access historical data points by specifying the desired time lag in days.",
+        "documentation": "/operators/ts_delay",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_theilsen",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_theilsen(x, y, d)",
+        "description": "Theil Sen slope estimator of inputs for the past n days.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "hump_decay",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "hump_decay(x, p=0)",
+        "description": "This operator helps to ignore the values that changed too little corresponding to previous ones",
+        "documentation": "/operators/hump_decay",
+        "level": null
+      },
+      {
+        "name": "ts_weighted_decay",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_weighted_decay(x, k=0.5)",
+        "description": "Instead of replacing today's value with yesterday's as in ts_decay(x, 1), it assigns weighted average of today's and yesterday's values with weight on today's value being k and yesterday's being (1-k)",
+        "documentation": "/operators/ts_weighted_decay",
+        "level": null
+      },
+      {
+        "name": "ts_quantile",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_quantile(x,d, driver=\"gaussian\" )",
+        "description": "Calculates the ts_rank of the input and transforms it using the inverse cumulative distribution function (quantile function) of a specified probability distribution (default: Gaussian/normal). This helps to normalize or reshape the distribution of your data over a rolling window.",
+        "documentation": "/operators/ts_quantile",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_count_nans",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_count_nans(x ,d)",
+        "description": "Counts the number of missing (NaN) values in a data series over a specified number of days.",
+        "documentation": "/operators/ts_count_nans",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_covariance",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_covariance(y, x, d)",
+        "description": "Calculates the covariance between two time-series variables, y and x, over the past d days. Useful for measuring how two variables move together within a specified historical window.",
+        "documentation": "/operators/ts_covariance",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_co_skewness",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_co_skewness(y, x, d)",
+        "description": "Returns coskewness of y and x for the past d days",
+        "documentation": "/operators/ts_co_skewness",
+        "level": null
+      },
+      {
+        "name": "ts_min_diff",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_min_diff(x, d)",
+        "description": "Returns x - ts_min(x, d)",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_decay_linear",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_decay_linear(x, d, dense = false)",
+        "description": "Applies a linear decay to time-series data over a set number of days, smoothing the data by averaging recent values and reducing the impact of older or missing data.",
+        "documentation": "/operators/ts_decay_linear",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_moment",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_moment(x, d, k=0)",
+        "description": "Returns K-th central moment of x for the past d days",
+        "documentation": "/operators/ts_moment",
+        "level": null
+      },
+      {
+        "name": "ts_arg_min",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_arg_min(x, d)",
+        "description": "Returns the number of days since the minimum value occurred in a time series over the past d days. If today's value is the minimum, returns 0; if it was yesterday, returns 1, and so on.",
+        "documentation": "/operators/ts_arg_min",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_regression",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_regression(y, x, d, lag = 0, rettype = 0)",
+        "description": "Returns various parameters related to regression function",
+        "documentation": "/operators/ts_regression",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_skewness",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_skewness(x, d)",
+        "description": "Return skewness of x for the past d days",
+        "documentation": "/operators/ts_skewness",
+        "level": null
+      },
+      {
+        "name": "ts_max_diff",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_max_diff(x, d)",
+        "description": "Returns x - ts_max(x, d)",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "kth_element",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "kth_element(x, d, k, ignore=“NaN”)",
+        "description": "Returns the K-th value from a time series by looking back over a specified number of (‘d’) days, with the option to ignore certain values. Commonly used for backfilling missing data.",
+        "documentation": "/operators/kth_element",
+        "level": "ALL"
+      },
+      {
+        "name": "hump",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "hump(x, hump = 0.01)",
+        "description": "Limits amount and magnitude of changes in input (thus reducing turnover)",
+        "documentation": "/operators/hump",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_delta",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_delta(x, d)",
+        "description": "Calculates the difference between a value and its delayed version over a specified period. Useful for measuring changes or momentum in time-series data.",
+        "documentation": "/operators/ts_delta",
+        "level": "ALL"
+      },
+      {
+        "name": "ts_poly_regression",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_poly_regression(y, x, d, k = 1)",
+        "description": "Returns y - Ey, where Ey = x + x^2 + ... + x^k over d days; k must be specified as a keyword argument",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_target_tvr_decay",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_target_tvr_decay(x, lambda_min=0, lambda_max=1, target_tvr=0.1)",
+        "description": "Tune \"ts_decay\" to have a turnover equal to a certain target, with optimization weight range between lambda_min, lambda_max",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_target_tvr_delta_limit",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_target_tvr_delta_limit(x, y, lambda_min=0, lambda_max=1, target_tvr=0.1)",
+        "description": "Tune \"ts_delta_limit\" to have a turnover equal to a certain target with optimization weight range between lambda_min, lambda_max. Also, please be aware of the scaling for x and y. Besides setting y as adv20 or volume related data, you can also set y as a constant.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "ts_target_tvr_hump",
+        "category": "Time Series",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "ts_target_tvr_hump(x, lambda_min=0, lambda_max=1, target_tvr=0.1)",
+        "description": "Tune \"hump\" to have a turnover equal to a certain target with optimization weight range between lambda_min, lambda_max.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "winsorize",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "winsorize(x, std=4)",
+        "description": "Winsorize limits values in a data to within a specified number of standard deviations from the mean, reducing the impact of extreme outliers.",
+        "documentation": "/operators/winsorize",
+        "level": "ALL"
+      },
+      {
+        "name": "rank",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "rank(x, rate=2)",
+        "description": "Ranks the values of the input x among all instruments, returning numbers evenly spaced between 0.0 and 1.0. Useful for normalizing data and reducing the impact of outliers.",
+        "documentation": "/operators/rank",
+        "level": "ALL"
+      },
+      {
+        "name": "regression_proj",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "regression_proj(y, x)",
+        "description": "Conducts the cross-sectional regression on the stocks with Y as target and X as the independent variable",
+        "documentation": "/operators/regression_proj",
+        "level": null
+      },
+      {
+        "name": "zscore",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "zscore(x)",
+        "description": "Z-score is a numerical measurement that describes a value's relationship to the mean of a group of values. Z-score is measured in terms of standard deviations from the mean",
+        "documentation": "/operators/zscore",
+        "level": "ALL"
+      },
+      {
+        "name": "scale",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "scale(x, scale=1, longscale=1, shortscale=1)",
+        "description": "Scales the input so that the sum of absolute values across all instruments equals a specified book size. Allows separate scaling for long and short positions using optional parameters.",
+        "documentation": "/operators/scale",
+        "level": "ALL"
+      },
+      {
+        "name": "normalize",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "normalize(x, useStd = false, limit = 0.0)",
+        "description": "Centers a daily cross section by subtracting the market mean; optionally divide by the cross sectional standard deviation and clamp the result to [?limit, +limit]. NaNs are ignored in mean/std.",
+        "documentation": "/operators/normalize",
+        "level": "ALL"
+      },
+      {
+        "name": "rank_gmean_amean_diff",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "rank_gmean_amean_diff(input1, input2, input3,...)",
+        "description": "Operator returns difference of geometric mean and arithmetic mean of cross sectional rank of inputs",
+        "documentation": "/operators/rank_gmean_amean_diff",
+        "level": null
+      },
+      {
+        "name": "quantile",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "quantile(x, driver = gaussian, sigma = 1.0)",
+        "description": "Ranks and shifts a vector of Alpha values, then applies a chosen statistical distribution (gaussian, cauchy, or uniform) to reduce outliers. The sigma parameter controls the scale of the output.",
+        "documentation": "/operators/quantile",
+        "level": "ALL"
+      },
+      {
+        "name": "vector_proj",
+        "category": "Cross Sectional",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vector_proj(x, y)",
+        "description": "Returns vector projection of x onto y.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_kurtosis",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_kurtosis(x)",
+        "description": "Kurtosis of vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_min",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_min(x)",
+        "description": "Minimum value form vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_count",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_count(x)",
+        "description": "Number of elements in vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_sum",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_sum(x)",
+        "description": "Calculates the sum of all values in a vector field.",
+        "documentation": "/operators/vec_sum",
+        "level": "ALL"
+      },
+      {
+        "name": "vec_skewness",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_skewness(x)",
+        "description": "Skewness of vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_max",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_max(x)",
+        "description": "Maximum value form vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_avg",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_avg(x)",
+        "description": "Calculates the mean (average) of all elements in a vector field for each instrument and date, converting vector data to a single matrix value.",
+        "documentation": "/operators/vec_avg",
+        "level": "ALL"
+      },
+      {
+        "name": "vec_stddev",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_stddev(x)",
+        "description": "Standard Deviation of vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "vec_range",
+        "category": "Vector",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "vec_range(x)",
+        "description": "Difference between maximum and minimum element in vector field x",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "bucket",
+        "category": "Transformational",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "bucket(rank(x), range=“0, 1, 0.1”, skipBoth=False, NaNGroup=False)\r\nor\r\nbucket(rank(x), buckets = “2,5,6,7,10”, skipBoth=False, NaNGroup=False)",
+        "description": "The bucket operator creates custom groups by dividing data into buckets (ranges) based on ranked values of any data field. These buckets can then be used with group operators like group_neutralize, group_rank, group_zscore etc.",
+        "documentation": "/operators/bucket",
+        "level": "ALL"
+      },
+      {
+        "name": "tail",
+        "category": "Transformational",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "tail(x, lower = 0, upper = 0, newval = 0)",
+        "description": "If (x > lower AND x < upper) return newval, else return x. Lower, upper, newval should be constants",
+        "documentation": "/operators/tail",
+        "level": null
+      },
+      {
+        "name": "trade_when",
+        "category": "Transformational",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "trade_when(x, y, z)",
+        "description": "The trade_when operator changes Alpha values only when a specific condition is met, keeps previous values otherwise, and can close positions by assigning NaN under an exit condition. It is useful for reducing turnover and controlling when trades are executed.",
+        "documentation": "/operators/trade_when",
+        "level": "ALL"
+      },
+      {
+        "name": "generate_stats",
+        "category": "Transformational",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "generate_stats(alpha)",
+        "description": "The generate_stats() operator calculates Alpha statistics for each day in the IS period. It takes an input of selected Alphas with shape = (A x D x I). It outputs daily statistics for each Alpha with shape = (S x D x A), where S is the number of statistics calculated.",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "group_mean",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_mean(x, weight, group)",
+        "description": "Calculates the harmonic mean of a data field within each specified group.",
+        "documentation": "/operators/group_mean",
+        "level": "ALL"
+      },
+      {
+        "name": "group_rank",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_rank(x, group)",
+        "description": "Ranks each element within its group based on the input field, assigning a value between 0.0 and 1.0. This helps compare items within the same group, such as stocks in the same industry.",
+        "documentation": "/operators/group_rank",
+        "level": "ALL"
+      },
+      {
+        "name": "group_vector_proj",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_vector_proj(x,y,g)",
+        "description": "Similar to vector_proj(x, y) but x projection to y for each group which can be any classifier such as subindustry, industry, sector, etc.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "group_extra",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_extra(x, weight, group)",
+        "description": "Replaces NaN values by their corresponding group means.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "group_backfill",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_backfill(x, group, d, std = 4.0)",
+        "description": "Fills missing (NaN) values for instruments within the same group by calculating a winsorized mean of all non-NaN values over the past d days. The winsorized mean is computed by trimming extreme values based on a specified standard deviation multiplier (std, default 4.0).",
+        "documentation": "/operators/group_backfill",
+        "level": "ALL"
+      },
+      {
+        "name": "group_scale",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_scale(x, group)",
+        "description": "Normalizes values within each group to a range between 0 and 1, making data comparable across different groups.",
+        "documentation": "/operators/group_scale",
+        "level": "ALL"
+      },
+      {
+        "name": "group_count",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_count(x, group)",
+        "description": "Gives the number of instruments in the same group (e.g. sector) which have valid values of x. For example, x=1 gives the number of instruments in each group (without regard for whether any particular field has valid data). This operator improves weight coverage and may help to reduce drawdown risk.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "group_zscore",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_zscore(x, group)",
+        "description": "Calculates the Z-score of each value within its group, showing how far each value is from the group mean in terms of standard deviations. Useful for comparing values relative to their group.",
+        "documentation": "/operators/group_zscore",
+        "level": "ALL"
+      },
+      {
+        "name": "group_std_dev",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_std_dev(x, group)",
+        "description": "All elements in group equals to the standard deviation of the group.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "group_sum",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_sum(x, group)",
+        "description": "Sum of x for all instruments in the same group.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "group_neutralize",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_neutralize(x, group)",
+        "description": "Neutralizes Alpha values within each specified group by subtracting the group mean from each value. Groups can be industry, sector, country, or any custom grouping.",
+        "documentation": "/operators/group_neutralize",
+        "level": "ALL"
+      },
+      {
+        "name": "group_cartesian_product",
+        "category": "Group",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "group_cartesian_product(g1, g2)",
+        "description": "Merge two groups into one group. If originally there are len_1 and len_2 group indices in g1 and g2, there will be len_1 * len_2 indices in the new group.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "combo_a",
+        "category": "Group",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "combo_a(alpha, nlength = 250, mode = 'algo1')",
+        "description": "Combines multiple alpha signals into a single weighted output by balancing each alpha's historical return with its variability over the most recent nlength days.\r\n\r\nThe parameter mode selects one of the several weighted approaches (algo1, algo2, algo3), each of which handles the tradeoff between performance and stability differently.",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "inst_pnl",
+        "category": "Special",
+        "scope": [
+          "COMBO",
+          "REGULAR"
+        ],
+        "definition": "inst_pnl(x)",
+        "description": "Generate pnl per instruments. Please note that the use of the inst_pnl() operator in an Alpha Expression is considered as utilizing the pv1 dataset (Price Volume Data for Equity) since it relies on pv1 data for calculations.",
+        "documentation": null,
+        "level": null
+      },
+      {
+        "name": "self_corr",
+        "category": "Special",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "self_corr(input)",
+        "description": "Taking an input matrix of (D x N) with lookback=\"K\", producing an output matrix of (D x N x N), where each output(di, j, k) refers to correlation of input(di-K:di, j) and input(di-K:di, k). Outputs (D x N x N) from the input of (D x N)",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "in",
+        "category": "Special",
+        "scope": [
+          "SELECTION"
+        ],
+        "definition": "in",
+        "description": "in",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "universe_size",
+        "category": "Special",
+        "scope": [
+          "SELECTION"
+        ],
+        "definition": "universe_size",
+        "description": "universe_size",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_ir",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_ir(input)",
+        "description": "IR of values in the array *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_avg",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_avg(input, threshold=0)",
+        "description": "Average of non-NAN elements of d(..., :). Threshold: Minimum required number of valid (non-nan) values. If there is not enough valid values, then the output is nan. 0 means no limit.threshold (Default: 0) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_powersum",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_powersum(input, constant=2, precise=false)",
+        "description": "Sum of power, sum(power(x, constant)). Threshold: precise, whether calculate power precise if constant greater than 4, default false constant=<integer value>, default:2 *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_max",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_max(input)",
+        "description": "Maximum of elements of d(..., :) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_min",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_min(input)",
+        "description": "Minimum of elements of d(..., :) ***Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. \r\nIf input matrix is (D x N), output matrix (D x 1) \r\nIf input matrix is (D x N X N), output matrix (D x N X 1) \r\nThe defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_norm",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_norm(input)",
+        "description": "Absolute sum of number of element of d(..., :) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_sum",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_sum(input)",
+        "description": "Sum the number of element of d(..., :) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_range",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_range(input)",
+        "description": "Return the range of values in the array, return NAN if no valid value *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_percentage",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_percentage(input, percentage=0.5)",
+        "description": "Return the value of percentage in the sorted array: e.g., median value when percentage=0.5. Threshold: percentage=\"<value between 0 and 1>\" (Default: 0.5) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_skewness",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_skewness(input)",
+        "description": "Skewness of values in the array *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_count",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_count(input, threshold)",
+        "description": "Count the number of element of d(..., :) > threshold. threshold=<float> *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_kurtosis",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_kurtosis(input)",
+        "description": "Kurtosis of values in the array ***Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. \r\nIf input matrix is (D x N), output matrix (D x 1) \r\nIf input matrix is (D x N X N), output matrix (D x N X 1) \r\nThe defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_choose",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_choose(input, nth, ignoreNan=true)",
+        "description": "Choose the 'nth' element in the array, return NAN if not found. Threshold: nth=\"<the Nth element>\" (Required) ignoreNan=\"true|false\" (Default: true) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      },
+      {
+        "name": "reduce_stddev",
+        "category": "Reduce",
+        "scope": [
+          "COMBO"
+        ],
+        "definition": "reduce_stddev(input, threshold=0)",
+        "description": "Standard deviation of values in the array. Threshold: Minimum required percentage of valid (non-nan) values. If there is not enough valid values, then the output is NAN. 0 means no limit.threshold (Default: 0) *** Takes an input 2-D or 3-D matrix with user-defined reducer, producing an output matrix. *If input matrix is (D x N), output matrix (D x 1) *If input matrix is (D x N X N), output matrix (D x N X 1) *The defined function is applied on the last dimension : output(I) = reduce(input(I, 0:N)).",
+        "documentation": null,
+        "level": "ALL"
+      }
+    ]
+  }
+}

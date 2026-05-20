@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}/recordsets",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/recordsets",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1000,
+    "content_type": "text/html",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": "1.0",
+    "retries": 0,
+    "location": null,
+    "body": ""
+  }
+}

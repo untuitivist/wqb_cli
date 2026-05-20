@@ -1,0 +1,418 @@
+[
+  {
+    "path": "/achievements",
+    "dir": "achievements"
+  },
+  {
+    "path": "/achievements/{achievement_id}/icon",
+    "dir": "achievements/achievement_id/icon"
+  },
+  {
+    "path": "/agreements",
+    "dir": "agreements"
+  },
+  {
+    "path": "/alphas",
+    "dir": "alphas"
+  },
+  {
+    "path": "/alphas/distribution",
+    "dir": "alphas/distribution"
+  },
+  {
+    "path": "/alphas/lists",
+    "dir": "alphas/lists"
+  },
+  {
+    "path": "/alphas/sample-alpha-id-walkthrough",
+    "dir": "alphas/sample-alpha-id-walkthrough"
+  },
+  {
+    "path": "/alphas/super-selection",
+    "dir": "alphas/super-selection"
+  },
+  {
+    "path": "/alphas/unsubmitted",
+    "dir": "alphas/unsubmitted"
+  },
+  {
+    "path": "/alphas/{alpha_id}",
+    "dir": "alphas/alpha_id"
+  },
+  {
+    "path": "/alphas/{alpha_id}/alphas",
+    "dir": "alphas/alpha_id/alphas"
+  },
+  {
+    "path": "/alphas/{alpha_id}/check",
+    "dir": "alphas/alpha_id/check"
+  },
+  {
+    "path": "/alphas/{alpha_id}/correlations",
+    "dir": "alphas/alpha_id/correlations"
+  },
+  {
+    "path": "/alphas/{alpha_id}/correlations/power-pool",
+    "dir": "alphas/alpha_id/correlations/power-pool"
+  },
+  {
+    "path": "/alphas/{alpha_id}/correlations/prod",
+    "dir": "alphas/alpha_id/correlations/prod"
+  },
+  {
+    "path": "/alphas/{alpha_id}/correlations/self",
+    "dir": "alphas/alpha_id/correlations/self"
+  },
+  {
+    "path": "/alphas/{alpha_id}/performance-comparison",
+    "dir": "alphas/alpha_id/performance-comparison"
+  },
+  {
+    "path": "/alphas/{alpha_id}/recordsets",
+    "dir": "alphas/alpha_id/recordsets"
+  },
+  {
+    "path": "/alphas/{alpha_id}/recordsets/pnl",
+    "dir": "alphas/alpha_id/recordsets/pnl"
+  },
+  {
+    "path": "/alphas/{alpha_id}/recordsets/sharpe",
+    "dir": "alphas/alpha_id/recordsets/sharpe"
+  },
+  {
+    "path": "/alphas/{alpha_id}/recordsets/yearly-stats",
+    "dir": "alphas/alpha_id/recordsets/yearly-stats"
+  },
+  {
+    "path": "/alphas/{alpha_id}/submit",
+    "dir": "alphas/alpha_id/submit"
+  },
+  {
+    "path": "/authentication",
+    "dir": "authentication"
+  },
+  {
+    "path": "/authentication/brainlabs",
+    "dir": "authentication/brainlabs"
+  },
+  {
+    "path": "/authentication/persona",
+    "dir": "authentication/persona"
+  },
+  {
+    "path": "/authentication/support",
+    "dir": "authentication/support"
+  },
+  {
+    "path": "/authentication/workday",
+    "dir": "authentication/workday"
+  },
+  {
+    "path": "/captcha",
+    "dir": "captcha"
+  },
+  {
+    "path": "/competition-levels",
+    "dir": "competition-levels"
+  },
+  {
+    "path": "/competition-levels/{competition_level_id}/icon",
+    "dir": "competition-levels/competition_level_id/icon"
+  },
+  {
+    "path": "/competitions",
+    "dir": "competitions"
+  },
+  {
+    "path": "/competitions/{competition_id}",
+    "dir": "competitions/competition_id"
+  },
+  {
+    "path": "/competitions/{competition_id}/agreement",
+    "dir": "competitions/competition_id/agreement"
+  },
+  {
+    "path": "/configuration",
+    "dir": "configuration"
+  },
+  {
+    "path": "/consultant",
+    "dir": "consultant"
+  },
+  {
+    "path": "/consultant-datasets",
+    "dir": "consultant-datasets"
+  },
+  {
+    "path": "/consultant-information/consultant-dos-and-donts",
+    "dir": "consultant-information/consultant-dos-and-donts"
+  },
+  {
+    "path": "/consultant-information/consultant-faqs",
+    "dir": "consultant-information/consultant-faqs"
+  },
+  {
+    "path": "/consultant-information/osmosis-allocation-guide-consultants",
+    "dir": "consultant-information/osmosis-allocation-guide-consultants"
+  },
+  {
+    "path": "/consultant-information/visualization-tool",
+    "dir": "consultant-information/visualization-tool"
+  },
+  {
+    "path": "/consultant-program",
+    "dir": "consultant-program"
+  },
+  {
+    "path": "/consultant-program/{language}",
+    "dir": "consultant-program/language"
+  },
+  {
+    "path": "/consultant/boards",
+    "dir": "consultant/boards"
+  },
+  {
+    "path": "/consultant/boards/leader",
+    "dir": "consultant/boards/leader"
+  },
+  {
+    "path": "/consultant/summary",
+    "dir": "consultant/summary"
+  },
+  {
+    "path": "/data-categories",
+    "dir": "data-categories"
+  },
+  {
+    "path": "/data-fields",
+    "dir": "data-fields"
+  },
+  {
+    "path": "/data-fields/summary",
+    "dir": "data-fields/summary"
+  },
+  {
+    "path": "/data-fields/{field_id}",
+    "dir": "data-fields/field_id"
+  },
+  {
+    "path": "/data-sets",
+    "dir": "data-sets"
+  },
+  {
+    "path": "/data-sets/search",
+    "dir": "data-sets/search"
+  },
+  {
+    "path": "/data-sets/{dataset_id}",
+    "dir": "data-sets/dataset_id"
+  },
+  {
+    "path": "/errors/api/2/envelope",
+    "dir": "errors/api/2/envelope"
+  },
+  {
+    "path": "/events",
+    "dir": "events"
+  },
+  {
+    "path": "/events/{event_id}",
+    "dir": "events/event_id"
+  },
+  {
+    "path": "/messages",
+    "dir": "messages"
+  },
+  {
+    "path": "/operators",
+    "dir": "operators"
+  },
+  {
+    "path": "/search",
+    "dir": "search"
+  },
+  {
+    "path": "/simulations",
+    "dir": "simulations"
+  },
+  {
+    "path": "/simulations/super-selection",
+    "dir": "simulations/super-selection"
+  },
+  {
+    "path": "/simulations/{simulation_id}",
+    "dir": "simulations/simulation_id"
+  },
+  {
+    "path": "/suggest/examples",
+    "dir": "suggest/examples"
+  },
+  {
+    "path": "/suggest/expression",
+    "dir": "suggest/expression"
+  },
+  {
+    "path": "/suggest/fastexpr",
+    "dir": "suggest/fastexpr"
+  },
+  {
+    "path": "/suggest/fields",
+    "dir": "suggest/fields"
+  },
+  {
+    "path": "/tags",
+    "dir": "tags"
+  },
+  {
+    "path": "/teams",
+    "dir": "teams"
+  },
+  {
+    "path": "/tutorial-pages",
+    "dir": "tutorial-pages"
+  },
+  {
+    "path": "/tutorial-pages/{page_id}",
+    "dir": "tutorial-pages/page_id"
+  },
+  {
+    "path": "/tutorial/{tutorial_slug}",
+    "dir": "tutorial/tutorial_slug"
+  },
+  {
+    "path": "/tutorials",
+    "dir": "tutorials"
+  },
+  {
+    "path": "/user/email/change",
+    "dir": "user/email/change"
+  },
+  {
+    "path": "/user/email/reverify",
+    "dir": "user/email/reverify"
+  },
+  {
+    "path": "/user/email/verify",
+    "dir": "user/email/verify"
+  },
+  {
+    "path": "/user/password/change",
+    "dir": "user/password/change"
+  },
+  {
+    "path": "/user/password/forgot",
+    "dir": "user/password/forgot"
+  },
+  {
+    "path": "/user/password/reset",
+    "dir": "user/password/reset"
+  },
+  {
+    "path": "/user/token",
+    "dir": "user/token"
+  },
+  {
+    "path": "/users",
+    "dir": "users"
+  },
+  {
+    "path": "/users/self",
+    "dir": "users/self"
+  },
+  {
+    "path": "/users/self/achievements",
+    "dir": "users/self/achievements"
+  },
+  {
+    "path": "/users/self/activities/pyramid-alphas",
+    "dir": "users/self/activities/pyramid-alphas"
+  },
+  {
+    "path": "/users/self/activities/pyramid-multipliers",
+    "dir": "users/self/activities/pyramid-multipliers"
+  },
+  {
+    "path": "/users/self/activities/simulations",
+    "dir": "users/self/activities/simulations"
+  },
+  {
+    "path": "/users/self/agreements",
+    "dir": "users/self/agreements"
+  },
+  {
+    "path": "/users/self/alphas",
+    "dir": "users/self/alphas"
+  },
+  {
+    "path": "/users/self/alphas/summary",
+    "dir": "users/self/alphas/summary"
+  },
+  {
+    "path": "/users/self/consultant/summary",
+    "dir": "users/self/consultant/summary"
+  },
+  {
+    "path": "/users/self/consultant/tutorial/summary",
+    "dir": "users/self/consultant/tutorial/summary"
+  },
+  {
+    "path": "/users/self/messages",
+    "dir": "users/self/messages"
+  },
+  {
+    "path": "/users/self/messages/summary",
+    "dir": "users/self/messages/summary"
+  },
+  {
+    "path": "/users/self/pyramid/alphas",
+    "dir": "users/self/pyramid/alphas"
+  },
+  {
+    "path": "/users/self/teams",
+    "dir": "users/self/teams"
+  },
+  {
+    "path": "/users/self/tutorial/steps",
+    "dir": "users/self/tutorial/steps"
+  },
+  {
+    "path": "/users/self/tutorial/summary",
+    "dir": "users/self/tutorial/summary"
+  },
+  {
+    "path": "/users/{user_id}",
+    "dir": "users/user_id"
+  },
+  {
+    "path": "/users/{user_id}/achievements",
+    "dir": "users/user_id/achievements"
+  },
+  {
+    "path": "/users/{user_id}/activities",
+    "dir": "users/user_id/activities"
+  },
+  {
+    "path": "/users/{user_id}/alphas",
+    "dir": "users/user_id/alphas"
+  },
+  {
+    "path": "/users/{user_id}/competitions",
+    "dir": "users/user_id/competitions"
+  },
+  {
+    "path": "/users/{user_id}/settings/simulation",
+    "dir": "users/user_id/settings/simulation"
+  },
+  {
+    "path": "/video-courses",
+    "dir": "video-courses"
+  },
+  {
+    "path": "/alphas/{alpha_id}/recordsets/{record_set_name}",
+    "dir": "alphas/alpha_id/recordsets/record_set_name"
+  },
+  {
+    "path": "/users/{user_id}/activities/diversity",
+    "dir": "users/user_id/activities/diversity"
+  }
+]

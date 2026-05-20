@@ -1,0 +1,226 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/self/consultant/tutorial/summary",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/consultant/tutorial/summary",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1473,
+    "content_type": "application/json",
+    "allow": "GET, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "active": true,
+      "currentStep": 17,
+      "status": "IN_PROGRESS",
+      "steps": [
+        {
+          "id": 0,
+          "name": "Different type of alphas",
+          "slug": "different-type-of-alphas",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 1,
+          "name": "Power Pool Alpha",
+          "slug": "power-pool-alpha",
+          "hint": "Utilize data fields with strong raw signals.",
+          "answer": "rank(ts_delta(mdl110_growth,120))+rank(ts_delta(mdl110_analyst_sentiment,120))",
+          "task": "Create a single alpha that meets all of the following criteria simultaneously:<ul><li>Uses 8 or fewer operators.</li><li>Uses 3 or fewer data fields.</li><li>Achieves a Sharpe ratio of 1.0 or higher.</li><li>Passes other submission criteria, including Fitness, Turnover, Weight Distribution, and the Sub-universe test.</li><li>Has a self-correlation below 0.5 when compared to the alphas in your Power Pool.</li></ul>",
+          "visited": true,
+          "requirements": "submit",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 2,
+          "name": "ATOM",
+          "slug": "atom",
+          "hint": "Fields such as market, sector, country, and currency are considered support data fields. Therefore, using these data fields does not classify the Alpha as multi-dataset Alpha.",
+          "answer": "group_normalize(quantile(star_val_industry_rank),group_cartesian_product(exchange,industry))<br>(Region: GLB, Universe: MINVOL1M, Decay:0, Neutralization: Industry)",
+          "task": "Simulate an alpha using just 1 dataset. Check whether the alpha passes the 2-year Sharpe test. If your ATOM Alpha passes all the submission criteria, please submit it.<br>Criteria:<br><ul><li>Simulate an alpha using just 1 dataset. Support data fields are not counted as additional dataset.</li><li>Check prod correlation of simulated alpha and check whether it is below 0.7.</li></ul>",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 3,
+          "name": "Regular Alpha",
+          "slug": "regular-alpha",
+          "hint": null,
+          "answer": null,
+          "task": "Simulate a regular alpha, and check whether it passes IS-ladder test and prod-correlation test. If your regular alpha passes all the submission criteria, please submit it.",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 4,
+          "name": "SuperAlpha",
+          "slug": "superalpha",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 5,
+          "name": "Backtesting period",
+          "slug": "backtesting-period",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 6,
+          "name": "Multi-simulations & Visualization",
+          "slug": "multi-simulations-visualization",
+          "hint": null,
+          "answer": null,
+          "task": "You’ll see a Visualization checkbox next to the Simulate button.<br>Check this box before running your experiment!<br>In the result window, you can find more detailed information in the dropdown menu located at the top right of the Chart section. This time, try to browse \"PnL By Capitalization\".",
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 7,
+          "name": "BRAIN API & ACE library",
+          "slug": "brain-api-ace-library",
+          "hint": null,
+          "answer": null,
+          "task": "With BRAIN API and ACE library, try simulating 200 simulations from now.",
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 8,
+          "name": "Risk Neutralization",
+          "slug": "risk-neutralization",
+          "hint": null,
+          "answer": null,
+          "task": "This time, let's simulate alphas using risk neutralization. Try selecting neutralization options other than 'None,' 'Market,' 'Sector,' 'Industry,' and 'Subindustry' in the Settings section.",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 9,
+          "name": "Max Trade",
+          "slug": "max-trade",
+          "hint": null,
+          "answer": null,
+          "task": "Create an alpha with the Max Trade option turned 'On'",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 10,
+          "name": "PnL curves",
+          "slug": "pnl-curves",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 11,
+          "name": "New Regions: Europe",
+          "slug": "new-regions-europe",
+          "hint": null,
+          "answer": null,
+          "task": "Simulate an Alpha in EUR region",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 12,
+          "name": "New Regions: Asia",
+          "slug": "new-regions-asia",
+          "hint": null,
+          "answer": null,
+          "task": "Simulate an Alpha in ASI region",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 13,
+          "name": "New Regions: Global",
+          "slug": "new-regions-global",
+          "hint": null,
+          "answer": null,
+          "task": "Simulate an Alpha in GLB region",
+          "visited": true,
+          "requirements": "simulate",
+          "status": "NOT_STARTED"
+        },
+        {
+          "id": 14,
+          "name": "BRAIN Labs",
+          "slug": "brain-labs",
+          "hint": null,
+          "answer": null,
+          "task": "<ul><li>Try accessing BRAIN Labs, it is at the top of the screen.</li><li>Sign in to BRAIN Labs.</li></ul>",
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 15,
+          "name": "Consultant Payments",
+          "slug": "consultant-payments",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 16,
+          "name": "Themes & Pyramid Multipliers",
+          "slug": "themes-pyramid-multipliers",
+          "hint": null,
+          "answer": null,
+          "task": "Try achieving 2 pyramids.",
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        },
+        {
+          "id": 17,
+          "name": "Exclusive events and support for Consultants",
+          "slug": "exclusive-events-and-support-for-consultants",
+          "hint": null,
+          "answer": null,
+          "task": null,
+          "visited": true,
+          "requirements": null,
+          "status": "COMPLETED"
+        }
+      ]
+    }
+  }
+}

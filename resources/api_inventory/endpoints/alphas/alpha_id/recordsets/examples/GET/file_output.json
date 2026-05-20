@@ -1,0 +1,48 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}/recordsets",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/recordsets",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 960,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "count": 5,
+      "next": null,
+      "previous": null,
+      "results": [
+        {
+          "name": "pnl",
+          "title": "PnL"
+        },
+        {
+          "name": "sharpe",
+          "title": "Sharpe"
+        },
+        {
+          "name": "turnover",
+          "title": "Turnover"
+        },
+        {
+          "name": "daily-pnl",
+          "title": "Daily PnL"
+        },
+        {
+          "name": "yearly-stats",
+          "title": "Yearly Stats"
+        }
+      ]
+    }
+  }
+}

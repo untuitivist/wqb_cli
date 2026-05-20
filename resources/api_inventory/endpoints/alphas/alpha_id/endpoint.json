@@ -1,0 +1,240 @@
+{
+  "path": "/alphas/{alpha_id}",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}",
+  "methods": [
+    "GET",
+    "PATCH"
+  ],
+  "source": [
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Alpha details or property patch. / Discovered from platform frontend bundle.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": "PATCH updates alpha properties.",
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 348,
+      "content_type": "application/json",
+      "response_shape": {
+        "author": "str",
+        "category": "null",
+        "classifications": [
+          {
+            "id": "str",
+            "name": "str"
+          }
+        ],
+        "color": "null",
+        "competitions": "null",
+        "dateCreated": "str",
+        "dateModified": "str",
+        "dateSubmitted": "null",
+        "favorite": "bool",
+        "grade": "null",
+        "hidden": "bool",
+        "id": "str",
+        "is": {
+          "bookSize": "int",
+          "checks": [
+            {
+              "limit": "float",
+              "name": "str",
+              "result": "str",
+              "value": "float"
+            }
+          ],
+          "drawdown": "float",
+          "fitness": "float",
+          "investabilityConstrained": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "longCount": "int",
+          "margin": "float",
+          "pnl": "int",
+          "returns": "float",
+          "riskNeutralized": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "sharpe": "float",
+          "shortCount": "int",
+          "startDate": "str",
+          "turnover": "float"
+        },
+        "name": "null",
+        "origin": "str",
+        "os": "null",
+        "osmosisPoints": "null",
+        "prod": "null",
+        "pyramidThemes": "null",
+        "pyramids": "null",
+        "regular": {
+          "code": "str",
+          "description": "null",
+          "operatorCount": "int"
+        },
+        "settings": {
+          "decay": "int",
+          "delay": "int",
+          "endDate": "str",
+          "instrumentType": "str",
+          "language": "str",
+          "maxPosition": "str",
+          "maxTrade": "str",
+          "nanHandling": "str",
+          "neutralization": "str",
+          "pasteurization": "str",
+          "region": "str",
+          "startDate": "str",
+          "testPeriod": "str",
+          "truncation": "float",
+          "unitHandling": "str",
+          "universe": "str",
+          "visualization": "bool"
+        },
+        "stage": "str",
+        "status": "str",
+        "tags": [],
+        "team": "null",
+        "test": {
+          "bookSize": "int",
+          "drawdown": "float",
+          "fitness": "float",
+          "investabilityConstrained": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "longCount": "int",
+          "margin": "float",
+          "pnl": "int",
+          "returns": "float",
+          "riskNeutralized": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "sharpe": "float",
+          "shortCount": "int",
+          "startDate": "str",
+          "turnover": "float"
+        },
+        "themes": "null",
+        "train": {
+          "bookSize": "int",
+          "drawdown": "float",
+          "fitness": "float",
+          "investabilityConstrained": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "longCount": "int",
+          "margin": "float",
+          "pnl": "int",
+          "returns": "float",
+          "riskNeutralized": {
+            "bookSize": "int",
+            "drawdown": "float",
+            "fitness": "float",
+            "longCount": "int",
+            "margin": "float",
+            "pnl": "int",
+            "returns": "float",
+            "sharpe": "float",
+            "shortCount": "int",
+            "turnover": "float"
+          },
+          "sharpe": "float",
+          "shortCount": "int",
+          "startDate": "str",
+          "turnover": "float"
+        },
+        "type": "str"
+      },
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "PATCH",
+      "resolved_path": "/alphas/vR5p8vqb",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "PATCH may mutate remote state; not executed by inventory test."
+    }
+  ],
+  "official_doc": {
+    "summary": "获取 alpha 详情。alpha id 通常来自 simulation 完成结果里的 alpha 字段。",
+    "methods": {
+      "GET": {
+        "description": "返回 alpha 的 type、settings、regular/combo/selection、is/os/prod 等信息。"
+      }
+    }
+  }
+}

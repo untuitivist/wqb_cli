@@ -1,0 +1,296 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1113,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "vR5p8vqb",
+      "type": "REGULAR",
+      "author": "JL40454",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 0,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "OFF",
+        "maxTrade": "OFF",
+        "maxPosition": "OFF",
+        "language": "FASTEXPR",
+        "visualization": false,
+        "startDate": "2014-01-01",
+        "endDate": "2023-12-31",
+        "testPeriod": "P1Y6M"
+      },
+      "regular": {
+        "code": "ts_rank(-ts_std_dev(ts_delta(close, 5), 20) * rank(volume), 60)",
+        "description": null,
+        "operatorCount": 6
+      },
+      "dateCreated": "2026-05-18T12:46:14-04:00",
+      "dateSubmitted": null,
+      "dateModified": "2026-05-18T12:46:14-04:00",
+      "name": null,
+      "favorite": false,
+      "hidden": false,
+      "color": null,
+      "category": null,
+      "tags": [],
+      "classifications": [
+        {
+          "id": "DATA_USAGE:SINGLE_DATA_SET",
+          "name": "Single Data Set Alpha"
+        }
+      ],
+      "grade": null,
+      "stage": "IS",
+      "status": "UNSUBMITTED",
+      "is": {
+        "pnl": -19562,
+        "bookSize": 20000000,
+        "longCount": 1552,
+        "shortCount": 1506,
+        "turnover": 0.5856,
+        "returns": -0.0002,
+        "drawdown": 0.1779,
+        "margin": -1e-06,
+        "sharpe": -0.01,
+        "fitness": -0.0,
+        "startDate": "2014-01-01",
+        "investabilityConstrained": {
+          "pnl": 161600,
+          "bookSize": 20000000,
+          "longCount": 1584,
+          "shortCount": 1545,
+          "turnover": 0.3098,
+          "returns": 0.0016,
+          "drawdown": 0.1467,
+          "margin": 1e-05,
+          "fitness": 0.0,
+          "sharpe": 0.04
+        },
+        "riskNeutralized": {
+          "pnl": 451474,
+          "bookSize": 20000000,
+          "longCount": 1552,
+          "shortCount": 1506,
+          "turnover": 0.5856,
+          "returns": 0.0045,
+          "drawdown": 0.0774,
+          "margin": 1.5e-05,
+          "fitness": 0.02,
+          "sharpe": 0.22
+        },
+        "checks": [
+          {
+            "name": "LOW_SHARPE",
+            "result": "FAIL",
+            "limit": 1.58,
+            "value": -0.01
+          },
+          {
+            "name": "LOW_FITNESS",
+            "result": "FAIL",
+            "limit": 1.0,
+            "value": -0.0
+          },
+          {
+            "name": "LOW_TURNOVER",
+            "result": "PASS",
+            "limit": 0.01,
+            "value": 0.5856
+          },
+          {
+            "name": "HIGH_TURNOVER",
+            "result": "PASS",
+            "limit": 0.7,
+            "value": 0.5856
+          },
+          {
+            "name": "CONCENTRATED_WEIGHT",
+            "result": "PASS"
+          },
+          {
+            "name": "LOW_SUB_UNIVERSE_SHARPE",
+            "result": "FAIL",
+            "limit": -0.0,
+            "value": -0.04
+          },
+          {
+            "name": "REVERSION_COMPONENT",
+            "result": "WARNING",
+            "message": "Alpha expression includes a reversion component so we may not accept these alphas in the future, try working on different alpha ideas"
+          },
+          {
+            "name": "SELF_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "DATA_DIVERSITY",
+            "result": "PENDING"
+          },
+          {
+            "name": "PROD_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "REGULAR_SUBMISSION",
+            "result": "PENDING"
+          },
+          {
+            "name": "HT_TURNOVER",
+            "result": "PASS",
+            "limit": 0.2,
+            "value": 0.5856
+          },
+          {
+            "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+            "result": "WARNING",
+            "limit": 0.75,
+            "value": -4.5
+          },
+          {
+            "name": "LOW_2Y_SHARPE",
+            "result": "FAIL",
+            "value": -0.38,
+            "limit": 1.58
+          },
+          {
+            "result": "PASS",
+            "name": "MATCHES_PYRAMID",
+            "effective": 1,
+            "multiplier": 1.1,
+            "pyramids": [
+              {
+                "name": "USA/D1/PV",
+                "multiplier": 1.1
+              }
+            ]
+          },
+          {
+            "result": "WARNING",
+            "name": "MATCHES_THEMES",
+            "themes": [
+              {
+                "id": "lyvRJ3y",
+                "multiplier": 1.0,
+                "name": "All regions/D0 Power Pool May`26"
+              },
+              {
+                "id": "q4O05qy",
+                "multiplier": 1.5,
+                "name": "MEA Region Theme"
+              },
+              {
+                "id": "ZywpJvB",
+                "multiplier": 3.0,
+                "name": "After Cost HTVR Theme"
+              }
+            ]
+          }
+        ]
+      },
+      "os": null,
+      "train": {
+        "pnl": 365296,
+        "bookSize": 20000000,
+        "longCount": 1545,
+        "shortCount": 1505,
+        "turnover": 0.5876,
+        "returns": 0.0043,
+        "drawdown": 0.1546,
+        "margin": 1.5e-05,
+        "fitness": 0.01,
+        "sharpe": 0.12,
+        "startDate": "2014-01-01",
+        "investabilityConstrained": {
+          "pnl": 251848,
+          "bookSize": 20000000,
+          "longCount": 1580,
+          "shortCount": 1542,
+          "turnover": 0.3077,
+          "returns": 0.003,
+          "drawdown": 0.1467,
+          "margin": 1.9e-05,
+          "fitness": 0.01,
+          "sharpe": 0.07
+        },
+        "riskNeutralized": {
+          "pnl": 537899,
+          "bookSize": 20000000,
+          "longCount": 1545,
+          "shortCount": 1505,
+          "turnover": 0.5876,
+          "returns": 0.0064,
+          "drawdown": 0.0774,
+          "margin": 2.2e-05,
+          "fitness": 0.03,
+          "sharpe": 0.32
+        }
+      },
+      "test": {
+        "pnl": -397201,
+        "bookSize": 20000000,
+        "longCount": 1590,
+        "shortCount": 1512,
+        "turnover": 0.5744,
+        "returns": -0.0262,
+        "drawdown": 0.0975,
+        "margin": -9.1e-05,
+        "fitness": -0.13,
+        "sharpe": -0.59,
+        "startDate": "2022-06-30",
+        "investabilityConstrained": {
+          "pnl": -104211,
+          "bookSize": 20000000,
+          "longCount": 1606,
+          "shortCount": 1566,
+          "turnover": 0.3219,
+          "returns": -0.0069,
+          "drawdown": 0.0794,
+          "margin": -4.3e-05,
+          "fitness": -0.02,
+          "sharpe": -0.13
+        },
+        "riskNeutralized": {
+          "pnl": -93674,
+          "bookSize": 20000000,
+          "longCount": 1590,
+          "shortCount": 1512,
+          "turnover": 0.5744,
+          "returns": -0.0062,
+          "drawdown": 0.0442,
+          "margin": -2.2e-05,
+          "fitness": -0.03,
+          "sharpe": -0.28
+        }
+      },
+      "prod": null,
+      "competitions": null,
+      "themes": null,
+      "pyramids": null,
+      "pyramidThemes": null,
+      "team": null,
+      "osmosisPoints": null,
+      "origin": "PLATFORM"
+    }
+  }
+}

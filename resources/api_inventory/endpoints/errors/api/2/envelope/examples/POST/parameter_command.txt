@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /errors/api/2/envelope --param sentry_client=sample --param sentry_key=sample --param sentry_version=sample --execute --json "{\"event_id\":\"example\",\"timestamp\":\"2026-05-19T19:19:07.909062+00:00\",\"exception\":{\"values\":[{\"type\":\"ExampleError\",\"value\":\"example request\"}]}}"

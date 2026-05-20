@@ -1,0 +1,9 @@
+{
+  "path_vars": {},
+  "params": {
+    "limit": 1,
+    "offset": 0,
+    "order": "sample",
+    "start>": "sample"
+  }
+}

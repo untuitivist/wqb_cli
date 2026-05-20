@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call OPTIONS /users/{user_id}/alphas --var user_id=JL40454

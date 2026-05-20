@@ -1,0 +1,65 @@
+{
+  "path": "/teams",
+  "url_template": "https://api.worldquantbrain.com/teams",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Teams. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/teams",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "POST, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "status_code": 405,
+    "reason": "Method Not Allowed",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Method \"GET\" not allowed."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "POST, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 259
+  },
+  "test_results": [
+    {
+      "path": "/teams",
+      "method": "GET",
+      "resolved_path": "/teams",
+      "url": "https://api.worldquantbrain.com/teams",
+      "executed": true,
+      "status": "tested",
+      "status_code": 405,
+      "reason": "Method Not Allowed",
+      "ok": false,
+      "elapsed_ms": 260,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": "POST, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

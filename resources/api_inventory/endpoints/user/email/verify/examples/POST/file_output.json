@@ -1,0 +1,26 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/user/email/verify",
+  "request": {
+    "method": "POST",
+    "url": "https://api.worldquantbrain.com/user/email/verify",
+    "params": {},
+    "mutating": true
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 1002,
+    "content_type": "application/json",
+    "allow": "POST, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "example": [
+        "Unexpected property."
+      ]
+    }
+  }
+}

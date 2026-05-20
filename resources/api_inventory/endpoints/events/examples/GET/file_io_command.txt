@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /events --input api_inventory\endpoints\events\examples\GET\input.json --output api_inventory\endpoints\events\examples\GET\file_output.json

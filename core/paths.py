@@ -1,0 +1,25 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+
+PACKAGE_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = PACKAGE_ROOT.parent
+LOCAL_ROOT = PACKAGE_ROOT / "local"
+RESOURCES_ROOT = PACKAGE_ROOT / "resources"
+
+DEFAULT_ENV_PATH = LOCAL_ROOT / ".env"
+LEGACY_ENV_PATH = REPO_ROOT / ".env"
+
+DEFAULT_CONFIG_PATH = LOCAL_ROOT / "config.json"
+
+DEFAULT_AUTH_DIR = LOCAL_ROOT / "auth"
+DEFAULT_COOKIE_PATH = DEFAULT_AUTH_DIR / "cookies.json"
+LEGACY_COOKIE_PATH = REPO_ROOT / ".wqb_cli_auth" / "cookies.json"
+
+DEFAULT_COMMUNITY_DIR = LOCAL_ROOT / "community"
+DEFAULT_COMMUNITY_SQLITE_PATH = DEFAULT_COMMUNITY_DIR / "community.sqlite3"
+
+DEFAULT_SCOPE_DIR = LOCAL_ROOT / "data_all"
+DEFAULT_SCOPE_INFO_PATH = DEFAULT_SCOPE_DIR / "info_data.bin"
+DEFAULT_SCOPE_ALL_DATA_PATH = DEFAULT_SCOPE_DIR / "all_data.pickle"

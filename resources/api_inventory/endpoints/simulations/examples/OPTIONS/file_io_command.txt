@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call OPTIONS /simulations --input api_inventory\endpoints\simulations\examples\OPTIONS\input.json --output api_inventory\endpoints\simulations\examples\OPTIONS\file_output.json

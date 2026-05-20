@@ -1,0 +1,76 @@
+{
+  "path": "/alphas/{alpha_id}/recordsets/sharpe",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/recordsets/sharpe",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Sharpe recordset.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/recordsets/sharpe",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb/recordsets/sharpe",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/recordsets/sharpe",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 334,
+      "content_type": "application/json",
+      "response_shape": {
+        "records": [
+          [
+            "str"
+          ]
+        ],
+        "schema": {
+          "name": "str",
+          "properties": [
+            {
+              "name": "str",
+              "title": "str",
+              "type": "str"
+            }
+          ],
+          "title": "str"
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ],
+  "official_doc": {
+    "summary": "获取指定 record set。",
+    "methods": {
+      "GET": {
+        "description": "不同 record set 返回不同 schema 与 records。records 是紧凑表格编码。",
+        "recordset_format": {
+          "schema": "name, title, properties[]",
+          "records": "array of row arrays matching schema.properties"
+        }
+      }
+    }
+  }
+}

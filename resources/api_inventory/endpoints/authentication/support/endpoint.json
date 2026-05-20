@@ -1,0 +1,60 @@
+{
+  "path": "/authentication/support",
+  "url_template": "https://api.worldquantbrain.com/authentication/support",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "query": "return_to="
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/authentication/support",
+    "usable": false,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 403,
+    "reason": "Forbidden",
+    "response_shape": "text",
+    "response_sample": "<!DOCTYPE html><html lang=\"en-US\"><head><title>Just a moment...</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><meta http-equiv=\"X-UA-Compatible\" content=\"IE=Edge\"><meta name=\"robots\" content=\"noindex,nofollow\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta http-equiv=\"content-security-policy\" content=\"default-src 'none'; script-src 'nonce-ZzYoXXAzzK81PWPGsR7Gkc' 'unsafe-eval' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'unsafe-inline'; img-src 'self' https://challenges.cloudflare.com; connect-src 'self' https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com blob:; child-src 'self' https://challenges.cloudflare.com blob:; worker-src blob:; form-action http: https:; base-uri 'self'\"><style>*{box-sizing:border-box;margin:0;padding:0}html{line-height:1.15;-webkit-text-size-adjust:100%;color:#313131;font-family:system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica ",
+    "headers": {
+      "Content-Type": "text/html; charset=UTF-8"
+    },
+    "error": null,
+    "elapsed_ms": 2772
+  },
+  "test_results": [
+    {
+      "path": "/authentication/support",
+      "method": "GET",
+      "resolved_path": "/authentication/support",
+      "url": "https://api.worldquantbrain.com/authentication/support",
+      "executed": true,
+      "status": "tested",
+      "status_code": 302,
+      "reason": "Found",
+      "ok": true,
+      "elapsed_ms": 1511,
+      "content_type": "",
+      "response_shape": null,
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": true
+    }
+  ]
+}

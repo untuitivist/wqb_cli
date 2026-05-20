@@ -1,0 +1,33 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/data-fields",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/data-fields",
+    "params": {
+      "dataset.id": "sample",
+      "search": "analyst",
+      "limit": 1,
+      "offset": 0,
+      "delay": "sample",
+      "instrumentType": "sample",
+      "region": "sample",
+      "universe": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 1239,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      "Invalid query"
+    ]
+  }
+}

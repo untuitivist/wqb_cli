@@ -1,0 +1,95 @@
+{
+  "path": "/users/self/tutorial/summary",
+  "url_template": "https://api.worldquantbrain.com/users/self/tutorial/summary",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Tutorial summary state. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/tutorial/summary",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, POST, PATCH, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "active": "bool",
+      "expired": "bool",
+      "startDatetime": "NoneType",
+      "completionDate": "NoneType",
+      "expireDatetime": "NoneType",
+      "currentStep": "NoneType",
+      "maxUnlockedStep": "NoneType",
+      "totalSteps": "int",
+      "status": "NoneType",
+      "notificationSlug": "NoneType"
+    },
+    "response_sample": {
+      "active": false,
+      "expired": false,
+      "startDatetime": null,
+      "completionDate": null,
+      "expireDatetime": null,
+      "currentStep": null,
+      "maxUnlockedStep": null,
+      "totalSteps": 27,
+      "status": null,
+      "notificationSlug": null
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, POST, PATCH, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 273
+  },
+  "test_results": [
+    {
+      "path": "/users/self/tutorial/summary",
+      "method": "GET",
+      "resolved_path": "/users/self/tutorial/summary",
+      "url": "https://api.worldquantbrain.com/users/self/tutorial/summary",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 271,
+      "content_type": "application/json",
+      "response_shape": {
+        "active": "bool",
+        "completionDate": "null",
+        "currentStep": "null",
+        "expireDatetime": "null",
+        "expired": "bool",
+        "maxUnlockedStep": "null",
+        "notificationSlug": "null",
+        "startDatetime": "null",
+        "status": "null",
+        "totalSteps": "int"
+      },
+      "allow": "GET, POST, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

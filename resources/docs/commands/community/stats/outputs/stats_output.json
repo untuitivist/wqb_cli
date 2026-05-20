@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "sqlite_path": "U:\\Project\\MainCode\\3.Work\\WQB\\wqb_cli\\wqb_cli\\local\\community\\community.sqlite3",
+  "counts": {
+    "forum_communities": 11,
+    "forum_topics": 6333,
+    "forum_comments": 77981,
+    "docs_categories": 16,
+    "docs_sections": 52,
+    "docs_articles": 370
+  }
+}

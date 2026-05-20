@@ -1,0 +1,46 @@
+{
+  "ok": true,
+  "scope": "USA_1",
+  "table": "os",
+  "total": 85921,
+  "offset": 0,
+  "limit": 3,
+  "filters": {
+    "datafield": "volume",
+    "dataset": null
+  },
+  "columns": [
+    "id",
+    "sharpe",
+    "fitness",
+    "turnover",
+    "margin",
+    "osISSharpeRatio"
+  ],
+  "rows": [
+    {
+      "id": "Wj8njr7k",
+      "sharpe": -1.81,
+      "fitness": -1.33,
+      "turnover": 0.0719,
+      "margin": -0.001889,
+      "osISSharpeRatio": -1.08
+    },
+    {
+      "id": "A1KzJ9Xw",
+      "sharpe": 0.7,
+      "fitness": 0.31,
+      "turnover": 0.1675,
+      "margin": 0.000399,
+      "osISSharpeRatio": 0.43
+    },
+    {
+      "id": "RRX66n9o",
+      "sharpe": 0.63,
+      "fitness": 0.26,
+      "turnover": 0.0758,
+      "margin": 0.000566,
+      "osISSharpeRatio": 0.33
+    }
+  ]
+}

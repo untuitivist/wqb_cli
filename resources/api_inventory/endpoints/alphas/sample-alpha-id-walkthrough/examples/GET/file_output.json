@@ -1,0 +1,24 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/alphas/sample-alpha-id-walkthrough",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/sample-alpha-id-walkthrough",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 404,
+    "reason": "Not Found",
+    "elapsed_ms": 998,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "detail": "Not found."
+    }
+  }
+}

@@ -1,0 +1,55 @@
+﻿{
+  "ok": true,
+  "endpoint": "/simulations/{simulation_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/simulations/3RTDPvcRM4JtczS18UmrIqML",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1083,
+    "content_type": "application/json",
+    "allow": "GET, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": 900,
+    "location": null,
+    "body": {
+      "id": "3RTDPvcRM4JtczS18UmrIqML",
+      "parent": "9Xb69y251KaGqyWKGddux",
+      "type": "REGULAR",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "USA",
+        "universe": "TOP3000",
+        "delay": 1,
+        "decay": 4,
+        "neutralization": "SUBINDUSTRY",
+        "truncation": 0.08,
+        "pasteurization": "ON",
+        "unitHandling": "VERIFY",
+        "nanHandling": "OFF",
+        "maxTrade": "OFF",
+        "maxPosition": "OFF",
+        "language": "FASTEXPR",
+        "visualization": false
+      },
+      "regular": "-rank(ts_delta(close, 1))",
+      "status": "WARNING",
+      "message": "Alpha expression includes a reversion component so we may not accept these alphas in the future, try working on different alpha ideas. <linkToCommonErrorMessages>Learn more</linkToCommonErrorMessages>",
+      "location": {
+        "type": "REVERSION_COMPONENT",
+        "property": "regular"
+      },
+      "links": {
+        "linkToCommonErrorMessages": "https://support.worldquantbrain.com/hc/en-us/articles/18423410021783--BRAIN-TIPS-Troubleshooting-common-error-messages"
+      },
+      "alpha": "58L1gX66"
+    }
+  }
+}

@@ -1,0 +1,103 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}/recordsets",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/YPNOpk3W/recordsets",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 5315,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 3,
+    "location": null,
+    "body": {
+      "count": 19,
+      "next": null,
+      "previous": null,
+      "results": [
+        {
+          "name": "pnl",
+          "title": "PnL"
+        },
+        {
+          "name": "sharpe",
+          "title": "Sharpe"
+        },
+        {
+          "name": "turnover",
+          "title": "Turnover"
+        },
+        {
+          "name": "daily-pnl",
+          "title": "Daily PnL"
+        },
+        {
+          "name": "yearly-stats",
+          "title": "Yearly Stats"
+        },
+        {
+          "name": "coverage",
+          "title": "Coverage of Universe"
+        },
+        {
+          "name": "coverage-by-industry",
+          "title": "Coverage by Industry"
+        },
+        {
+          "name": "coverage-by-sector",
+          "title": "Coverage by Sector"
+        },
+        {
+          "name": "average-size-by-industry",
+          "title": "Average Size by Industry"
+        },
+        {
+          "name": "average-size-by-sector",
+          "title": "Average Size by Sector"
+        },
+        {
+          "name": "average-size-by-capitalization",
+          "title": "Average Size by Capitalization"
+        },
+        {
+          "name": "pnl-by-industry",
+          "title": "PnL by Industry"
+        },
+        {
+          "name": "pnl-by-sector",
+          "title": "PnL by Sector"
+        },
+        {
+          "name": "pnl-by-capitalization",
+          "title": "PnL by Capitalization"
+        },
+        {
+          "name": "sharpe-by-industry",
+          "title": "Sharpe by Industry"
+        },
+        {
+          "name": "sharpe-by-sector",
+          "title": "Sharpe by Sector"
+        },
+        {
+          "name": "sharpe-by-capitalization",
+          "title": "Sharpe by Capitalization"
+        },
+        {
+          "name": "average-value-by-industry",
+          "title": "Abs Average Value by Industry"
+        },
+        {
+          "name": "average-value-by-sector",
+          "title": "Abs Average Value by Sector"
+        }
+      ]
+    }
+  }
+}

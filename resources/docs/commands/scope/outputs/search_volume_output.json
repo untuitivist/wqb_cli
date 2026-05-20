@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "scope": "USA_1",
+  "group": "datafield",
+  "query": "volume",
+  "results": [
+    {
+      "name": "volume",
+      "sharpe_ratio": 0.37148093003263366,
+      "count": 84933,
+      "fitness_ratio": 0.36256384530408403
+    },
+    {
+      "name": "snt_social_volume",
+      "sharpe_ratio": 0.2422168248558901,
+      "count": 5141,
+      "fitness_ratio": 0.2537574213142394
+    },
+    {
+      "name": "mdl10_avg_daily_volume",
+      "sharpe_ratio": 0.3106512966549958,
+      "count": 2127,
+      "fitness_ratio": 0.2840221482131537
+    },
+    {
+      "name": "volume_10wks",
+      "sharpe_ratio": 0.4651767038811137,
+      "count": 1729,
+      "fitness_ratio": 0.44086457799232626
+    },
+    {
+      "name": "shrt36_totalvolume",
+      "sharpe_ratio": 0.3142437131449546,
+      "count": 1516,
+      "fitness_ratio": 0.29365894575283147
+    },
+    {
+      "name": "mcr38_volume",
+      "sharpe_ratio": 0.5452752266669518,
+      "count": 1425,
+      "fitness_ratio": 0.5467307247196324
+    },
+    {
+      "name": "mdl10_volume",
+      "sharpe_ratio": 0.41253429682017206,
+      "count": 1220,
+      "fitness_ratio": 0.36487629303517416
+    },
+    {
+      "name": "im_average_daily_volume",
+      "sharpe_ratio": 0.37165517148184357,
+      "count": 1215,
+      "fitness_ratio": 0.3648450435146118
+    },
+    {
+      "name": "pv103_c_volume",
+      "sharpe_ratio": 0.3984289159740738,
+      "count": 963,
+      "fitness_ratio": 0.3837355513884769
+    },
+    {
+      "name": "pv87_last_highlast_lowlast_pricelast_volume_adosc",
+      "sharpe_ratio": 0.27184007194744353,
+      "count": 874,
+      "fitness_ratio": 0.24284096855202597
+    }
+  ]
+}

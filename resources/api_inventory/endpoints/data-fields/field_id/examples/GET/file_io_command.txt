@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /data-fields/{field_id} --input api_inventory\endpoints\data-fields\field_id\examples\GET\input.json --output api_inventory\endpoints\data-fields\field_id\examples\GET\file_output.json

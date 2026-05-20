@@ -1,0 +1,141 @@
+{
+  "path": "/achievements",
+  "url_template": "https://api.worldquantbrain.com/achievements",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Achievements. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/achievements",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": [
+      {
+        "id": "str",
+        "name": "str",
+        "description": "str",
+        "total": "int"
+      }
+    ],
+    "response_sample": [
+      {
+        "id": "SIMULATION_20",
+        "name": "20 Simulations",
+        "description": "Ran 20 Simulations",
+        "total": 20
+      },
+      {
+        "id": "SIMULATION_100",
+        "name": "100 Simulations",
+        "description": "Ran 100 Simulations",
+        "total": 100
+      },
+      {
+        "id": "SUBMIT_1",
+        "name": "First Submission",
+        "description": "Submitted your first alpha",
+        "total": 1
+      },
+      {
+        "id": "SUBMIT_10",
+        "name": "10 Submissions",
+        "description": "Submitted 10 alphas",
+        "total": 10
+      },
+      {
+        "id": "ALPHA_PERF_GOOD",
+        "name": "Good Alpha",
+        "description": "Made an alpha with Good performance",
+        "total": null
+      },
+      {
+        "id": "ALPHA_PERF_EXCELLENT",
+        "name": "Excellent Alpha",
+        "description": "Made an alpha with Excellent performance",
+        "total": null
+      },
+      {
+        "id": "ALPHA_PERF_SPECTACULAR",
+        "name": "Spectacular Alpha",
+        "description": "Made an alpha with Spectacular performance",
+        "total": null
+      },
+      {
+        "id": "SUPER_ALPHA",
+        "name": "SuperAlpha",
+        "description": "Unlocked consultant access to SuperAlpha",
+        "total": null
+      },
+      {
+        "id": "CONSULTANT_SUBMIT",
+        "name": "First Consultant Submission",
+        "description": "Submitted your first consultant alpha",
+        "total": null
+      },
+      {
+        "id": "TUTORIAL",
+        "name": "Complete Tutorial",
+        "description": "Completed tutorial and achieved GOLD level",
+        "total": null
+      },
+      {
+        "id": "CONSULTANT_TUTORIAL",
+        "name": "Complete Consultant Tutorial",
+        "description": "Completed Consultant tutorial",
+        "total": null
+      }
+    ],
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 276
+  },
+  "test_results": [
+    {
+      "path": "/achievements",
+      "method": "GET",
+      "resolved_path": "/achievements",
+      "url": "https://api.worldquantbrain.com/achievements",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 255,
+      "content_type": "application/json",
+      "response_shape": [
+        {
+          "description": "str",
+          "id": "str",
+          "name": "str",
+          "total": "int"
+        }
+      ],
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

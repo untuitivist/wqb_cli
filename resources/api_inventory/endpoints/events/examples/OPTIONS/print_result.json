@@ -1,0 +1,159 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/events",
+  "request": {
+    "method": "OPTIONS",
+    "url": "https://api.worldquantbrain.com/events",
+    "params": {
+      "limit": "1",
+      "offset": "0",
+      "order": "sample",
+      "start>": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1236,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "actions": {
+        "GET": {
+          "id": {
+            "type": "string",
+            "required": false,
+            "readOnly": true,
+            "label": "Id"
+          },
+          "title": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Title",
+            "maxLength": 200
+          },
+          "type": {
+            "type": "field",
+            "required": true,
+            "readOnly": false,
+            "label": "Type"
+          },
+          "category": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false,
+            "label": "Category",
+            "choices": []
+          },
+          "start": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": false,
+            "label": "Start"
+          },
+          "end": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": false,
+            "label": "End"
+          },
+          "timezone": {
+            "type": "field",
+            "required": true,
+            "readOnly": false,
+            "label": "Timezone"
+          },
+          "language": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false,
+            "label": "Language",
+            "choices": [
+              {
+                "value": "en",
+                "label": "English"
+              },
+              {
+                "value": "zh-cn",
+                "label": "Chinese"
+              },
+              {
+                "value": "ru",
+                "label": "Russian"
+              },
+              {
+                "value": "es",
+                "label": "Spanish"
+              },
+              {
+                "value": "vi",
+                "label": "Vietnamese"
+              },
+              {
+                "value": "ko",
+                "label": "Korean"
+              },
+              {
+                "value": "th",
+                "label": "Thai"
+              },
+              {
+                "value": "ro",
+                "label": "Romanian"
+              },
+              {
+                "value": "hu",
+                "label": "Hungarian"
+              }
+            ]
+          },
+          "description": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Description",
+            "maxLength": 1000
+          },
+          "register": {
+            "type": "url",
+            "required": false,
+            "readOnly": false,
+            "label": "Register"
+          },
+          "venue": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "label": "Venue",
+            "maxLength": 200
+          },
+          "city": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false,
+            "label": "City",
+            "choices": []
+          },
+          "country": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false,
+            "label": "Country",
+            "choices": [
+              {
+                "value": "CN",
+                "label": "Mainland China"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}

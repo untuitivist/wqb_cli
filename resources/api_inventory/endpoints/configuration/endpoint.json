@@ -1,0 +1,117 @@
+{
+  "path": "/configuration",
+  "url_template": "https://api.worldquantbrain.com/configuration",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend"
+  ],
+  "description": "Platform configuration. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/configuration",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "analytics": {
+        "trackingId": "NoneType"
+      },
+      "recaptcha": {
+        "siteKey": "str"
+      },
+      "recaptchaV3": {
+        "siteKey": "str"
+      }
+    },
+    "response_sample": {
+      "analytics": {
+        "trackingId": null
+      },
+      "recaptcha": {
+        "siteKey": "6LfmXTcpAAAAADEMEogEOHYuPKXg_6XrCn03X6S0"
+      },
+      "recaptchaV3": {
+        "siteKey": "6Ld54lkpAAAAAE7dC93Z79DLwqjgVupzpJTyUhoH"
+      }
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 258
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/configuration",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "analytics": {
+          "trackingId": "null"
+        },
+        "recaptcha": {
+          "siteKey": "str"
+        },
+        "recaptchaV3": {
+          "siteKey": "str"
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/configuration",
+      "method": "GET",
+      "resolved_path": "/configuration",
+      "url": "https://api.worldquantbrain.com/configuration",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 253,
+      "content_type": "application/json",
+      "response_shape": {
+        "analytics": {
+          "trackingId": "null"
+        },
+        "recaptcha": {
+          "siteKey": "str"
+        },
+        "recaptchaV3": {
+          "siteKey": "str"
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

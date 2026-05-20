@@ -1,0 +1,74 @@
+{
+  "path": "/users/self/achievements",
+  "url_template": "https://api.worldquantbrain.com/users/self/achievements",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/achievements",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": [
+        {
+          "achieved": "str",
+          "description": "str",
+          "id": "str",
+          "name": "str",
+          "ratio": "float",
+          "total": "int",
+          "value": "int"
+        }
+      ]
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/achievements",
+      "method": "GET",
+      "resolved_path": "/users/self/achievements",
+      "url": "https://api.worldquantbrain.com/users/self/achievements",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 621,
+      "content_type": "application/json",
+      "response_shape": [
+        {
+          "achieved": "str",
+          "description": "str",
+          "id": "str",
+          "name": "str",
+          "ratio": "float",
+          "total": "int",
+          "value": "int"
+        }
+      ],
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

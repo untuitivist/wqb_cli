@@ -1,0 +1,234 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/search",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/search",
+    "params": {
+      "query": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1378,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "reference": {
+        "count": 4,
+        "next": "http://api.worldquantbrain.com:443/search?limit=3&offset=3&query=sample&type=reference",
+        "previous": null,
+        "results": [
+          {
+            "id": "regular-alpha",
+            "title": "Regular Alpha",
+            "highlights": []
+          },
+          {
+            "id": "backtesting-period",
+            "title": "Backtesting period 📈",
+            "highlights": []
+          },
+          {
+            "id": "expanding-alpha-ideas",
+            "title": "Expanding Alpha Ideas",
+            "highlights": []
+          }
+        ]
+      },
+      "tutorialPage": {
+        "count": 10,
+        "next": "http://api.worldquantbrain.com:443/search?limit=3&offset=3&query=sample&type=tutorialpage",
+        "previous": null,
+        "results": [
+          {
+            "id": "brain-genius-program-faqs",
+            "title": "BRAIN Genius Program FAQs",
+            "highlights": [],
+            "tutorial": "consultant-information"
+          },
+          {
+            "id": "getting-started-amr-alphas",
+            "title": "AMR Alphas [Master]",
+            "highlights": [],
+            "tutorial": "regions-and-universes"
+          },
+          {
+            "id": "test-period",
+            "title": "Test Period",
+            "highlights": [],
+            "tutorial": "create-alphas"
+          }
+        ]
+      },
+      "video": {
+        "count": 8,
+        "next": "http://api.worldquantbrain.com:443/search?limit=3&offset=3&query=sample&type=video",
+        "previous": null,
+        "results": [
+          {
+            "id": "test-period",
+            "category": "Alpha Performance",
+            "title": "Test Period",
+            "uid": "ZiJEBd4szh2c6KQxhik7u8",
+            "numericalId": null,
+            "language": "en",
+            "sequence": 3,
+            "source": "VidYard",
+            "description": "In this video, you will learn about a unique feature on BRAIN called the Test Period, designed to enhance your alpha robustness testing process",
+            "transcript": "Hi, everyone.\r\n\r\nWelcome to this video, where you will learn about a unique feature on Brain called the **test period**, designed to enhance your alpha robustness testing process.\r\n\r\nAn alpha is considered robust if its out-of-sample performance is similar to its in-sample performance. Thus, this feature can help you potentially avoid overfitting within your alphas.\r\n\r\nLet's understand how to use the test period tool through an example. We will now test an alpha idea based on a company's improvement in operating earnings yield over the last year, using the **TS rank** operator. Operating earnings yield is calculated as the operating income of the company divided by its market capitalization.\r\n\r\nAs a user on Brain, you can backtest your alpha ideas over a five-year in-sample period to check the robustness of your idea. Before simulating the alpha, you need to access the simulation settings.\r\n\r\nHere, you can set a test period of one year, click on \"Apply,\" and then click on \"Simulate.\" This allows you to divide your in-sample period into a **train period** of four years and a **test period** of one year. The train period is ideal for developing your alphas, while the test period is crucial for validating them.\r\n\r\nIn this example, we selected a testing period of one year, as having 20% of testing data is commonly used for data analysis. However, you can experiment with different periods as well.\r\n\r\nAfter simulating the alpha, you can observe its performance over the train period of four years by scrolling down to see the train period alpha statistics. You can determine if the idea generates a decent signal during this period.\r\n\r\nTo validate the robustness of the alpha idea and avoid overfitting, you need to evaluate its performance over the test period by scrolling up and clicking on the \"Show Test Period\" button. You can view the alpha's performance in the last year of in-sample data, represented by the orange-colored line on the cumulative P&L chart.\r\n\r\nUpon observation, if the alpha performs well during the test period, it boosts our confidence in the idea and encourages us to further improve it before submitting. As is the case in this example, by clicking on the \"IS\" button, you can see the overall five-year in-sample performance of the alpha.\r\n\r\nTo become submittable on Brain, an alpha must pass various in-sample tests. In this case, the alpha is failing the fitness test, indicating a need for improvement. You can think of various ways to make this alpha submittable by iterating on the idea and refining it further.\r\n\r\nScrolling up, you will see a button named \"Hide Test Period,\" which allows you to hide the test period if desired. **Note:** An alpha can only be submitted when the test period is revealed by clicking on the \"Show Test Period\" button.\r\n\r\n**To summarize:**  \r\nThe test period feature helps avoid overfitting and assesses the robustness of an alpha idea. By setting a test period, you can analyze its performance separately from the training period. This feature provides valuable insights without directly affecting the simulation itself. Use the test period to accept or reject alpha ideas and optimize your resource allocation for developing robust alphas.",
+            "lastModified": "2025-08-01T10:28:21.269128-04:00",
+            "highlights": [
+              {
+                "section": "transcript",
+                "content": [
+                  "An alpha is considered robust if its out-of-<em>sample</em> performance is similar to its in-<em>sample</em> performance",
+                  "As a user on Brain, you can backtest your alpha ideas over a five-year in-<em>sample</em> period to check the",
+                  "This allows you to divide your in-<em>sample</em> period into a **train period** of four years and a **test period",
+                  "You can view the alpha's performance in the last year of in-<em>sample</em> data, represented by the orange-colored",
+                  "To become submittable on Brain, an alpha must pass various in-<em>sample</em> tests."
+                ]
+              }
+            ],
+            "videoCourse": "international-quant-championship-2026"
+          },
+          {
+            "id": "iqc-scoring-merged-alpha-performance-criteria",
+            "category": "Introduction",
+            "title": "IQC Scoring: Merged Alpha Performance criteria",
+            "uid": "Pdqb8HVXGCApJQrfxaSNvo",
+            "numericalId": null,
+            "language": "en",
+            "sequence": 2,
+            "source": "VidYard",
+            "description": "Overview of IQC scoring criteria",
+            "transcript": "Hi, everyone.\r\n\r\nWelcome to another video related to the International Quant Championship (IQC).  \r\nIf you and your teammates have just registered for the IQC, you might be wondering how the scoring works. Some of you may have already started submitting alphas and are curious about how to improve your score and climb up the leaderboard. Don’t worry—we have you covered in this video.\r\n\r\nLet’s understand how IQC scoring works.\r\n\r\nUnlike the WorldQuant Challenge, where individual alphas are scored with a limit of 2,000 points per day, scoring in the International Quant Championship is structured differently. The scoring is based on the **merged alpha performance** of your team.\r\n\r\nBefore we go into the details of the scoring, let’s understand what **merged P&L** means.  \r\nMerged P&L is the P&L chart generated after combining the performance of all the individual alphas submitted by you and your teammates in the IQC. Your merged alpha performance score is calculated from this merged P&L chart.\r\n\r\nThe illustration here should help you understand how the merged P&L chart is generated. When you submit your first IQC alpha, your merged P&L chart will be the P&L chart for that single alpha. After your first submission, you can see how your merged P&L chart and score would look based on the alphas you have submitted, and how it would change if you submit more alphas.\r\n\r\nThe merged P&L chart is generated assuming **equal weight** on all the submitted alphas of your team. From this merged P&L chart, your merged performance score is calculated and is largely a function of three parameters:\r\n\r\n1. **Merged Performance Sharpe Ratio:**  \r\n   The Sharpe ratio measures the return on an investment compared to the level of risk taken. The higher the Sharpe, the better the score, assuming all other parameters are the same.\r\n\r\n2. **Merged Performance Return-to-Drawdown Ratio:**  \r\n   Drawdown is the largest reduction in P&L during a given period, expressed as a percentage. The larger the merged performance return-to-drawdown ratio, the better the score.\r\n\r\n3. **Merged Performance Turnover:**  \r\n   Turnover is the average measure of daily trading activity. Alphas with low turnover have lower transaction costs. Thus, the higher the merged performance turnover of your alphas, the lower the score, assuming all other parameters are the same.\r\n\r\nIt is essential to balance these parameters in your merged alpha performance. For example, an alpha with high turnover or transaction costs must be compensated with a comparatively higher Sharpe ratio.\r\n\r\nYou can think of merged performance as simulating a diverse pool of alphas to get an overall merged performance for your team. This merged performance can be optimized by working on new and diverse ideas.\r\n\r\nEvery time you simulate an alpha on the platform, you can see your merged performance score on the **Performance Comparison** tab within the alpha simulation results, just below the correlation and in-sample testing status tab. When you click **Refresh**, you can see both your current score and how the simulated alpha would impact your merged performance score if you decide to submit it.\r\n\r\nBe aware that submitting alphas that do not add value to your already existing pool of submitted alphas can reduce your merged performance score, as shown in the illustration. By \"not adding value,\" we mean the alpha does not contribute to improving the overall performance parameters of your merged alpha.\r\n\r\nIn addition to the scores, you can also see the merged performance metrics of your merged P&L chart. As shown here, you can see the Sharpe ratio, turnover, and other metrics of your merged P&L chart should you decide to submit the simulated alpha.\r\n\r\nNote that an increase in the merged P&L returns by itself does not necessarily imply an increase in the merged performance score. The score is a function of various parameters of the merged performance of alphas submitted by your team, as we saw earlier.\r\n\r\nDuring **Stage 1** of the International Quant Championship, only the **in-sample merged performance** of alphas is used to calculate the scores on the leaderboard.  \r\nWhile in **Stage 2**, **out-of-sample (OS) performance** is also taken into account to calculate the final score.\r\n\r\nIf you’re new to Brain and wondering what in-sample and out-of-sample performance mean, I suggest you go through the Introduction to Alpha course in the Learn section. For a brief explanation:\r\n\r\n- **In-sample model performance** is the result you see on the platform after the alpha simulation is completed. This is derived from only the data visible to you at the time of building your alpha. For example, only data from March 2016 to February 2021 may be visible.\r\n- **Out-of-sample model performance** displays how your alpha performs on data not visible to you—such as the two years after February 2021. Measuring out-of-sample performance is important to avoid overfitting your model to the data. A robust model would have OS performance similar to in-sample performance.\r\n\r\nDuring Stage 1, only your in-sample delay-1 and delay-0 performance drives your score. Note that the merged performance scores for delay-1 and delay-0 alphas are calculated separately, and the final score is calculated according to the formula you see here. So make sure you submit both delay-1 and delay-0 alphas.\r\n\r\nDuring Stage 2, OS scores are also considered to calculate the final scores on the leaderboard. For this, both the in-sample and out-of-sample scores are scaled and make equal contributions to the final score. Note that all alphas submitted by your team since the start of Stage 1 are considered for scoring during Stage 2.\r\n\r\nAs you submit alphas, you should see your team climb up the global IQC leaderboard. You can filter the leaderboard results to view how you are performing within your own university and your country. You can also see the separate delay-1 and delay-0 scores of the teams on the leaderboard and compare where you stand versus your competition.\r\n\r\n**To help you climb the leaderboard, here are a few things you can focus on:**\r\n\r\n- The most important is to submit **unique and diverse ideas**. Working on new ideas is the best way to increase your score, as diversification has the potential to reduce the risk of your merged performance and thus improve your Sharpe ratio.\r\n- Explore creating alphas using data sets you haven’t worked on before.\r\n- Create both delay-1 and delay-0 alphas. Note that the delay-1 alpha’s merged performance score has a higher contribution to your final score.\r\n- Create alphas across both liquid and illiquid universes. For example, if you’re submitting alphas in the USA top 3,000, submitting alphas in the top 200 or top 500 universe might add value to your merged performance score.\r\n- Keep the turnover of your alphas in check. Higher turnover inversely impacts your score. For price-volume data sets, keeping turnover less than or close to 40% is recommended, but make sure it is compensated with a higher Sharpe ratio.\r\n- Creating alphas with data sets that have lower turnover can reduce the average turnover of your merged P&L. If your merged P&L metrics have high turnover, you can try to improve your score by submitting alphas with lower turnover.\r\n- Go through all the available operators in the Learn section of the Brain platform, as you can implement a single idea in multiple ways through the use of diverse operators.\r\n- Avoid overfitting your alphas to in-sample performance. Overfitting may not produce good out-of-sample performance and can reduce your OS score.\r\n\r\n**Additional tips:**\r\n\r\n- Make sure to watch the Learn section videos and read the documentation. The Learn section is continually updated with new resources.\r\n- You are informed about all updates and other learning resources through the announcements section on the home page of the Brain platform.\r\n- Explore and engage with the community forum. If you have any open queries regarding alpha research or specific questions on niche aspects of the platform, it is possible that what you’re looking for is already answered on the forum.\r\n- Check out the Brain Tips series on the forum. This series is regularly updated and provides useful guidance on a diverse range of topics related to alpha research.\r\n- During the alpha creation process, do not just submit the first submittable version of an alpha that improves your score. It is possible that you can improve your alpha further without overfitting, which could lead to a significant difference in your score.\r\n- If you have registered as a team, you can have different team members work on different data sets to create alphas, so your overall alpha pool has more diversity. After some time, you and your team members can switch data sets, as each person may have a different approach to creating alphas with specific data sets, potentially improving your overall team score. This can also be a good opportunity for learning and brainstorming within the team.\r\n- Organize and manage your alpha lists efficiently, as you may need to revisit your alphas as you progress through the competition. The Brain platform has features to name, color, and assign tags to your alphas to help you stay organized.\r\n- Attend webinars and Q&A sessions where experienced researchers at WorldQuant provide useful training and tips for your alpha research. You also have the opportunity to directly ask questions to the Brain team in these sessions.\r\n\r\nSo, all the best with the International Quant Championship!  \r\nWe hope you reach the top of the leaderboard.",
+            "lastModified": "2025-08-01T10:45:29.554669-04:00",
+            "highlights": [
+              {
+                "section": "transcript",
+                "content": [
+                  "If you’re new to Brain and wondering what in-<em>sample</em> and out-of-<em>sample</em> performance mean, I suggest you",
+                  "A robust model would have OS performance similar to in-<em>sample</em> performance.",
+                  "During Stage 1, only your in-<em>sample</em> delay-1 and delay-0 performance drives your score.",
+                  "For this, both the in-<em>sample</em> and out-of-<em>sample</em> scores are scaled and make equal contributions to the",
+                  "- Avoid overfitting your alphas to in-<em>sample</em> performance."
+                ]
+              }
+            ],
+            "videoCourse": "international-quant-championship-2026"
+          },
+          {
+            "id": "how-to-avoid-overfitting",
+            "category": "Alpha Performance",
+            "title": "How to Avoid Overfitting",
+            "uid": "kPUWHotySvxSiRyE24QxCr",
+            "numericalId": 6125120,
+            "language": "en",
+            "sequence": 0,
+            "source": "VidYard",
+            "description": "This video discusses the concept of overfitting in the context of Alpha creation and provides three practical steps to help minimize overfitting in your Alphas.",
+            "transcript": "In this video, we\r\nwill discuss overfitting, which\r\nis very important aspect of Alpha\r\ndevelopment. Alpha\r\nis nothing but a mathematic model for financial markets.\r\nThere's no definite approach\r\nthat can help us avoid\r\noverfitting. But there are certainly\r\ngood practices one can follow\r\nto reduce the extent of overfitting.\r\nIn this video, I will share\r\nthe approach I took towards my research\r\nto avoid or control\r\nthe extent of overfitting.\r\nSo we'll talk about three key things.\r\nFirst, what is overfitting?\r\nSecond, what are good practices\r\nto help us avoid overfitting.\r\nAnd finally, what tests\r\nwe can carry out to check\r\nthe robustness of the signal\r\nor the level of overfitting.\r\nNow let's start by discussing what overfitting\r\nis. In the process\r\nof Alpha development, a quant runs\r\nhis strategy algorithm on\r\nthe historical data to build\r\nan expectation about the future\r\nperformance of his strategy.\r\nWhile executing his idea, he\r\ncan introduce a lots of conditions\r\nand parameters to maximize\r\nthe Alpha's performance on\r\nthe past data.\r\nBut over doing this to make\r\nthe data present, good back\r\ntesting results can lead to\r\npoor performance. So this process,\r\nwhere the performance of the model on\r\nfuture unseen data\r\nvaries a lot from the performance\r\nof the model on the data it was\r\ntrained on, is called overfitting.\r\nHere are three good practices\r\nto help us avoid overfitting\r\nFirst, go by the idea.\r\nThe process of improvising\r\nthe backtesting results of\r\nthe strategy should mainly be\r\ndriven by making improvements\r\nto the idea behind the signal.\r\nIt's not a good practice to try\r\nmake improvements by introducing\r\nrandom conditions and parameters.\r\nSecond, good practice is to\r\navoid changes that result\r\nin very small difference in\r\nthe performance in the backtesting results.\r\nWhile making changes to the implementation\r\nof the Alpha, you should try\r\navoiding making changes that result\r\nin very small differences in\r\nthe in sample performance. The\r\nimpact of these small changes can\r\nbe much bigger in out of sample\r\nand could be the reason of the poorer\r\nperformance.\r\nSo lesser the number of conditions and\r\nthe parameters we can introduce\r\nwhile developing over Alpha,\r\nthe better it is. So the third\r\ngood practice is logical\r\nparameter fitting.\r\nWhile fitting various parameters,\r\nyou shouldn't try random numbers.\r\nInstead, you should make logical\r\nchanges in the parameters. For\r\nexample, if you're training the\r\nAlpha on the duration or\r\ntime period, you can use\r\nvalues like five days for a\r\nweek,\r\nor 10 days for 2 weeks.\r\nYou can also use 20 days,\r\nwhich is a month or 60\r\ndays for a quarter, 120\r\nfor half a year, 250 for a\r\nyear, and so on. In short,\r\nthe simpler and more explainable\r\nthe ideas execution, the\r\nhigher its expectation of having\r\nsimilar in sample and\r\nout sample results. There are a\r\nfew tests you can do to\r\ncheck the robustness of the ideas, execution\r\nor the level of overfitting\r\nthat could have happened while doing the\r\nbacktesting. You can test the idea\r\nby analyzing its performance\r\non various subsets of stocks\r\nin its universe.\r\nFor example, if the original\r\nsignal was created on the top\r\n2000 liquid stocks in US,\r\nyou can test the same\r\nexecution on top 500\r\nliquid stocks.\r\nGiven that the idea is now being\r\ntested on much more liquid group,\r\nwe would expect performance to fall.\r\nBut the performance shouldn't completely vanish\r\nas even these 500 stocks\r\nwere a part of the universe and were contributing\r\ninto the performance. A complete\r\nfallen performance or much less\r\nperformance in the liquid universe as\r\ncompared to the top 2000\r\nwould indicate that most of the performance\r\nwas derived by fitting the model\r\non a relatively illiquid group\r\nof instruments in the universe.\r\nOn the Websim platform,\r\na positive value of expression\r\nfor a stock represents going long\r\nand a negative value represents going short.\r\nThe magnitude of the value represents\r\nthe proportion in which the capital\r\nwill be allocated across various\r\nstocks in the universe. It\r\nis important to test the strength\r\nof predictability of the direction\r\nand the magnitude in an Alpha.\r\nThere could be lots of ways of doing\r\nthis, but I'll share with you\r\ntwo ways of doing this. The predictability\r\nof going long and short on\r\na stock can be tested by\r\nremoving the impact of\r\nmagnitude from the signal.\r\nThis can be done by taking sign\r\nof the whole expression\r\nwhich will equalize the capital\r\non all stocks. The results\r\nwill represent the Alpha strength\r\nin predicting the long and\r\nshort direction,\r\nand this could also act like a test\r\nfor overfitting of an Alpha\r\non the basis of the capital allocation\r\nor on the basis of the sign\r\nor the direction of the signal. The second\r\napproach, which is basically to test\r\nhow much of the performance is\r\ndriven by the capital allocation.\r\nYou can take the rank of the expression\r\nwhich will define a more normalized\r\nway of distributing capital.\r\nIf the results are still good, it\r\nindicates that the Alpha is not\r\nover fitted and not deriving\r\nits performance from a very few stocks.\r\nSo there are many more approaches you can\r\ntake, but this could be a good\r\nstart.",
+            "lastModified": "2023-04-28T11:27:57.280932-04:00",
+            "highlights": [
+              {
+                "section": "transcript",
+                "content": [
+                  "the Alpha, you should try\r\navoiding making changes that result\r\nin very small differences in\r\nthe in <em>sample</em>",
+                  "The\r\nimpact of these small changes can\r\nbe much bigger in out of <em>sample</em>\r\nand could be the reason of the",
+                  "simpler and more explainable\r\nthe ideas execution, the\r\nhigher its expectation of having\r\nsimilar in <em>sample</em>",
+                  "and\r\nout <em>sample</em> results."
+                ]
+              }
+            ],
+            "videoCourse": "improving-alpha-performance"
+          }
+        ]
+      },
+      "recommendedReading": {
+        "count": 0,
+        "next": null,
+        "previous": null,
+        "results": []
+      },
+      "faq": {
+        "count": 10,
+        "next": "http://api.worldquantbrain.com:443/search?limit=3&offset=3&query=sample&type=faq",
+        "previous": null,
+        "results": [
+          {
+            "id": "hard_to_explain",
+            "category": "OS and IS Sharpe",
+            "sequence": 218,
+            "question": "I got some well-performing Alphas, but they are hard to explain or tell some reasons behind that. Is that ok?",
+            "answer": "[{\"type\": \"TEXT\", \"value\": \"<p> It is better to have a reasonable idea behind an Alpha. If you can&#x27;t explain the idea behind your Alpha but it performs well in In-Sample as well as in Out-Sample, then it is still valuable to us. The longer the testing period, the more confidence we can have in that Alpha. </p>\", \"id\": \"04a9bacd-d581-449e-8b1b-ef3136e16c4f\"}]",
+            "lastModified": "2019-01-18T05:19:00.423946-05:00",
+            "highlights": [
+              {
+                "section": "answer",
+                "content": [
+                  "If you can&#x27;t explain the idea behind your Alpha but it performs well in In-<em>Sample</em> as well as in",
+                  "Out-<em>Sample</em>, then it is still valuable to us."
+                ]
+              }
+            ]
+          },
+          {
+            "id": "os_performance",
+            "category": "OS and IS Sharpe",
+            "sequence": 215,
+            "question": "How I can get performance for out of sample data?",
+            "answer": "[{\"type\": \"TEXT\", \"value\": \"<p> </p><p>Certain Alphas based on successful performance will be testing with out of sample data</p>\", \"id\": \"7f1278f4-4f87-4891-b357-cc24448c1c7c\"}]",
+            "lastModified": "2019-01-18T05:17:27.274812-05:00",
+            "highlights": [
+              {
+                "section": "question",
+                "content": [
+                  "How I can get performance for out of <em>sample</em> data?"
+                ]
+              },
+              {
+                "section": "answer",
+                "content": [
+                  "<p> </p><p>Certain Alphas based on successful performance will be testing with out of <em>sample</em> data</p>"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "in-sample-out-sample-alphas",
+            "category": "My Alphas",
+            "sequence": 55,
+            "question": "What do in sample and out sample mean? And are their neutralizations the same?",
+            "answer": "[{\"type\": \"TEXT\", \"value\": \"<p> </p><p>In-Sample - This section has a summary of the performance of Alphas  up to the date they were first simulated on. I.e. In-sample performance  of an Alpha is the performance obtained from back testing on historical  data. This is the performance you see on the results page when  simulating an Alpha.<br/> </p><p>Out-Sample - Out sample performance of an Alpha is the performance after  its date of submission. It is the \\u2018real world\\u2019 performance on Alpha.  The \\u2018Out-Sample\\u2019 tab shows the performance over various time periods.  For selected Alphas we run out of sample simulations, the results are  shown here. The data displayed for these Alphas are - Name, Test Date,  Sharpe over various periods(e.g.: Sharpe30 is for 1 month and Sharpe 360  is for a year), Total Out Sample Sharpe, Correlation Stats (with your  own Alphas, threshold being 0.5 to 0.7) and Rating (on a scale from 0 to  100).</p><p>The Neutralization setting for your in-sample and out-sample Alphas are the same.\\u00a0</p>\", \"id\": \"7b76d654-d5de-4335-ade7-fce3a409306d\"}]",
+            "lastModified": "2019-01-11T02:03:42.475306-05:00",
+            "highlights": [
+              {
+                "section": "question",
+                "content": [
+                  "What do in <em>sample</em> and out <em>sample</em> mean? And are their neutralizations the same?"
+                ]
+              },
+              {
+                "section": "answer",
+                "content": [
+                  "<p> </p><p>In-<em>Sample</em> - This section has a summary of the performance of Alphas  up to the date they were",
+                  "<br/> </p><p>Out-<em>Sample</em> - Out <em>sample</em> performance of an Alpha is the performance after  its date of submission",
+                  "The ‘Out-<em>Sample</em>’ tab shows the performance over various time periods.",
+                  "For selected Alphas we run out of <em>sample</em> simulations, the results are  shown here.",
+                  "</p><p>The Neutralization setting for your in-<em>sample</em> and out-<em>sample</em> Alphas are the same. </p>"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

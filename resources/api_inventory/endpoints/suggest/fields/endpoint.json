@@ -1,0 +1,175 @@
+{
+  "path": "/suggest/fields",
+  "url_template": "https://api.worldquantbrain.com/suggest/fields",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend"
+  ],
+  "description": "Field suggestion. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": "POST may send prompt/context.",
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/suggest/fields",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "selection": [
+        "str"
+      ],
+      "combo": [
+        "str"
+      ]
+    },
+    "response_sample": {
+      "selection": [
+        "turnover",
+        "long_count",
+        "short_count",
+        "decay",
+        "universe",
+        "operator_count",
+        "datafield_count",
+        "dataset_count",
+        "datacategory_count",
+        "self_correlation",
+        "prod_correlation",
+        "neutralization",
+        "truncation",
+        "datacategories",
+        "datasets",
+        "datafields",
+        "classifications",
+        "competitions",
+        "themes",
+        "name",
+        "color",
+        "category",
+        "favorite",
+        "own",
+        "own_university",
+        "own_country",
+        "tags",
+        "os_start_date",
+        "author_tenure",
+        "author_activity",
+        "author_distinct_count_regions",
+        "author_self_correlation",
+        "author_prod_correlation",
+        "author_sharpe",
+        "author_turnover",
+        "author_fitness",
+        "author_returns_to_drawdown",
+        "author_distinct_count_datafield",
+        "author_distinct_count_datasetcategory",
+        "author_distinct_quarter_count_datafield",
+        "author_distinct_quarter_count_dataset",
+        "author_distinct_quarter_count_datasetcategory",
+        "author_distinct_count_operator",
+        "author_distinct_quarter_count_operator",
+        "author_distinct_count_dataset",
+        "author_yield_rate",
+        "author_quarter_yield_rate"
+      ],
+      "combo": [
+        "alpha",
+        "long_value",
+        "short_value",
+        "pnl",
+        "returns",
+        "drawdown",
+        "long_count",
+        "short_count",
+        "hold_value",
+        "trade_value",
+        "hold_shares",
+        "trade_shares",
+        "hold_pnl",
+        "trade_pnl",
+        "turnover"
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 254
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/suggest/fields",
+      "seen_count": 8,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "combo": [
+          "str"
+        ],
+        "selection": [
+          "str"
+        ]
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/suggest/fields",
+      "method": "GET",
+      "resolved_path": "/suggest/fields",
+      "url": "https://api.worldquantbrain.com/suggest/fields",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 314,
+      "content_type": "application/json",
+      "response_shape": {
+        "combo": [
+          "str"
+        ],
+        "selection": [
+          "str"
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "POST",
+      "resolved_path": "/suggest/fields",
+      "url": "https://api.worldquantbrain.com/suggest/fields",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

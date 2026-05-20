@@ -1,0 +1,49 @@
+{
+  "path": "/alphas/{alpha_id}/correlations",
+  "url_template": "https://api.worldquantbrain.com/alphas/{alpha_id}/correlations",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform"
+  ],
+  "description": "Alpha correlation base endpoint.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/alphas/{alpha_id}/correlations",
+      "method": "GET",
+      "resolved_path": "/alphas/vR5p8vqb/correlations",
+      "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/correlations",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 255,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

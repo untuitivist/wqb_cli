@@ -1,0 +1,77 @@
+{
+  "path": "/data-fields/{field_id}",
+  "url_template": "https://api.worldquantbrain.com/data-fields/{field_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "rocky-d/wqb"
+  ],
+  "description": "Data field details.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/data-fields/{field_id}",
+      "method": "GET",
+      "resolved_path": "/data-fields/abnormal_news_sentiment_1d",
+      "url": "https://api.worldquantbrain.com/data-fields/abnormal_news_sentiment_1d",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 561,
+      "content_type": "application/json",
+      "response_shape": {
+        "category": {
+          "id": "str",
+          "name": "str"
+        },
+        "data": [
+          {
+            "alphaCount": "int",
+            "coverage": "float",
+            "dateCoverage": "float",
+            "delay": "int",
+            "pyramidMultiplier": "float",
+            "region": "str",
+            "themes": [],
+            "universe": "str",
+            "userCount": "int"
+          }
+        ],
+        "dataset": {
+          "id": "str",
+          "name": "str"
+        },
+        "description": "str",
+        "id": "str",
+        "subcategory": {
+          "id": "str",
+          "name": "str"
+        },
+        "type": "str",
+        "visualizable": "bool"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

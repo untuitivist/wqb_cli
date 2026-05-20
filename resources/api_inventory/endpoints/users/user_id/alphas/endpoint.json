@@ -1,0 +1,498 @@
+{
+  "path": "/users/{user_id}/alphas",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/alphas",
+  "methods": [
+    "OPTIONS"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "OPTIONS",
+      "observed_path": "/users/JL40454/alphas",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "actions": {
+          "GET": {
+            "author": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "category": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "classifications": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "color": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "combo": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "competitions": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateCreated": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateModified": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateSubmitted": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "favorite": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "grade": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "hidden": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "is": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "name": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "origin": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "os": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "osmosisPoints": {
+              "label": "str",
+              "maxValue": "int",
+              "minValue": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "prod": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "pyramidThemes": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "pyramids": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "regular": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "selection": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "settings": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "stage": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "status": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "tags": {
+              "child": "dict",
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "team": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "test": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "themes": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "train": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/{user_id}/alphas",
+      "method": "OPTIONS",
+      "resolved_path": "/users/JL40454/alphas",
+      "url": "https://api.worldquantbrain.com/users/JL40454/alphas",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 675,
+      "content_type": "application/json",
+      "response_shape": {
+        "actions": {
+          "GET": {
+            "author": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "category": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "classifications": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "color": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "combo": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "competitions": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateCreated": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateModified": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "dateSubmitted": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "favorite": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "grade": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "hidden": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "is": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "name": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "origin": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "os": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "osmosisPoints": {
+              "label": "str",
+              "maxValue": "int",
+              "minValue": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "prod": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "pyramidThemes": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "pyramids": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "regular": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "selection": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "settings": {
+              "children": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "stage": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "status": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "tags": {
+              "child": "dict",
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "team": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "test": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "themes": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "train": {
+              "child": "dict",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

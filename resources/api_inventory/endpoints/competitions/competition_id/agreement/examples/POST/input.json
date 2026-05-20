@@ -1,0 +1,9 @@
+{
+  "path_vars": {
+    "competition_id": "challenge"
+  },
+  "params": {},
+  "json": {
+    "example": true
+  }
+}

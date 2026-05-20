@@ -1,0 +1,135 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}/check",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/check",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 7106,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "is": {
+        "checks": [
+          {
+            "name": "LOW_SHARPE",
+            "result": "FAIL",
+            "limit": 1.58,
+            "value": -0.01
+          },
+          {
+            "name": "LOW_FITNESS",
+            "result": "FAIL",
+            "limit": 1.0,
+            "value": -0.0
+          },
+          {
+            "name": "LOW_TURNOVER",
+            "result": "PASS",
+            "limit": 0.01,
+            "value": 0.5856
+          },
+          {
+            "name": "HIGH_TURNOVER",
+            "result": "PASS",
+            "limit": 0.7,
+            "value": 0.5856
+          },
+          {
+            "name": "CONCENTRATED_WEIGHT",
+            "result": "PASS"
+          },
+          {
+            "name": "LOW_SUB_UNIVERSE_SHARPE",
+            "result": "FAIL",
+            "limit": -0.0,
+            "value": -0.04
+          },
+          {
+            "name": "REVERSION_COMPONENT",
+            "result": "WARNING",
+            "message": "Alpha expression includes a reversion component so we may not accept these alphas in the future, try working on different alpha ideas"
+          },
+          {
+            "name": "SELF_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "DATA_DIVERSITY",
+            "result": "PASS"
+          },
+          {
+            "name": "PROD_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "REGULAR_SUBMISSION",
+            "result": "PASS",
+            "limit": 4,
+            "value": 0
+          },
+          {
+            "name": "HT_TURNOVER",
+            "result": "PASS",
+            "limit": 0.2,
+            "value": 0.5856
+          },
+          {
+            "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+            "result": "WARNING",
+            "limit": 0.75,
+            "value": -4.5
+          },
+          {
+            "name": "LOW_2Y_SHARPE",
+            "result": "FAIL",
+            "value": -0.38,
+            "limit": 1.58
+          },
+          {
+            "result": "PASS",
+            "name": "MATCHES_PYRAMID",
+            "effective": 1,
+            "multiplier": 1.1,
+            "pyramids": [
+              {
+                "name": "USA/D1/PV",
+                "multiplier": 1.1
+              }
+            ]
+          },
+          {
+            "result": "WARNING",
+            "name": "MATCHES_THEMES",
+            "themes": [
+              {
+                "id": "lyvRJ3y",
+                "multiplier": 1.0,
+                "name": "All regions/D0 Power Pool May`26"
+              },
+              {
+                "id": "q4O05qy",
+                "multiplier": 1.5,
+                "name": "MEA Region Theme"
+              },
+              {
+                "id": "ZywpJvB",
+                "multiplier": 3.0,
+                "name": "After Cost HTVR Theme"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

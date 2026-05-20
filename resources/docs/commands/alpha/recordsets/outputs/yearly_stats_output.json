@@ -1,0 +1,230 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}/recordsets/{record_set_name}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/YPNOpk3W/recordsets/yearly-stats",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1410,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "schema": {
+        "name": "yearly-stats",
+        "title": "Yearly Stats",
+        "properties": [
+          {
+            "name": "year",
+            "title": "Year",
+            "type": "year"
+          },
+          {
+            "name": "pnl",
+            "title": "PnL",
+            "type": "amount"
+          },
+          {
+            "name": "bookSize",
+            "title": "Book Size",
+            "type": "amount"
+          },
+          {
+            "name": "longCount",
+            "title": "Long Count",
+            "type": "integer"
+          },
+          {
+            "name": "shortCount",
+            "title": "Short Count",
+            "type": "integer"
+          },
+          {
+            "name": "turnover",
+            "title": "Turnover",
+            "type": "percent"
+          },
+          {
+            "name": "sharpe",
+            "title": "Sharpe",
+            "type": "decimal"
+          },
+          {
+            "name": "returns",
+            "title": "Returns",
+            "type": "percent"
+          },
+          {
+            "name": "drawdown",
+            "title": "Drawdown",
+            "type": "percent"
+          },
+          {
+            "name": "margin",
+            "title": "Margin",
+            "type": "permyriad"
+          },
+          {
+            "name": "fitness",
+            "title": "Fitness",
+            "type": "decimal"
+          },
+          {
+            "name": "stage",
+            "title": "Stage",
+            "type": "string"
+          }
+        ]
+      },
+      "records": [
+        [
+          "2014",
+          3984240,
+          20000000,
+          609,
+          587,
+          0.4574,
+          6.45,
+          0.4066,
+          0.0219,
+          0.001778,
+          6.08,
+          "IS"
+        ],
+        [
+          "2015",
+          2607646,
+          20000000,
+          971,
+          1007,
+          0.4507,
+          2.48,
+          0.2672,
+          0.1337,
+          0.001186,
+          1.91,
+          "IS"
+        ],
+        [
+          "2016",
+          2684810,
+          20000000,
+          1082,
+          933,
+          0.5262,
+          4.53,
+          0.2751,
+          0.0266,
+          0.001045,
+          3.28,
+          "IS"
+        ],
+        [
+          "2017",
+          1549780,
+          20000000,
+          1016,
+          1007,
+          0.5318,
+          2.17,
+          0.1588,
+          0.0465,
+          0.000597,
+          1.19,
+          "IS"
+        ],
+        [
+          "2018",
+          2493524,
+          20000000,
+          1006,
+          994,
+          0.4853,
+          3.89,
+          0.2565,
+          0.0331,
+          0.001057,
+          2.83,
+          "IS"
+        ],
+        [
+          "2019",
+          1505347,
+          20000000,
+          987,
+          1010,
+          0.5526,
+          2.13,
+          0.1542,
+          0.0583,
+          0.000558,
+          1.13,
+          "IS"
+        ],
+        [
+          "2020",
+          2053325,
+          20000000,
+          969,
+          1027,
+          0.6351,
+          2.27,
+          0.2323,
+          0.0639,
+          0.000731,
+          1.37,
+          "IS"
+        ],
+        [
+          "2021",
+          1648370,
+          20000000,
+          1004,
+          1001,
+          0.6756,
+          1.58,
+          0.1696,
+          0.0951,
+          0.000502,
+          0.79,
+          "IS"
+        ],
+        [
+          "2022",
+          2174501,
+          20000000,
+          993,
+          1011,
+          0.6754,
+          2.17,
+          0.2246,
+          0.0325,
+          0.000665,
+          1.25,
+          "IS"
+        ],
+        [
+          "2023",
+          1868620,
+          20000000,
+          997,
+          1009,
+          0.6827,
+          2.22,
+          0.1938,
+          0.0515,
+          0.000568,
+          1.18,
+          "IS"
+        ]
+      ]
+    }
+  }
+}

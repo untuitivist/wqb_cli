@@ -1,0 +1,151 @@
+{
+  "path": "/tutorials",
+  "url_template": "https://api.worldquantbrain.com/tutorials",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "Tutorial list. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional",
+    "query": "limit=50"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/tutorials?limit=1",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "category": "str",
+          "pages": [
+            "..."
+          ],
+          "title": "str",
+          "sequence": "int",
+          "lastModified": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 11,
+      "next": "http://api.worldquantbrain.com:443/tutorials?limit=1&offset=1",
+      "previous": null,
+      "results": [
+        {
+          "id": "discover-brain",
+          "category": "Getting Started",
+          "pages": [
+            {
+              "title": "*Read this First * - Starter Pack",
+              "id": "read-first-starter-pack",
+              "lastModified": "2026-03-09T06:46:59.769340-04:00"
+            },
+            {
+              "title": "Introduction to Alphas",
+              "id": "about-brain-platform",
+              "lastModified": "2025-09-12T03:33:37.870415-04:00"
+            },
+            {
+              "title": "Introduction to BRAIN Expression Language",
+              "id": "introduction-brain-expression-language",
+              "lastModified": "2025-03-12T05:14:01.490538-04:00"
+            },
+            {
+              "title": "Intermediate Pack - Understand Results [1/2]",
+              "id": "intermediate-pack-part-1",
+              "lastModified": "2025-09-08T05:22:10.878298-04:00"
+            },
+            {
+              "title": "Intermediate Pack - Improve your Alpha [2/2]",
+              "id": "intermediate-pack-part-2",
+              "lastModified": "2025-03-12T05:10:08.846145-04:00"
+            },
+            {
+              "title": "Getting Started with High Turnover Alphas",
+              "id": "getting-started-high-turnover-alphas",
+              "lastModified": "2026-03-27T10:11:01.638647-04:00"
+            },
+            {
+              "title": "10 Steps to Start on BRAIN",
+              "id": "10-steps-start-brain-platform",
+              "lastModified": "2025-03-12T05:07:54.001684-04:00"
+            },
+            {
+              "title": "WorldQuant Challenge",
+              "id": "challenge-help",
+              "lastModified": "2025-03-12T05:07:12.194953-04:00"
+            }
+          ],
+          "title": "Discover BRAIN",
+          "sequence": 0,
+          "lastModified": "2023-03-30T10:03:04.259135-04:00"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 279
+  },
+  "test_results": [
+    {
+      "path": "/tutorials",
+      "method": "GET",
+      "resolved_path": "/tutorials",
+      "url": "https://api.worldquantbrain.com/tutorials",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 284,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "category": "str",
+            "id": "str",
+            "lastModified": "str",
+            "pages": [
+              "dict"
+            ],
+            "sequence": "int",
+            "title": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

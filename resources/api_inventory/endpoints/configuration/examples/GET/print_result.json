@@ -1,0 +1,32 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/configuration",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/configuration",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1226,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "analytics": {
+        "trackingId": null
+      },
+      "recaptcha": {
+        "siteKey": "6LfmXTcpAAAAADEMEogEOHYuPKXg_6XrCn03X6S0"
+      },
+      "recaptchaV3": {
+        "siteKey": "6Ld54lkpAAAAAE7dC93Z79DLwqjgVupzpJTyUhoH"
+      }
+    }
+  }
+}

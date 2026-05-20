@@ -1,0 +1,383 @@
+{
+  "path": "/events",
+  "url_template": "https://api.worldquantbrain.com/events",
+  "methods": [
+    "GET",
+    "OPTIONS"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_dynamic_capture",
+    "platform_frontend"
+  ],
+  "description": "Events list. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional",
+    "offset": "optional",
+    "order": "observed query parameter",
+    "start>": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/events?limit=1",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "title": "str",
+          "type": "str",
+          "category": "NoneType",
+          "start": "str",
+          "end": "str",
+          "timezone": "str",
+          "language": "str",
+          "description": "str",
+          "register": "str",
+          "venue": "NoneType",
+          "city": "NoneType",
+          "country": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 21,
+      "next": "http://api.worldquantbrain.com:443/events?limit=1&offset=1",
+      "previous": null,
+      "results": [
+        {
+          "id": "zO8y3jm",
+          "title": "Opportunity webinar - February 2026",
+          "type": "ONLINE",
+          "category": null,
+          "start": "2026-02-05T08:00:00-05:00",
+          "end": "2026-02-05T09:00:00-05:00",
+          "timezone": "US/Eastern",
+          "language": "en",
+          "description": "This webinar qualifies for the Brain Community Score. To have your attendance count, join using the email ID registered with Brain.",
+          "register": "https://worldquant.zoom.us/webinar/register/WN_lSvruJB-TWSxLGK59TDuxw#/registration",
+          "venue": null,
+          "city": null,
+          "country": ""
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 269
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/events",
+      "seen_count": 2,
+      "query_keys": [
+        "limit",
+        "order",
+        "start>"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "category": "null",
+            "city": "null",
+            "country": "str",
+            "description": "str",
+            "end": "str",
+            "id": "str",
+            "language": "str",
+            "register": "str",
+            "start": "str",
+            "timezone": "str",
+            "title": "str",
+            "type": "str",
+            "venue": "null"
+          }
+        ]
+      }
+    },
+    {
+      "method": "OPTIONS",
+      "observed_path": "/events",
+      "seen_count": 1,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "actions": {
+          "GET": {
+            "category": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "city": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "country": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "description": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "end": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "language": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "register": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "start": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "timezone": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "title": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "venue": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/events",
+      "method": "GET",
+      "resolved_path": "/events",
+      "url": "https://api.worldquantbrain.com/events",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 267,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "category": "null",
+            "city": "null",
+            "country": "str",
+            "description": "str",
+            "end": "str",
+            "id": "str",
+            "language": "str",
+            "register": "str",
+            "start": "str",
+            "timezone": "str",
+            "title": "str",
+            "type": "str",
+            "venue": "null"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/events",
+      "method": "OPTIONS",
+      "resolved_path": "/events",
+      "url": "https://api.worldquantbrain.com/events",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 264,
+      "content_type": "application/json",
+      "response_shape": {
+        "actions": {
+          "GET": {
+            "category": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "city": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "country": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "description": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "end": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "id": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "language": {
+              "choices": "list",
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "register": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "start": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "timezone": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "title": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "type": {
+              "label": "str",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            },
+            "venue": {
+              "label": "str",
+              "maxLength": "int",
+              "readOnly": "bool",
+              "required": "bool",
+              "type": "str"
+            }
+          }
+        }
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

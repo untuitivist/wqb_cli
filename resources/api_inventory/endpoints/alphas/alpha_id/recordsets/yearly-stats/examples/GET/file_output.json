@@ -1,0 +1,245 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/alphas/{alpha_id}/recordsets/yearly-stats",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/vR5p8vqb/recordsets/yearly-stats",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 996,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "schema": {
+        "name": "yearly-stats",
+        "title": "Yearly Stats",
+        "properties": [
+          {
+            "name": "year",
+            "title": "Year",
+            "type": "year"
+          },
+          {
+            "name": "pnl",
+            "title": "PnL",
+            "type": "amount"
+          },
+          {
+            "name": "bookSize",
+            "title": "Book Size",
+            "type": "amount"
+          },
+          {
+            "name": "longCount",
+            "title": "Long Count",
+            "type": "integer"
+          },
+          {
+            "name": "shortCount",
+            "title": "Short Count",
+            "type": "integer"
+          },
+          {
+            "name": "turnover",
+            "title": "Turnover",
+            "type": "percent"
+          },
+          {
+            "name": "sharpe",
+            "title": "Sharpe",
+            "type": "decimal"
+          },
+          {
+            "name": "returns",
+            "title": "Returns",
+            "type": "percent"
+          },
+          {
+            "name": "drawdown",
+            "title": "Drawdown",
+            "type": "percent"
+          },
+          {
+            "name": "margin",
+            "title": "Margin",
+            "type": "permyriad"
+          },
+          {
+            "name": "fitness",
+            "title": "Fitness",
+            "type": "decimal"
+          },
+          {
+            "name": "stage",
+            "title": "Stage",
+            "type": "string"
+          }
+        ]
+      },
+      "records": [
+        [
+          "2014",
+          -107607.0,
+          20000000,
+          1516,
+          1518,
+          0.5928,
+          -0.46,
+          -0.0107,
+          0.0319,
+          -3.6e-05,
+          -0.06,
+          "TRAIN"
+        ],
+        [
+          "2015",
+          -171603.0,
+          20000000,
+          1548,
+          1520,
+          0.5952,
+          -0.64,
+          -0.017,
+          0.0374,
+          -5.7e-05,
+          -0.11,
+          "TRAIN"
+        ],
+        [
+          "2016",
+          200470.0,
+          20000000,
+          1540,
+          1519,
+          0.5848,
+          0.68,
+          0.0199,
+          0.0293,
+          6.8e-05,
+          0.13,
+          "TRAIN"
+        ],
+        [
+          "2017",
+          333571.0,
+          20000000,
+          1545,
+          1484,
+          0.568,
+          1.64,
+          0.0332,
+          0.0211,
+          0.000117,
+          0.4,
+          "TRAIN"
+        ],
+        [
+          "2018",
+          -382833.0,
+          20000000,
+          1512,
+          1534,
+          0.5796,
+          -1.46,
+          -0.0381,
+          0.0474,
+          -0.000132,
+          -0.37,
+          "TRAIN"
+        ],
+        [
+          "2019",
+          142480.0,
+          20000000,
+          1565,
+          1469,
+          0.5839,
+          0.55,
+          0.0141,
+          0.0246,
+          4.8e-05,
+          0.09,
+          "TRAIN"
+        ],
+        [
+          "2020",
+          1368310.0,
+          20000000,
+          1558,
+          1472,
+          0.6033,
+          2.97,
+          0.1481,
+          0.0307,
+          0.000491,
+          1.47,
+          "TRAIN"
+        ],
+        [
+          "2021",
+          -1012636.0,
+          20000000,
+          1580,
+          1505,
+          0.5934,
+          -2.16,
+          -0.1005,
+          0.1295,
+          -0.000339,
+          -0.89,
+          "TRAIN"
+        ],
+        [
+          "2022",
+          7487.0,
+          20000000,
+          1531,
+          1537,
+          0.5899,
+          0.02,
+          0.0015,
+          0.0402,
+          5e-06,
+          0.0,
+          "TRAIN"
+        ],
+        [
+          "2022",
+          -396068.0,
+          20000000,
+          1612,
+          1491,
+          0.5883,
+          -1.38,
+          -0.0774,
+          0.0851,
+          -0.000263,
+          -0.5,
+          "TEST"
+        ],
+        [
+          "2023",
+          -37553.0,
+          20000000,
+          1579,
+          1523,
+          0.5674,
+          -0.1,
+          -0.0038,
+          0.0448,
+          -1.3e-05,
+          -0.01,
+          "TEST"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "path": "/users/{user_id}/activities/diversity",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/activities/diversity",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "official_doc_snippet"
+  ],
+  "description": "按 Region、Delay、Data Category 返回 alpha 提交分布。",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Official-only entry; no safe sample probe generated."
+  },
+  "official_doc": {
+    "summary": "按 Region、Delay、Data Category 返回 alpha 提交分布。",
+    "methods": {
+      "GET": {
+        "params": {
+          "grouping": "region,delay,dataCategory"
+        },
+        "response": {
+          "alphas": "array of alphaCount, delay, region, dataCategory",
+          "count": "total alpha count"
+        }
+      }
+    }
+  },
+  "test_results": [
+    {
+      "path": "/users/{user_id}/activities/diversity",
+      "method": "GET",
+      "resolved_path": "/users/JL40454/activities/diversity",
+      "url": "https://api.worldquantbrain.com/users/JL40454/activities/diversity",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 473,
+      "content_type": "application/json",
+      "response_shape": {
+        "alphas": [
+          {
+            "alphaCount": "int",
+            "dataCategory": {
+              "id": "str",
+              "name": "str"
+            },
+            "dataDiversity": {
+              "check": "str",
+              "limit": "float"
+            },
+            "delay": "int",
+            "region": "str"
+          }
+        ],
+        "count": "int"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "path_vars": {},
+  "params": {
+    "members.self.status": "sample",
+    "order": "sample",
+    "status": "sample"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "ok": false,
+  "dry_run": false,
+  "endpoint": "/users/self/teams",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/self/teams",
+    "params": {
+      "members.self.status": "sample",
+      "order": "sample",
+      "status": "sample"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 400,
+    "reason": "Bad Request",
+    "elapsed_ms": 955,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      "Invalid query"
+    ]
+  }
+}

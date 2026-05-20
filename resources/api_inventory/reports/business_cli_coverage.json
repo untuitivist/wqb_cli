@@ -1,0 +1,637 @@
+{
+  "endpoint_count": 104,
+  "method_case_count": 126,
+  "missing_count": 0,
+  "rows": [
+    {
+      "path": "/achievements",
+      "method": "GET",
+      "command": "wqb platform achievements"
+    },
+    {
+      "path": "/achievements/{achievement_id}/icon",
+      "method": "GET",
+      "command": "wqb platform achievement-icon ALPHA_PERF_EXCELLENT"
+    },
+    {
+      "path": "/agreements",
+      "method": "GET",
+      "command": "wqb platform agreements"
+    },
+    {
+      "path": "/alphas",
+      "method": "GET",
+      "command": "wqb alpha all --limit 1"
+    },
+    {
+      "path": "/alphas/distribution",
+      "method": "GET",
+      "command": "wqb alpha distribution"
+    },
+    {
+      "path": "/alphas/lists",
+      "method": "GET",
+      "command": "wqb alpha lists"
+    },
+    {
+      "path": "/alphas/sample-alpha-id-walkthrough",
+      "method": "GET",
+      "command": "wqb alpha walkthrough"
+    },
+    {
+      "path": "/alphas/super-selection",
+      "method": "GET",
+      "command": "wqb alpha super-selection"
+    },
+    {
+      "path": "/alphas/unsubmitted",
+      "method": "GET",
+      "command": "wqb alpha unsubmitted"
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "GET",
+      "command": "wqb alpha get vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "PATCH",
+      "command": "wqb alpha patch vR5p8vqb --input api_inventory/examples/alpha_patch_color.json"
+    },
+    {
+      "path": "/alphas/{alpha_id}/alphas",
+      "method": "GET",
+      "command": "wqb alpha related vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/check",
+      "method": "GET",
+      "command": "wqb alpha check vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations",
+      "method": "GET",
+      "command": "wqb alpha correlation base vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/power-pool",
+      "method": "GET",
+      "command": "wqb alpha correlation power-pool vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/prod",
+      "method": "GET",
+      "command": "wqb alpha correlation prod vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/self",
+      "method": "GET",
+      "command": "wqb alpha correlation self vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/performance-comparison",
+      "method": "GET",
+      "command": "wqb alpha performance-comparison vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets",
+      "method": "GET",
+      "command": "wqb alpha recordsets vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/pnl",
+      "method": "GET",
+      "command": "wqb alpha pnl vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/sharpe",
+      "method": "GET",
+      "command": "wqb alpha sharpe vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/yearly-stats",
+      "method": "GET",
+      "command": "wqb alpha yearly-stats vR5p8vqb"
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/{record_set_name}",
+      "method": "GET",
+      "command": "wqb alpha recordset vR5p8vqb pnl"
+    },
+    {
+      "path": "/alphas/{alpha_id}/submit",
+      "method": "POST",
+      "command": "wqb alpha submit vR5p8vqb"
+    },
+    {
+      "path": "/authentication",
+      "method": "DELETE",
+      "command": "wqb auth logout"
+    },
+    {
+      "path": "/authentication",
+      "method": "GET",
+      "command": "wqb auth status"
+    },
+    {
+      "path": "/authentication",
+      "method": "HEAD",
+      "command": "wqb auth head"
+    },
+    {
+      "path": "/authentication",
+      "method": "POST",
+      "command": "wqb auth login --input api_inventory/examples/auth_login.json"
+    },
+    {
+      "path": "/authentication/brainlabs",
+      "method": "GET",
+      "command": "wqb auth brainlabs"
+    },
+    {
+      "path": "/authentication/persona",
+      "method": "GET",
+      "command": "wqb auth persona"
+    },
+    {
+      "path": "/authentication/support",
+      "method": "GET",
+      "command": "wqb auth support"
+    },
+    {
+      "path": "/authentication/workday",
+      "method": "GET",
+      "command": "wqb auth workday"
+    },
+    {
+      "path": "/captcha",
+      "method": "GET",
+      "command": "wqb platform captcha"
+    },
+    {
+      "path": "/competition-levels",
+      "method": "GET",
+      "command": "wqb config competition-levels"
+    },
+    {
+      "path": "/competition-levels/{competition_level_id}/icon",
+      "method": "GET",
+      "command": "wqb platform competition-level-icon none"
+    },
+    {
+      "path": "/competitions",
+      "method": "GET",
+      "command": "wqb competition list --limit 1"
+    },
+    {
+      "path": "/competitions/{competition_id}",
+      "method": "GET",
+      "command": "wqb competition get challenge"
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "GET",
+      "command": "wqb competition agreement challenge --method GET"
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "POST",
+      "command": "wqb competition agreement challenge --method POST"
+    },
+    {
+      "path": "/configuration",
+      "method": "GET",
+      "command": "wqb config get"
+    },
+    {
+      "path": "/consultant",
+      "method": "GET",
+      "command": "wqb consultant get"
+    },
+    {
+      "path": "/consultant-datasets",
+      "method": "GET",
+      "command": "wqb consultant datasets"
+    },
+    {
+      "path": "/consultant-information/consultant-dos-and-donts",
+      "method": "GET",
+      "command": "wqb consultant dos-and-donts"
+    },
+    {
+      "path": "/consultant-information/consultant-faqs",
+      "method": "GET",
+      "command": "wqb consultant faqs"
+    },
+    {
+      "path": "/consultant-information/osmosis-allocation-guide-consultants",
+      "method": "GET",
+      "command": "wqb consultant osmosis-guide"
+    },
+    {
+      "path": "/consultant-information/visualization-tool",
+      "method": "GET",
+      "command": "wqb consultant visualization-tool"
+    },
+    {
+      "path": "/consultant-program",
+      "method": "GET",
+      "command": "wqb consultant program"
+    },
+    {
+      "path": "/consultant-program/{language}",
+      "method": "GET",
+      "command": "wqb consultant program-language en"
+    },
+    {
+      "path": "/consultant/boards",
+      "method": "GET",
+      "command": "wqb consultant boards leader"
+    },
+    {
+      "path": "/consultant/boards/leader",
+      "method": "GET",
+      "command": "wqb consultant boards leader"
+    },
+    {
+      "path": "/consultant/summary",
+      "method": "GET",
+      "command": "wqb consultant summary"
+    },
+    {
+      "path": "/data-categories",
+      "method": "GET",
+      "command": "wqb data categories"
+    },
+    {
+      "path": "/data-fields",
+      "method": "GET",
+      "command": "wqb data fields --dataset analyst10 --limit 1"
+    },
+    {
+      "path": "/data-fields/summary",
+      "method": "GET",
+      "command": "wqb data fields-summary"
+    },
+    {
+      "path": "/data-fields/{field_id}",
+      "method": "GET",
+      "command": "wqb data field actual_update_flag_ebi"
+    },
+    {
+      "path": "/data-sets",
+      "method": "GET",
+      "command": "wqb data datasets --limit 1"
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "GET",
+      "command": "wqb data dataset-search --method GET"
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "POST",
+      "command": "wqb data dataset-search --method POST"
+    },
+    {
+      "path": "/data-sets/{dataset_id}",
+      "method": "GET",
+      "command": "wqb data dataset analyst10"
+    },
+    {
+      "path": "/errors/api/2/envelope",
+      "method": "POST",
+      "command": "wqb errors envelope --input api_inventory/examples/error_envelope.json"
+    },
+    {
+      "path": "/events",
+      "method": "GET",
+      "command": "wqb event list --limit 1"
+    },
+    {
+      "path": "/events",
+      "method": "OPTIONS",
+      "command": "wqb event options"
+    },
+    {
+      "path": "/events/{event_id}",
+      "method": "GET",
+      "command": "wqb event get zO8y3jm"
+    },
+    {
+      "path": "/messages",
+      "method": "GET",
+      "command": "wqb platform messages"
+    },
+    {
+      "path": "/operators",
+      "method": "GET",
+      "command": "wqb data operators"
+    },
+    {
+      "path": "/search",
+      "method": "GET",
+      "command": "wqb search analyst"
+    },
+    {
+      "path": "/simulations",
+      "method": "GET",
+      "command": "wqb sim list"
+    },
+    {
+      "path": "/simulations",
+      "method": "OPTIONS",
+      "command": "wqb sim options"
+    },
+    {
+      "path": "/simulations",
+      "method": "POST",
+      "command": "wqb sim create --input api_inventory/examples/simulation_regular_close.json"
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "GET",
+      "command": "wqb sim super-selection --method GET"
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "POST",
+      "command": "wqb sim super-selection --method POST"
+    },
+    {
+      "path": "/simulations/{simulation_id}",
+      "method": "GET",
+      "command": "wqb sim get 2UnwIe7g5jEcCgDvI4GpqO"
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "GET",
+      "command": "wqb suggest examples --method GET"
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "POST",
+      "command": "wqb suggest examples --method POST"
+    },
+    {
+      "path": "/suggest/expression",
+      "method": "GET",
+      "command": "wqb suggest expression --method GET"
+    },
+    {
+      "path": "/suggest/expression",
+      "method": "POST",
+      "command": "wqb suggest expression --method POST"
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "GET",
+      "command": "wqb suggest fastexpr --method GET"
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "POST",
+      "command": "wqb suggest fastexpr --method POST"
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "GET",
+      "command": "wqb suggest fields --method GET"
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "POST",
+      "command": "wqb suggest fields --method POST"
+    },
+    {
+      "path": "/tags",
+      "method": "GET",
+      "command": "wqb platform tags"
+    },
+    {
+      "path": "/teams",
+      "method": "GET",
+      "command": "wqb platform teams"
+    },
+    {
+      "path": "/tutorial-pages",
+      "method": "GET",
+      "command": "wqb tutorial pages"
+    },
+    {
+      "path": "/tutorial-pages/{page_id}",
+      "method": "GET",
+      "command": "wqb tutorial page exclusive-events-and-support-for-consultants"
+    },
+    {
+      "path": "/tutorial/{tutorial_slug}",
+      "method": "GET",
+      "command": "wqb tutorial slug exclusive-events-and-support-for-consultants"
+    },
+    {
+      "path": "/tutorials",
+      "method": "GET",
+      "command": "wqb tutorial list --limit 1"
+    },
+    {
+      "path": "/user/email/change",
+      "method": "GET",
+      "command": "wqb account email-change --method GET"
+    },
+    {
+      "path": "/user/email/change",
+      "method": "POST",
+      "command": "wqb account email-change --method POST"
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "GET",
+      "command": "wqb account email-reverify --method GET"
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "POST",
+      "command": "wqb account email-reverify --method POST"
+    },
+    {
+      "path": "/user/email/verify",
+      "method": "GET",
+      "command": "wqb account email-verify --method GET"
+    },
+    {
+      "path": "/user/email/verify",
+      "method": "POST",
+      "command": "wqb account email-verify --method POST"
+    },
+    {
+      "path": "/user/password/change",
+      "method": "GET",
+      "command": "wqb account password-change --method GET"
+    },
+    {
+      "path": "/user/password/change",
+      "method": "POST",
+      "command": "wqb account password-change --method POST"
+    },
+    {
+      "path": "/user/password/forgot",
+      "method": "GET",
+      "command": "wqb account password-forgot --method GET"
+    },
+    {
+      "path": "/user/password/forgot",
+      "method": "POST",
+      "command": "wqb account password-forgot --method POST"
+    },
+    {
+      "path": "/user/password/reset",
+      "method": "GET",
+      "command": "wqb account password-reset --method GET"
+    },
+    {
+      "path": "/user/password/reset",
+      "method": "POST",
+      "command": "wqb account password-reset --method POST"
+    },
+    {
+      "path": "/user/token",
+      "method": "GET",
+      "command": "wqb account token --method GET"
+    },
+    {
+      "path": "/user/token",
+      "method": "POST",
+      "command": "wqb account token --method POST"
+    },
+    {
+      "path": "/users",
+      "method": "GET",
+      "command": "wqb user list --limit 1"
+    },
+    {
+      "path": "/users/self",
+      "method": "GET",
+      "command": "wqb user self"
+    },
+    {
+      "path": "/users/self/achievements",
+      "method": "GET",
+      "command": "wqb user achievements"
+    },
+    {
+      "path": "/users/self/activities/pyramid-alphas",
+      "method": "GET",
+      "command": "wqb user pyramid-alphas"
+    },
+    {
+      "path": "/users/self/activities/pyramid-multipliers",
+      "method": "GET",
+      "command": "wqb user pyramid-multipliers"
+    },
+    {
+      "path": "/users/self/activities/simulations",
+      "method": "GET",
+      "command": "wqb user simulation-activity"
+    },
+    {
+      "path": "/users/self/agreements",
+      "method": "GET",
+      "command": "wqb user agreements"
+    },
+    {
+      "path": "/users/self/alphas",
+      "method": "GET",
+      "command": "wqb alpha list --limit 1"
+    },
+    {
+      "path": "/users/self/alphas/summary",
+      "method": "GET",
+      "command": "wqb user alphas-summary"
+    },
+    {
+      "path": "/users/self/consultant/summary",
+      "method": "GET",
+      "command": "wqb user consultant-summary"
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "GET",
+      "command": "wqb user consultant-tutorial-summary"
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "PATCH",
+      "command": "wqb user consultant-tutorial-patch --input api_inventory/examples/user_consultant_tutorial_patch.json"
+    },
+    {
+      "path": "/users/self/messages",
+      "method": "GET",
+      "command": "wqb user messages --limit 1"
+    },
+    {
+      "path": "/users/self/messages/summary",
+      "method": "GET",
+      "command": "wqb user messages-summary"
+    },
+    {
+      "path": "/users/self/pyramid/alphas",
+      "method": "GET",
+      "command": "wqb user pyramid-alpha-summary"
+    },
+    {
+      "path": "/users/self/teams",
+      "method": "GET",
+      "command": "wqb user teams"
+    },
+    {
+      "path": "/users/self/tutorial/steps",
+      "method": "GET",
+      "command": "wqb user tutorial-steps"
+    },
+    {
+      "path": "/users/self/tutorial/summary",
+      "method": "GET",
+      "command": "wqb user tutorial-summary"
+    },
+    {
+      "path": "/users/{user_id}",
+      "method": "GET",
+      "command": "wqb user get JL40454"
+    },
+    {
+      "path": "/users/{user_id}/achievements",
+      "method": "GET",
+      "command": "wqb user user-achievements JL40454"
+    },
+    {
+      "path": "/users/{user_id}/activities",
+      "method": "GET",
+      "command": "wqb user user-activities JL40454"
+    },
+    {
+      "path": "/users/{user_id}/activities/diversity",
+      "method": "GET",
+      "command": "wqb user user-diversity JL40454"
+    },
+    {
+      "path": "/users/{user_id}/alphas",
+      "method": "OPTIONS",
+      "command": "wqb user user-alphas-options JL40454"
+    },
+    {
+      "path": "/users/{user_id}/competitions",
+      "method": "GET",
+      "command": "wqb user user-competitions JL40454"
+    },
+    {
+      "path": "/users/{user_id}/settings/simulation",
+      "method": "GET",
+      "command": "wqb user user-simulation-settings JL40454"
+    },
+    {
+      "path": "/video-courses",
+      "method": "GET",
+      "command": "wqb platform video-courses"
+    }
+  ]
+}

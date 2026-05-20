@@ -1,0 +1,36 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/events/{event_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/events/zO8y3jm",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1240,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "id": "zO8y3jm",
+      "title": "Opportunity webinar - February 2026",
+      "type": "ONLINE",
+      "category": null,
+      "start": "2026-02-05T08:00:00-05:00",
+      "end": "2026-02-05T09:00:00-05:00",
+      "timezone": "US/Eastern",
+      "language": "en",
+      "description": "This webinar qualifies for the Brain Community Score. To have your attendance count, join using the email ID registered with Brain.",
+      "register": "https://worldquant.zoom.us/webinar/register/WN_lSvruJB-TWSxLGK59TDuxw#/registration",
+      "venue": null,
+      "city": null,
+      "country": ""
+    }
+  }
+}

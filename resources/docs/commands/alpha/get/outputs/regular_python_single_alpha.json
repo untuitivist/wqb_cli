@@ -1,0 +1,203 @@
+﻿{
+  "ok": true,
+  "endpoint": "/alphas/{alpha_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/alphas/e7nPQPpl",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1130,
+    "content_type": "application/json",
+    "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": null,
+    "body": {
+      "id": "e7nPQPpl",
+      "type": "REGULAR",
+      "author": "JL40454",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "CHN",
+        "universe": "TOP2000U",
+        "delay": 1,
+        "decay": 15,
+        "neutralization": "REVERSION_AND_MOMENTUM",
+        "truncation": 0.04,
+        "lookback": 2,
+        "pasteurization": "ON",
+        "maxTrade": "ON",
+        "maxPosition": "OFF",
+        "language": "PYTHON",
+        "visualization": false,
+        "startDate": "2014-01-01",
+        "endDate": "2023-12-31"
+      },
+      "regular": {
+        "code": "from brain.alphas import alpha\nimport numpy as np\nimport numpy.typing as npt\n\n\ndef _pasteurize(a, universe):\n    a = a.copy()\n    a[~universe.astype(bool)] = np.nan\n    return a\n\n\n@alpha(data=[\"close\", \"high\", \"low\"], store=[])\ndef cli_regular_python_example(data, store) -> npt.NDArray[np.float32]:\n    if data.close.shape[0] < 2:\n        return np.full(data.close.shape[1], np.nan, dtype=np.float32)\n    spread = data.high - data.low\n    spread = np.where(spread == 0, np.nan, spread)\n    signal = ((data.close - data.low) - (data.high - data.close)) / spread\n    a = -(signal[-1] - signal[-2])\n    a = _pasteurize(a, data.close[-1])\n    return a.astype(np.float32)",
+        "description": null,
+        "operatorCount": null
+      },
+      "dateCreated": "2026-05-19T20:46:38-04:00",
+      "dateSubmitted": null,
+      "dateModified": "2026-05-19T20:46:38-04:00",
+      "name": null,
+      "favorite": false,
+      "hidden": false,
+      "color": null,
+      "category": null,
+      "tags": [],
+      "classifications": [
+        {
+          "id": "DATA_USAGE:SINGLE_DATA_SET",
+          "name": "Single Data Set Alpha"
+        }
+      ],
+      "grade": null,
+      "stage": "IS",
+      "status": "UNSUBMITTED",
+      "is": {
+        "pnl": 30618727,
+        "bookSize": 20000000,
+        "longCount": 988,
+        "shortCount": 942,
+        "turnover": 1.1529,
+        "returns": 0.3172,
+        "drawdown": 0.2384,
+        "margin": 0.00055,
+        "sharpe": 3.78,
+        "fitness": 1.98,
+        "startDate": "2014-01-01",
+        "checks": [
+          {
+            "name": "LOW_SHARPE",
+            "result": "PASS",
+            "limit": 2.07,
+            "value": 3.78
+          },
+          {
+            "name": "LOW_FITNESS",
+            "result": "PASS",
+            "limit": 1,
+            "value": 1.98
+          },
+          {
+            "name": "LOW_TURNOVER",
+            "result": "PASS",
+            "limit": 0.01,
+            "value": 1.1529
+          },
+          {
+            "name": "HIGH_TURNOVER",
+            "result": "FAIL",
+            "limit": 0.7,
+            "value": 1.1529
+          },
+          {
+            "name": "CONCENTRATED_WEIGHT",
+            "result": "PASS"
+          },
+          {
+            "name": "LOW_RETURNS",
+            "result": "PASS",
+            "limit": 0.08,
+            "value": 0.3172
+          },
+          {
+            "name": "LOW_SUB_UNIVERSE_SHARPE",
+            "result": "PASS",
+            "limit": 2.69,
+            "value": 3.4
+          },
+          {
+            "name": "LOW_ROBUST_UNIVERSE_SHARPE.WITH_RATIO",
+            "result": "PASS",
+            "ratio": 0.4,
+            "limit": 1.51,
+            "value": 3.79
+          },
+          {
+            "name": "LOW_ROBUST_UNIVERSE_RETURNS",
+            "result": "PASS",
+            "ratio": 0.4,
+            "limit": 0.1269,
+            "value": 0.3172
+          },
+          {
+            "name": "SELF_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "DATA_DIVERSITY",
+            "result": "PENDING"
+          },
+          {
+            "name": "PROD_CORRELATION",
+            "result": "PENDING"
+          },
+          {
+            "name": "REGULAR_SUBMISSION",
+            "result": "PENDING"
+          },
+          {
+            "name": "LOW_2Y_SHARPE",
+            "result": "PASS",
+            "value": 2.95,
+            "limit": 2.07
+          },
+          {
+            "result": "PASS",
+            "name": "MATCHES_PYRAMID",
+            "effective": 1,
+            "multiplier": 1.4,
+            "pyramids": [
+              {
+                "name": "CHN/D1/PV",
+                "multiplier": 1.4
+              }
+            ]
+          },
+          {
+            "result": "WARNING",
+            "name": "MATCHES_THEMES",
+            "themes": [
+              {
+                "id": "lyvRJ3y",
+                "multiplier": 1,
+                "name": "All regions/D0 Power Pool May`26"
+              },
+              {
+                "id": "q4O05qy",
+                "multiplier": 1.5,
+                "name": "MEA Region Theme"
+              },
+              {
+                "id": "ZywpJvB",
+                "multiplier": 3,
+                "name": "After Cost HTVR Theme"
+              }
+            ]
+          }
+        ]
+      },
+      "os": null,
+      "train": null,
+      "test": null,
+      "prod": null,
+      "competitions": null,
+      "themes": null,
+      "pyramids": null,
+      "pyramidThemes": null,
+      "team": null,
+      "osmosisPoints": null,
+      "origin": "PLATFORM"
+    }
+  }
+}

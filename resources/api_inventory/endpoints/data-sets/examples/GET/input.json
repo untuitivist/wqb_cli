@@ -1,0 +1,12 @@
+{
+  "path_vars": {},
+  "params": {
+    "instrumentType": "sample",
+    "region": "sample",
+    "delay": "sample",
+    "universe": "sample",
+    "limit": 1,
+    "offset": 0,
+    "theme": "sample"
+  }
+}

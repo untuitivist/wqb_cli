@@ -1,0 +1,66 @@
+{
+  "path": "/captcha",
+  "url_template": "https://api.worldquantbrain.com/captcha",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/captcha",
+      "seen_count": 14,
+      "query_keys": [],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "algorithm": "str",
+        "challenge": "str",
+        "maxNumber": "int",
+        "salt": "str",
+        "signature": "str"
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/captcha",
+      "method": "GET",
+      "resolved_path": "/captcha",
+      "url": "https://api.worldquantbrain.com/captcha",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 270,
+      "content_type": "application/json",
+      "response_shape": {
+        "algorithm": "str",
+        "challenge": "str",
+        "maxNumber": "int",
+        "salt": "str",
+        "signature": "str"
+      },
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

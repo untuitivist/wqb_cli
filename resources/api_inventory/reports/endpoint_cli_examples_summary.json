@@ -1,0 +1,1268 @@
+{
+  "generated_at": "2026-05-19T19:25:00.337597+00:00",
+  "method_case_count": 126,
+  "failure_count": 0,
+  "rows": [
+    {
+      "path": "/achievements",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\achievements\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /achievements",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /achievements --input api_inventory\\endpoints\\achievements\\examples\\GET\\input.json --output api_inventory\\endpoints\\achievements\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/achievements/{achievement_id}/icon",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\achievements\\achievement_id\\icon\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /achievements/{achievement_id}/icon --var achievement_id=ALPHA_PERF_EXCELLENT",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /achievements/{achievement_id}/icon --input api_inventory\\endpoints\\achievements\\achievement_id\\icon\\examples\\GET\\input.json --output api_inventory\\endpoints\\achievements\\achievement_id\\icon\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/agreements",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\agreements\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /agreements",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /agreements --input api_inventory\\endpoints\\agreements\\examples\\GET\\input.json --output api_inventory\\endpoints\\agreements\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas --param limit=1 --param offset=0 --param query=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas --input api_inventory\\endpoints\\alphas\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/distribution",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\distribution\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/distribution",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/distribution --input api_inventory\\endpoints\\alphas\\distribution\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\distribution\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/lists",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\lists\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/lists",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/lists --input api_inventory\\endpoints\\alphas\\lists\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\lists\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/sample-alpha-id-walkthrough",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\sample-alpha-id-walkthrough\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/sample-alpha-id-walkthrough",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/sample-alpha-id-walkthrough --input api_inventory\\endpoints\\alphas\\sample-alpha-id-walkthrough\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\sample-alpha-id-walkthrough\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/super-selection",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\super-selection\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/super-selection",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/super-selection --input api_inventory\\endpoints\\alphas\\super-selection\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\super-selection\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/unsubmitted",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\unsubmitted\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/unsubmitted",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/unsubmitted --input api_inventory\\endpoints\\alphas\\unsubmitted\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\unsubmitted\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id} --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id} --input api_inventory\\endpoints\\alphas\\alpha_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "PATCH",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\examples\\PATCH",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call PATCH /alphas/{alpha_id} --var alpha_id=not-a-real-alpha-id --execute --json {\\\"color\\\":\\\"PURPLE\\\"}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call PATCH /alphas/{alpha_id} --input api_inventory\\endpoints\\alphas\\alpha_id\\examples\\PATCH\\input.json --execute --output api_inventory\\endpoints\\alphas\\alpha_id\\examples\\PATCH\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/alphas",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\alphas\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/alphas --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/alphas --input api_inventory\\endpoints\\alphas\\alpha_id\\alphas\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\alphas\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/check",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\check\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/check --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/check --input api_inventory\\endpoints\\alphas\\alpha_id\\check\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\check\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations --input api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/power-pool",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\power-pool\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/power-pool --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/power-pool --input api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\power-pool\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\power-pool\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/prod",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\prod\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/prod --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/prod --input api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\prod\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\prod\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/self",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\self\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/self --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/correlations/self --input api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\self\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\correlations\\self\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/performance-comparison",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\performance-comparison\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/performance-comparison --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/performance-comparison --input api_inventory\\endpoints\\alphas\\alpha_id\\performance-comparison\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\performance-comparison\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets --input api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/pnl",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\pnl\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/pnl --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/pnl --input api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\pnl\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\pnl\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/sharpe",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\sharpe\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/sharpe --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/sharpe --input api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\sharpe\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\sharpe\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/yearly-stats",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\yearly-stats\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/yearly-stats --var alpha_id=vR5p8vqb",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/yearly-stats --input api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\yearly-stats\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\yearly-stats\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/{record_set_name}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\record_set_name\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/{record_set_name} --var alpha_id=vR5p8vqb --var record_set_name=pnl",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /alphas/{alpha_id}/recordsets/{record_set_name} --input api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\record_set_name\\examples\\GET\\input.json --output api_inventory\\endpoints\\alphas\\alpha_id\\recordsets\\record_set_name\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/alphas/{alpha_id}/submit",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\alphas\\alpha_id\\submit\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --var alpha_id=not-a-real-alpha-id --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --input api_inventory\\endpoints\\alphas\\alpha_id\\submit\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\alphas\\alpha_id\\submit\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication",
+      "method": "DELETE",
+      "directory": "api_inventory\\endpoints\\authentication\\examples\\DELETE",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli --cookies api_inventory\\examples\\empty_cookies.json api call DELETE /authentication --execute",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli --cookies api_inventory\\examples\\empty_cookies.json api call DELETE /authentication --input api_inventory\\endpoints\\authentication\\examples\\DELETE\\input.json --execute --output api_inventory\\endpoints\\authentication\\examples\\DELETE\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\authentication\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication --input api_inventory\\endpoints\\authentication\\examples\\GET\\input.json --output api_inventory\\endpoints\\authentication\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication",
+      "method": "HEAD",
+      "directory": "api_inventory\\endpoints\\authentication\\examples\\HEAD",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call HEAD /authentication",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call HEAD /authentication --input api_inventory\\endpoints\\authentication\\examples\\HEAD\\input.json --output api_inventory\\endpoints\\authentication\\examples\\HEAD\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\authentication\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /authentication --execute --env-auth",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /authentication --input api_inventory\\endpoints\\authentication\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\authentication\\examples\\POST\\file_output.json --env-auth",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication/brainlabs",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\authentication\\brainlabs\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/brainlabs",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/brainlabs --input api_inventory\\endpoints\\authentication\\brainlabs\\examples\\GET\\input.json --output api_inventory\\endpoints\\authentication\\brainlabs\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication/persona",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\authentication\\persona\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/persona",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/persona --input api_inventory\\endpoints\\authentication\\persona\\examples\\GET\\input.json --output api_inventory\\endpoints\\authentication\\persona\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication/support",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\authentication\\support\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/support --param query=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/support --input api_inventory\\endpoints\\authentication\\support\\examples\\GET\\input.json --output api_inventory\\endpoints\\authentication\\support\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/authentication/workday",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\authentication\\workday\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/workday",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /authentication/workday --input api_inventory\\endpoints\\authentication\\workday\\examples\\GET\\input.json --output api_inventory\\endpoints\\authentication\\workday\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/captcha",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\captcha\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /captcha",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /captcha --input api_inventory\\endpoints\\captcha\\examples\\GET\\input.json --output api_inventory\\endpoints\\captcha\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competition-levels",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\competition-levels\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competition-levels",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competition-levels --input api_inventory\\endpoints\\competition-levels\\examples\\GET\\input.json --output api_inventory\\endpoints\\competition-levels\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competition-levels/{competition_level_id}/icon",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\competition-levels\\competition_level_id\\icon\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competition-levels/{competition_level_id}/icon --var competition_level_id=none",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competition-levels/{competition_level_id}/icon --input api_inventory\\endpoints\\competition-levels\\competition_level_id\\icon\\examples\\GET\\input.json --output api_inventory\\endpoints\\competition-levels\\competition_level_id\\icon\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competitions",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\competitions\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions --param limit=1 --param offset=0",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions --input api_inventory\\endpoints\\competitions\\examples\\GET\\input.json --output api_inventory\\endpoints\\competitions\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competitions/{competition_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\competitions\\competition_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions/{competition_id} --var competition_id=challenge",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions/{competition_id} --input api_inventory\\endpoints\\competitions\\competition_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\competitions\\competition_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions/{competition_id}/agreement --var competition_id=challenge",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /competitions/{competition_id}/agreement --input api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\GET\\input.json --output api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /competitions/{competition_id}/agreement --var competition_id=challenge --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /competitions/{competition_id}/agreement --input api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\competitions\\competition_id\\agreement\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/configuration",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\configuration\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /configuration",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /configuration --input api_inventory\\endpoints\\configuration\\examples\\GET\\input.json --output api_inventory\\endpoints\\configuration\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant --input api_inventory\\endpoints\\consultant\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-datasets",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-datasets\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-datasets",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-datasets --input api_inventory\\endpoints\\consultant-datasets\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-datasets\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-information/consultant-dos-and-donts",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-information\\consultant-dos-and-donts\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/consultant-dos-and-donts",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/consultant-dos-and-donts --input api_inventory\\endpoints\\consultant-information\\consultant-dos-and-donts\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-information\\consultant-dos-and-donts\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-information/consultant-faqs",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-information\\consultant-faqs\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/consultant-faqs",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/consultant-faqs --input api_inventory\\endpoints\\consultant-information\\consultant-faqs\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-information\\consultant-faqs\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-information/osmosis-allocation-guide-consultants",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-information\\osmosis-allocation-guide-consultants\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/osmosis-allocation-guide-consultants",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/osmosis-allocation-guide-consultants --input api_inventory\\endpoints\\consultant-information\\osmosis-allocation-guide-consultants\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-information\\osmosis-allocation-guide-consultants\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-information/visualization-tool",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-information\\visualization-tool\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/visualization-tool",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-information/visualization-tool --input api_inventory\\endpoints\\consultant-information\\visualization-tool\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-information\\visualization-tool\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-program",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-program\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-program",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-program --input api_inventory\\endpoints\\consultant-program\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-program\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant-program/{language}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant-program\\language\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-program/{language} --var language=en",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant-program/{language} --input api_inventory\\endpoints\\consultant-program\\language\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant-program\\language\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant/boards",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant\\boards\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/boards",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/boards --input api_inventory\\endpoints\\consultant\\boards\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant\\boards\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant/boards/leader",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant\\boards\\leader\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/boards/leader --param user=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/boards/leader --input api_inventory\\endpoints\\consultant\\boards\\leader\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant\\boards\\leader\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/consultant/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\consultant\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /consultant/summary --input api_inventory\\endpoints\\consultant\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\consultant\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-categories",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-categories\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-categories",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-categories --input api_inventory\\endpoints\\data-categories\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-categories\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-fields",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-fields\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields --param dataset.id=sample --param search=analyst --param limit=1 --param offset=0 --param delay=sample --param instrumentType=sample --param region=sample --param universe=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields --input api_inventory\\endpoints\\data-fields\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-fields\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-fields/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-fields\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields/summary --input api_inventory\\endpoints\\data-fields\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-fields\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-fields/{field_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-fields\\field_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields/{field_id} --var field_id=abnormal_news_sentiment_1d",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-fields/{field_id} --input api_inventory\\endpoints\\data-fields\\field_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-fields\\field_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-sets",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-sets\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets --param instrumentType=sample --param region=sample --param delay=sample --param universe=sample --param limit=1 --param offset=0 --param theme=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets --input api_inventory\\endpoints\\data-sets\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-sets\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-sets\\search\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets/search",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets/search --input api_inventory\\endpoints\\data-sets\\search\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-sets\\search\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\data-sets\\search\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /data-sets/search --execute --json {\\\"query\\\":\\\"analyst\\\",\\\"limit\\\":1}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /data-sets/search --input api_inventory\\endpoints\\data-sets\\search\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\data-sets\\search\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/data-sets/{dataset_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\data-sets\\dataset_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets/{dataset_id} --var dataset_id=analyst10",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /data-sets/{dataset_id} --input api_inventory\\endpoints\\data-sets\\dataset_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\data-sets\\dataset_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/errors/api/2/envelope",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\errors\\api\\2\\envelope\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /errors/api/2/envelope --param sentry_client=sample --param sentry_key=sample --param sentry_version=sample --execute --json \"{\\\"event_id\\\":\\\"example\\\",\\\"timestamp\\\":\\\"2026-05-19T19:19:07.909062+00:00\\\",\\\"exception\\\":{\\\"values\\\":[{\\\"type\\\":\\\"ExampleError\\\",\\\"value\\\":\\\"example request\\\"}]}}\"",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /errors/api/2/envelope --input api_inventory\\endpoints\\errors\\api\\2\\envelope\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\errors\\api\\2\\envelope\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/events",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\events\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /events --param limit=1 --param offset=0 --param order=sample --param start>=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /events --input api_inventory\\endpoints\\events\\examples\\GET\\input.json --output api_inventory\\endpoints\\events\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/events",
+      "method": "OPTIONS",
+      "directory": "api_inventory\\endpoints\\events\\examples\\OPTIONS",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /events --param limit=1 --param offset=0 --param order=sample --param start>=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /events --input api_inventory\\endpoints\\events\\examples\\OPTIONS\\input.json --output api_inventory\\endpoints\\events\\examples\\OPTIONS\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/events/{event_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\events\\event_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /events/{event_id} --var event_id=zO8y3jm",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /events/{event_id} --input api_inventory\\endpoints\\events\\event_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\events\\event_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/messages",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\messages\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /messages",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /messages --input api_inventory\\endpoints\\messages\\examples\\GET\\input.json --output api_inventory\\endpoints\\messages\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/operators",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\operators\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /operators --param instrumentType=sample --param region=sample --param delay=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /operators --input api_inventory\\endpoints\\operators\\examples\\GET\\input.json --output api_inventory\\endpoints\\operators\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/search",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\search\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /search --param query=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /search --input api_inventory\\endpoints\\search\\examples\\GET\\input.json --output api_inventory\\endpoints\\search\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\simulations\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations --input api_inventory\\endpoints\\simulations\\examples\\GET\\input.json --output api_inventory\\endpoints\\simulations\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations",
+      "method": "OPTIONS",
+      "directory": "api_inventory\\endpoints\\simulations\\examples\\OPTIONS",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /simulations",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /simulations --input api_inventory\\endpoints\\simulations\\examples\\OPTIONS\\input.json --output api_inventory\\endpoints\\simulations\\examples\\OPTIONS\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\simulations\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /simulations --execute --json {\\\"type\\\":\\\"REGULAR\\\",\\\"settings\\\":{\\\"instrumentType\\\":\\\"EQUITY\\\",\\\"region\\\":\\\"USA\\\",\\\"universe\\\":\\\"TOP3000\\\",\\\"delay\\\":1,\\\"decay\\\":15,\\\"neutralization\\\":\\\"SUBINDUSTRY\\\",\\\"truncation\\\":0.08,\\\"pasteurization\\\":\\\"ON\\\",\\\"unitHandling\\\":\\\"VERIFY\\\",\\\"nanHandling\\\":\\\"OFF\\\",\\\"language\\\":\\\"FASTEXPR\\\",\\\"visualization\\\":false},\\\"regular\\\":\\\"close\\\"}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /simulations --input api_inventory\\endpoints\\simulations\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\simulations\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\simulations\\super-selection\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations/super-selection",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations/super-selection --input api_inventory\\endpoints\\simulations\\super-selection\\examples\\GET\\input.json --output api_inventory\\endpoints\\simulations\\super-selection\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\simulations\\super-selection\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /simulations/super-selection --execute --json {\\\"selection\\\":\\\"all\\\",\\\"combo\\\":\\\"equal\\\"}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /simulations/super-selection --input api_inventory\\endpoints\\simulations\\super-selection\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\simulations\\super-selection\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/simulations/{simulation_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\simulations\\simulation_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations/{simulation_id} --var simulation_id=2UnwIe7g5jEcCgDvI4GpqO",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /simulations/{simulation_id} --input api_inventory\\endpoints\\simulations\\simulation_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\simulations\\simulation_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\suggest\\examples\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/examples",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/examples --input api_inventory\\endpoints\\suggest\\examples\\examples\\GET\\input.json --output api_inventory\\endpoints\\suggest\\examples\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\suggest\\examples\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/examples --execute --json \"{\\\"prompt\\\":\\\"mean reversion alpha example\\\"}\"",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/examples --input api_inventory\\endpoints\\suggest\\examples\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\suggest\\examples\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/expression",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\suggest\\expression\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/expression",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/expression --input api_inventory\\endpoints\\suggest\\expression\\examples\\GET\\input.json --output api_inventory\\endpoints\\suggest\\expression\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/expression",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\suggest\\expression\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/expression --execute --json \"{\\\"prompt\\\":\\\"rank close\\\"}\"",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/expression --input api_inventory\\endpoints\\suggest\\expression\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\suggest\\expression\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\suggest\\fastexpr\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/fastexpr",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/fastexpr --input api_inventory\\endpoints\\suggest\\fastexpr\\examples\\GET\\input.json --output api_inventory\\endpoints\\suggest\\fastexpr\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\suggest\\fastexpr\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/fastexpr --execute --json {\\\"prompt\\\":\\\"rank(close)\\\"}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/fastexpr --input api_inventory\\endpoints\\suggest\\fastexpr\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\suggest\\fastexpr\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\suggest\\fields\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/fields",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /suggest/fields --input api_inventory\\endpoints\\suggest\\fields\\examples\\GET\\input.json --output api_inventory\\endpoints\\suggest\\fields\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\suggest\\fields\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/fields --execute --json \"{\\\"prompt\\\":\\\"analyst estimates\\\"}\"",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /suggest/fields --input api_inventory\\endpoints\\suggest\\fields\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\suggest\\fields\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/tags",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\tags\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tags",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tags --input api_inventory\\endpoints\\tags\\examples\\GET\\input.json --output api_inventory\\endpoints\\tags\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/teams",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\teams\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /teams",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /teams --input api_inventory\\endpoints\\teams\\examples\\GET\\input.json --output api_inventory\\endpoints\\teams\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/tutorial-pages",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\tutorial-pages\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial-pages",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial-pages --input api_inventory\\endpoints\\tutorial-pages\\examples\\GET\\input.json --output api_inventory\\endpoints\\tutorial-pages\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/tutorial-pages/{page_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\tutorial-pages\\page_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial-pages/{page_id} --var page_id=exclusive-events-and-support-for-consultants",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial-pages/{page_id} --input api_inventory\\endpoints\\tutorial-pages\\page_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\tutorial-pages\\page_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/tutorial/{tutorial_slug}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\tutorial\\tutorial_slug\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial/{tutorial_slug} --var tutorial_slug=exclusive-events-and-support-for-consultants",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorial/{tutorial_slug} --input api_inventory\\endpoints\\tutorial\\tutorial_slug\\examples\\GET\\input.json --output api_inventory\\endpoints\\tutorial\\tutorial_slug\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/tutorials",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\tutorials\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorials --param limit=1 --param query=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /tutorials --input api_inventory\\endpoints\\tutorials\\examples\\GET\\input.json --output api_inventory\\endpoints\\tutorials\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/change",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\email\\change\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/change",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/change --input api_inventory\\endpoints\\user\\email\\change\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\email\\change\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/change",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\email\\change\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/change --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/change --input api_inventory\\endpoints\\user\\email\\change\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\email\\change\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\email\\reverify\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/reverify",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/reverify --input api_inventory\\endpoints\\user\\email\\reverify\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\email\\reverify\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\email\\reverify\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/reverify --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/reverify --input api_inventory\\endpoints\\user\\email\\reverify\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\email\\reverify\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/verify",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\email\\verify\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/verify",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/email/verify --input api_inventory\\endpoints\\user\\email\\verify\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\email\\verify\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/email/verify",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\email\\verify\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/verify --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/email/verify --input api_inventory\\endpoints\\user\\email\\verify\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\email\\verify\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/change",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\password\\change\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/change",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/change --input api_inventory\\endpoints\\user\\password\\change\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\password\\change\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/change",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\password\\change\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/change --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/change --input api_inventory\\endpoints\\user\\password\\change\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\password\\change\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/forgot",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\password\\forgot\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/forgot",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/forgot --input api_inventory\\endpoints\\user\\password\\forgot\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\password\\forgot\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/forgot",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\password\\forgot\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/forgot --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/forgot --input api_inventory\\endpoints\\user\\password\\forgot\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\password\\forgot\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/reset",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\password\\reset\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/reset",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/password/reset --input api_inventory\\endpoints\\user\\password\\reset\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\password\\reset\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/password/reset",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\password\\reset\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/reset --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/password/reset --input api_inventory\\endpoints\\user\\password\\reset\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\password\\reset\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/token",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\user\\token\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/token",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /user/token --input api_inventory\\endpoints\\user\\token\\examples\\GET\\input.json --output api_inventory\\endpoints\\user\\token\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/user/token",
+      "method": "POST",
+      "directory": "api_inventory\\endpoints\\user\\token\\examples\\POST",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/token --execute --json {\\\"example\\\":true}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call POST /user/token --input api_inventory\\endpoints\\user\\token\\examples\\POST\\input.json --execute --output api_inventory\\endpoints\\user\\token\\examples\\POST\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users --param limit=1",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users --input api_inventory\\endpoints\\users\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self --input api_inventory\\endpoints\\users\\self\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/achievements",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\achievements\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/achievements",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/achievements --input api_inventory\\endpoints\\users\\self\\achievements\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\achievements\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/activities/pyramid-alphas",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\activities\\pyramid-alphas\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/pyramid-alphas --param startDate=sample --param endDate=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/pyramid-alphas --input api_inventory\\endpoints\\users\\self\\activities\\pyramid-alphas\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\activities\\pyramid-alphas\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/activities/pyramid-multipliers",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\activities\\pyramid-multipliers\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/pyramid-multipliers",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/pyramid-multipliers --input api_inventory\\endpoints\\users\\self\\activities\\pyramid-multipliers\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\activities\\pyramid-multipliers\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/activities/simulations",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\activities\\simulations\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/simulations --param date>=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/activities/simulations --input api_inventory\\endpoints\\users\\self\\activities\\simulations\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\activities\\simulations\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/agreements",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\agreements\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/agreements",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/agreements --input api_inventory\\endpoints\\users\\self\\agreements\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\agreements\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/alphas",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\alphas\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/alphas --param limit=1 --param offset=0 --param dateSubmitted=sample --param type=sample --param color=sample --param tag=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/alphas --input api_inventory\\endpoints\\users\\self\\alphas\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\alphas\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/alphas/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\alphas\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/alphas/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/alphas/summary --input api_inventory\\endpoints\\users\\self\\alphas\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\alphas\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/consultant/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\consultant\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/consultant/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/consultant/summary --input api_inventory\\endpoints\\users\\self\\consultant\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\consultant\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/consultant/tutorial/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/consultant/tutorial/summary --input api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "PATCH",
+      "directory": "api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\PATCH",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call PATCH /users/self/consultant/tutorial/summary --execute --json {\\\"completedSteps\\\":[]}",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call PATCH /users/self/consultant/tutorial/summary --input api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\PATCH\\input.json --execute --output api_inventory\\endpoints\\users\\self\\consultant\\tutorial\\summary\\examples\\PATCH\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/messages",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\messages\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/messages --param limit=1 --param offset=0 --param order=sample --param type=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/messages --input api_inventory\\endpoints\\users\\self\\messages\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\messages\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/messages/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\messages\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/messages/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/messages/summary --input api_inventory\\endpoints\\users\\self\\messages\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\messages\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/pyramid/alphas",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\pyramid\\alphas\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/pyramid/alphas --param startDate=sample --param endDate=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/pyramid/alphas --input api_inventory\\endpoints\\users\\self\\pyramid\\alphas\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\pyramid\\alphas\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/teams",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\teams\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/teams --param members.self.status=sample --param order=sample --param status=sample",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/teams --input api_inventory\\endpoints\\users\\self\\teams\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\teams\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/tutorial/steps",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\tutorial\\steps\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/tutorial/steps",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/tutorial/steps --input api_inventory\\endpoints\\users\\self\\tutorial\\steps\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\tutorial\\steps\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/self/tutorial/summary",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\self\\tutorial\\summary\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/tutorial/summary",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/self/tutorial/summary --input api_inventory\\endpoints\\users\\self\\tutorial\\summary\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\self\\tutorial\\summary\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id} --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id} --input api_inventory\\endpoints\\users\\user_id\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/achievements",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\achievements\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/achievements --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/achievements --input api_inventory\\endpoints\\users\\user_id\\achievements\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\achievements\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/activities",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\activities\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/activities --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/activities --input api_inventory\\endpoints\\users\\user_id\\activities\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\activities\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/activities/diversity",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\activities\\diversity\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/activities/diversity --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/activities/diversity --input api_inventory\\endpoints\\users\\user_id\\activities\\diversity\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\activities\\diversity\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/alphas",
+      "method": "OPTIONS",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\alphas\\examples\\OPTIONS",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /users/{user_id}/alphas --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call OPTIONS /users/{user_id}/alphas --input api_inventory\\endpoints\\users\\user_id\\alphas\\examples\\OPTIONS\\input.json --output api_inventory\\endpoints\\users\\user_id\\alphas\\examples\\OPTIONS\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/competitions",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\competitions\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/competitions --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/competitions --input api_inventory\\endpoints\\users\\user_id\\competitions\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\competitions\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/users/{user_id}/settings/simulation",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\users\\user_id\\settings\\simulation\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/settings/simulation --var user_id=JL40454",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /users/{user_id}/settings/simulation --input api_inventory\\endpoints\\users\\user_id\\settings\\simulation\\examples\\GET\\input.json --output api_inventory\\endpoints\\users\\user_id\\settings\\simulation\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    },
+    {
+      "path": "/video-courses",
+      "method": "GET",
+      "directory": "api_inventory\\endpoints\\video-courses\\examples\\GET",
+      "parameter_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /video-courses",
+      "file_io_command": "D:\\_soft\\Anaconda\\envs\\WQBRAIN\\python.exe -m wqb_cli api call GET /video-courses --input api_inventory\\endpoints\\video-courses\\examples\\GET\\input.json --output api_inventory\\endpoints\\video-courses\\examples\\GET\\file_output.json",
+      "parameter_returncode": 0,
+      "file_returncode": 0,
+      "output_valid_json": true
+    }
+  ],
+  "failures": []
+}

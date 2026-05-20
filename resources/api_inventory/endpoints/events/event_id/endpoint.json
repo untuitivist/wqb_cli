@@ -1,0 +1,61 @@
+{
+  "path": "/events/{event_id}",
+  "url_template": "https://api.worldquantbrain.com/events/{event_id}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Event details. / Discovered from platform frontend bundle.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "probe_url": null,
+    "usable": false,
+    "options": null,
+    "allowed_methods": null,
+    "status_code": null,
+    "reason": null,
+    "response_shape": null,
+    "response_sample": null,
+    "headers": {},
+    "error": null
+  },
+  "test_results": [
+    {
+      "path": "/events/{event_id}",
+      "method": "GET",
+      "resolved_path": "/events/zO8y3jm",
+      "url": "https://api.worldquantbrain.com/events/zO8y3jm",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 313,
+      "content_type": "application/json",
+      "response_shape": {
+        "category": "null",
+        "city": "null",
+        "country": "str",
+        "description": "str",
+        "end": "str",
+        "id": "str",
+        "language": "str",
+        "register": "str",
+        "start": "str",
+        "timezone": "str",
+        "title": "str",
+        "type": "str",
+        "venue": "null"
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

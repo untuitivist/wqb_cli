@@ -1,0 +1,45 @@
+﻿{
+  "ok": true,
+  "endpoint": "/simulations/{simulation_id}",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/simulations/2nFEcbbu55rausiX9XkI2d",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 989,
+    "content_type": "application/json",
+    "allow": "GET, DELETE, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": 900,
+    "location": null,
+    "body": {
+      "id": "2nFEcbbu55rausiX9XkI2d",
+      "type": "REGULAR",
+      "settings": {
+        "instrumentType": "EQUITY",
+        "region": "CHN",
+        "universe": "TOP2000U",
+        "delay": 1,
+        "decay": 60,
+        "neutralization": "NONE",
+        "truncation": 0.01,
+        "lookback": 3,
+        "pasteurization": "ON",
+        "maxTrade": "ON",
+        "maxPosition": "OFF",
+        "language": "PYTHON",
+        "visualization": true
+      },
+      "regular": "from brain.alphas import alpha\nimport numpy as np\nimport numpy.typing as npt\n\ndef _pasteurize(a, universe):\n    a = a.copy()\n    a[~universe.astype(bool)] = np.nan\n    return a\n\n@alpha(data=[\"close\", \"high\", \"low\", \"volume\"], store=[])\ndef alpha_smooth2_range_sqrt_invvol025(data, store) -> npt.NDArray[np.float32]:\n    if data.close.shape[0] < 3:\n        return np.full(data.close.shape[1], np.nan, dtype=np.float32)\n    spread = data.high - data.low\n    spread = np.where(spread == 0, np.nan, spread)\n    hl_diff = ((data.close - data.low) - (data.high - data.close)) / spread\n    delta_hl = hl_diff[1:, :] - hl_diff[:-1, :]\n    base = -np.nanmean(delta_hl[-2:, :], axis=0)\n    range_pct = np.where(data.close[-1] == 0, np.nan, spread[-1] / data.close[-1])\n    vol = np.where(data.volume[-1] <= 0, np.nan, data.volume[-1])\n    a = base * np.sqrt(np.maximum(range_pct, 0)) / np.power(vol, 0.25)\n    a = _pasteurize(a, data.close[-1])\n    return a.astype(np.float32)",
+      "status": "COMPLETE",
+      "alpha": "YPNOpk3W"
+    }
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "path": "/users/self/teams",
+  "url_template": "https://api.worldquantbrain.com/users/self/teams",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture"
+  ],
+  "description": "Observed by passive platform network capture.",
+  "safe_probe": true,
+  "params": {
+    "members.self.status": "observed query parameter",
+    "order": "observed query parameter",
+    "status": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": false,
+    "error": "Observed by platform dynamic network capture; no separate safe probe was run."
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/teams",
+      "seen_count": 42,
+      "query_keys": [
+        "members.self.status",
+        "order",
+        "status"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": []
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/teams",
+      "method": "GET",
+      "resolved_path": "/users/self/teams",
+      "url": "https://api.worldquantbrain.com/users/self/teams",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 256,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": []
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "path": "/users/self/messages",
+  "url_template": "https://api.worldquantbrain.com/users/self/messages",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_dynamic_capture"
+  ],
+  "description": "Current user's messages.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional",
+    "offset": "optional",
+    "order": "observed query parameter",
+    "type": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/users/self/messages",
+    "usable": true,
+    "options": {
+      "status_code": 405,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "id": "str",
+          "type": "str",
+          "title": "str",
+          "description": "str",
+          "dateCreated": "str",
+          "tags": [],
+          "read": "bool"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 372,
+      "next": "http://api.worldquantbrain.com:443/users/self/messages?limit=10&offset=10",
+      "previous": null,
+      "results": [
+        {
+          "id": "RXBM4o7",
+          "type": "NOTIFICATION",
+          "title": "Eligibility Criteria of # Pyramids Completed, for Genius level 'Expert': You're almost there",
+          "description": "You're only a few pyramids away from meeting the Eligibility Criteria of # Pyramids Completed, for Genius level 'Expert'. Keep up the good work!",
+          "dateCreated": "2026-05-18T01:00:35.731952-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "7EKr6KR",
+          "type": "ANNOUNCEMENT",
+          "title": "Research Paper 08: Good Volatility, Bad Volatility and the Cross-Section of Stock Returns",
+          "description": "Opportunity to learn!  Here comes a new Research Paper 08: Good Volatility, Bad Volatility and the Cross-Section of Stock Returns. You can view this here - <a href='https://support.worldquantbrain.com/hc/en-us/community/topics/13724934223127-Research-Papers-for-Users'><strong><u>here</u></strong></a>. Happy learning!\"",
+          "dateCreated": "2026-05-17T02:00:24.603075-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "7GP55vA",
+          "type": "ANNOUNCEMENT",
+          "title": "Quantcepts Quiz #12",
+          "description": "<div style=\"position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden;\"> <iframe src=\"https://survey.worldquantbrain.com/755984?lang=en\" style=\"position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;\"></iframe> </div>",
+          "dateCreated": "2026-05-15T00:00:00-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "R2vkn2R",
+          "type": "ANNOUNCEMENT",
+          "title": "📢 Launching a new universe on MEA region for Consultants",
+          "description": "<p>🎉Exciting news! We have launched a new TOP400 universe on MEA region. You can view this on Brain platform simulation page.</p>",
+          "dateCreated": "2026-05-13T05:24:37-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "RDXMl3R",
+          "type": "ANNOUNCEMENT",
+          "title": "📢 Launching new data fields for Consultants",
+          "description": "<p>🎉Exciting news! We have launched new data fields for MEA. You can view this <a href=\"/data\">here</a></p>",
+          "dateCreated": "2026-05-13T05:21:53-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "yONxPER",
+          "type": "ANNOUNCEMENT",
+          "title": "🆕Introducing a new feature: Python Alphas simulation for consultants!",
+          "description": "<p>You can now create and submit Alphas in Python. Learn more about the new feature on: <a href=\"/learn/documentation/consultant-information/getting-started-brain-python-alphas\" rel=\"noopener noreferrer\" target=\"_blank\">Getting Started with Brain Python Alphas</a>. This is an initial rollout and we will continue to refine the experience and tools based on your feedback. Stay tuned for more updates!</p>",
+          "dateCreated": "2026-05-12T10:00:00-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "ywkOogy",
+          "type": "ANNOUNCEMENT",
+          "title": "Research Paper: Profitability, R&D Investments and the Cross-Section of Stock Returns",
+          "description": "<p>Check out the <a href=\"https://support.worldquantbrain.com/hc/en-us/community/topics/12997688420247-Research-Papers-for-Consultants\"><strong><u>research paper</u></strong></a>, its key ideas and the associated BRAIN data fields.</p>",
+          "dateCreated": "2026-05-10T02:00:29.120700-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "AJZ9rpA",
+          "type": "ANNOUNCEMENT",
+          "title": "Research Paper 07: Relative Strength Strategies for Investing",
+          "description": "Opportunity to learn!  Here comes a new Research Paper 07: Relative Strength Strategies for Investing. You can view this here - <a href='https://support.worldquantbrain.com/hc/en-us/community/topics/13724934223127-Research-Papers-for-Users'><strong><u>here</u></strong></a>. Happy learning!\"",
+          "dateCreated": "2026-05-10T02:00:25.042175-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "RxNza07",
+          "type": "ANNOUNCEMENT",
+          "title": "📢 Launching a new High Turnover (HTVR) Theme - \"After Cost HTVR Theme\"",
+          "description": "🎉 Exciting news! We have launched a new \"After Cost HTVR Theme\".<br>Duration: May 11`th - May 24`th (2 weeks)<br>Multiplier: 3X for regular alphas<br>Details: Your alpha must be simulated in the USA region and satisfy the High Turnover (HTVR) base conditions:<br><ul><li>Turnover > 20%</li><li>High Turnover returns ratio > 0.75 OR Pnl realization < 20</li><li>After cost Sharpe > 1.0</li></ul>To get started, please see:<br><a href=\"https://platform.worldquantbrain.com/learn/documentation/discover-brain/getting-started-high-turnover-alphas\">Getting Started with High Turnover Alphas</a>",
+          "dateCreated": "2026-05-10T00:00:00-04:00",
+          "tags": [],
+          "read": false
+        },
+        {
+          "id": "ywkKQDy",
+          "type": "NOTIFICATION",
+          "title": "🌟 Congratulations for the 'Expert' milestone of # signals Completed in Genius",
+          "description": "You have completed the signals eligibility criteria for Genius level 'Expert'. Keep up the good work!",
+          "dateCreated": "2026-05-09T16:06:56.954381-04:00",
+          "tags": [],
+          "read": false
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 277
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/users/self/messages",
+      "seen_count": 16,
+      "query_keys": [
+        "limit",
+        "order",
+        "type"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "dateCreated": "str",
+            "description": "str",
+            "id": "str",
+            "read": "bool",
+            "tags": [],
+            "title": "str",
+            "type": "str"
+          }
+        ]
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/users/self/messages",
+      "method": "GET",
+      "resolved_path": "/users/self/messages",
+      "url": "https://api.worldquantbrain.com/users/self/messages",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 500,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "dateCreated": "str",
+            "description": "str",
+            "id": "str",
+            "read": "bool",
+            "tags": [],
+            "title": "str",
+            "type": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

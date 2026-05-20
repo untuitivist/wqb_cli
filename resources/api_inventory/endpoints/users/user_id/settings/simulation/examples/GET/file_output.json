@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/{user_id}/settings/simulation",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/JL40454/settings/simulation",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 938,
+    "content_type": "application/json",
+    "allow": "GET, POST, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "instrumentType": "EQUITY",
+      "region": "CHN",
+      "universe": "TOP2000U",
+      "delay": 1,
+      "decay": 20,
+      "neutralization": "REVERSION_AND_MOMENTUM",
+      "truncation": 0.05,
+      "lookback": 20,
+      "selectionHandling": "POSITIVE",
+      "selectionLimit": 10,
+      "maxTrade": "ON",
+      "maxPosition": "OFF",
+      "language": "PYTHON",
+      "visualization": false,
+      "componentActivation": "IS",
+      "testPeriod": "P0Y0M0D"
+    }
+  }
+}

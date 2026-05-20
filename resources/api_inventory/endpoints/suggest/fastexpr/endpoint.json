@@ -1,0 +1,71 @@
+{
+  "path": "/suggest/fastexpr",
+  "url_template": "https://api.worldquantbrain.com/suggest/fastexpr",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "FastExpr suggestion. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": "POST may send prompt/context.",
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/suggest/fastexpr",
+    "usable": false,
+    "options": {
+      "status_code": 404,
+      "allow": null,
+      "content_type": "application/json"
+    },
+    "allowed_methods": null,
+    "status_code": 404,
+    "reason": "Not Found",
+    "response_shape": {
+      "detail": "str"
+    },
+    "response_sample": {
+      "detail": "Not found."
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 288
+  },
+  "test_results": [
+    {
+      "path": "/suggest/fastexpr",
+      "method": "GET",
+      "resolved_path": "/suggest/fastexpr",
+      "url": "https://api.worldquantbrain.com/suggest/fastexpr",
+      "executed": true,
+      "status": "tested",
+      "status_code": 404,
+      "reason": "Not Found",
+      "ok": false,
+      "elapsed_ms": 282,
+      "content_type": "application/json",
+      "response_shape": {
+        "detail": "str"
+      },
+      "allow": null,
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "POST",
+      "resolved_path": "/suggest/fastexpr",
+      "url": "https://api.worldquantbrain.com/suggest/fastexpr",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

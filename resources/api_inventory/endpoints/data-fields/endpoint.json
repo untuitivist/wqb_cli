@@ -1,0 +1,216 @@
+{
+  "path": "/data-fields",
+  "url_template": "https://api.worldquantbrain.com/data-fields",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "platform_dynamic_capture",
+    "platform_frontend",
+    "rocky-d/wqb"
+  ],
+  "description": "Data field search. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {
+    "dataset.id": "dataset id",
+    "search": "query",
+    "limit": "1..100",
+    "offset": "0..10000",
+    "delay": "observed query parameter",
+    "instrumentType": "observed query parameter",
+    "region": "observed query parameter",
+    "universe": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/data-fields?instrumentType=EQUITY&region=USA&delay=1&universe=TOP3000&limit=1",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "results": [
+        {
+          "id": "str",
+          "description": "str",
+          "dataset": {
+            "id": "...",
+            "name": "..."
+          },
+          "category": {
+            "id": "...",
+            "name": "..."
+          },
+          "subcategory": {
+            "id": "...",
+            "name": "..."
+          },
+          "region": "str",
+          "delay": "int",
+          "universe": "str",
+          "type": "str",
+          "dateCoverage": "float",
+          "coverage": "float",
+          "userCount": "int",
+          "alphaCount": "int",
+          "pyramidMultiplier": "float",
+          "themes": []
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 10000,
+      "results": [
+        {
+          "id": "abnormal_news_sentiment_1d",
+          "description": "Abnormal sentiment score for novel, relevant, and non-neutral news for the past one day relative to past year baseline",
+          "dataset": {
+            "id": "model109",
+            "name": "Fundamentals and Technical Indicators Model"
+          },
+          "category": {
+            "id": "model",
+            "name": "Model"
+          },
+          "subcategory": {
+            "id": "model-valuation-models",
+            "name": "Valuation Models"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "MATRIX",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7745,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.4,
+          "themes": []
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "RateLimit-Remaining": "0",
+      "X-RateLimit-Remaining-Minute": "28",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 252
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/data-fields",
+      "seen_count": 9,
+      "query_keys": [
+        "delay",
+        "instrumentType",
+        "limit",
+        "offset",
+        "region",
+        "universe"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "results": [
+          {
+            "alphaCount": "int",
+            "category": {
+              "id": "str",
+              "name": "str"
+            },
+            "coverage": "float",
+            "dataset": {
+              "id": "str",
+              "name": "str"
+            },
+            "dateCoverage": "float",
+            "delay": "int",
+            "description": "str",
+            "id": "str",
+            "pyramidMultiplier": "float",
+            "region": "str",
+            "subcategory": {
+              "id": "str",
+              "name": "str"
+            },
+            "themes": [],
+            "type": "str",
+            "universe": "str",
+            "userCount": "int"
+          }
+        ]
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/data-fields",
+      "method": "GET",
+      "resolved_path": "/data-fields",
+      "url": "https://api.worldquantbrain.com/data-fields",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 255,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "results": [
+          {
+            "alphaCount": "int",
+            "category": {
+              "id": "str",
+              "name": "str"
+            },
+            "coverage": "float",
+            "dataset": {
+              "id": "str",
+              "name": "str"
+            },
+            "dateCoverage": "float",
+            "delay": "int",
+            "description": "str",
+            "id": "str",
+            "pyramidMultiplier": "float",
+            "region": "str",
+            "subcategory": {
+              "id": "str",
+              "name": "str"
+            },
+            "themes": [],
+            "type": "str",
+            "universe": "str",
+            "userCount": "int"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "path_vars": {},
+  "params": {
+    "limit": 1,
+    "offset": 0,
+    "dateSubmitted": "sample",
+    "type": "sample",
+    "color": "sample",
+    "tag": "sample"
+  }
+}

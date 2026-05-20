@@ -1,0 +1,1 @@
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call GET /authentication/brainlabs --input api_inventory\endpoints\authentication\brainlabs\examples\GET\input.json --output api_inventory\endpoints\authentication\brainlabs\examples\GET\file_output.json

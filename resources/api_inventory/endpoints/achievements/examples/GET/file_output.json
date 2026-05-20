@@ -1,0 +1,89 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/achievements",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/achievements",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 972,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": [
+      {
+        "id": "SIMULATION_20",
+        "name": "20 Simulations",
+        "description": "Ran 20 Simulations",
+        "total": 20
+      },
+      {
+        "id": "SIMULATION_100",
+        "name": "100 Simulations",
+        "description": "Ran 100 Simulations",
+        "total": 100
+      },
+      {
+        "id": "SUBMIT_1",
+        "name": "First Submission",
+        "description": "Submitted your first alpha",
+        "total": 1
+      },
+      {
+        "id": "SUBMIT_10",
+        "name": "10 Submissions",
+        "description": "Submitted 10 alphas",
+        "total": 10
+      },
+      {
+        "id": "ALPHA_PERF_GOOD",
+        "name": "Good Alpha",
+        "description": "Made an alpha with Good performance",
+        "total": null
+      },
+      {
+        "id": "ALPHA_PERF_EXCELLENT",
+        "name": "Excellent Alpha",
+        "description": "Made an alpha with Excellent performance",
+        "total": null
+      },
+      {
+        "id": "ALPHA_PERF_SPECTACULAR",
+        "name": "Spectacular Alpha",
+        "description": "Made an alpha with Spectacular performance",
+        "total": null
+      },
+      {
+        "id": "SUPER_ALPHA",
+        "name": "SuperAlpha",
+        "description": "Unlocked consultant access to SuperAlpha",
+        "total": null
+      },
+      {
+        "id": "CONSULTANT_SUBMIT",
+        "name": "First Consultant Submission",
+        "description": "Submitted your first consultant alpha",
+        "total": null
+      },
+      {
+        "id": "TUTORIAL",
+        "name": "Complete Tutorial",
+        "description": "Completed tutorial and achieved GOLD level",
+        "total": null
+      },
+      {
+        "id": "CONSULTANT_TUTORIAL",
+        "name": "Complete Consultant Tutorial",
+        "description": "Completed Consultant tutorial",
+        "total": null
+      }
+    ]
+  }
+}

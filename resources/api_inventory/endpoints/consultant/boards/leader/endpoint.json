@@ -1,0 +1,300 @@
+{
+  "path": "/consultant/boards/leader",
+  "url_template": "https://api.worldquantbrain.com/consultant/boards/leader",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_dynamic_capture"
+  ],
+  "description": "Consultant leaderboard.",
+  "safe_probe": true,
+  "params": {
+    "user": "observed query parameter"
+  },
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/consultant/boards/leader",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "user": "str",
+          "weightFactor": "float",
+          "valueFactor": "float",
+          "dailyOsmosisRank": "float",
+          "dataFieldsUsed": "int",
+          "submissionsCount": "int",
+          "meanProdCorrelation": "float",
+          "meanSelfCorrelation": "float",
+          "superAlphaSubmissionsCount": "int",
+          "superAlphaMeanProdCorrelation": "float",
+          "superAlphaMeanSelfCorrelation": "float",
+          "university": "str",
+          "country": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 8239,
+      "next": "http://api.worldquantbrain.com:443/consultant/boards/leader?limit=10&offset=10",
+      "previous": null,
+      "results": [
+        {
+          "user": "VV64321",
+          "weightFactor": 46.1,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 89,
+          "submissionsCount": 51,
+          "meanProdCorrelation": 0.6402,
+          "meanSelfCorrelation": 0.4979,
+          "superAlphaSubmissionsCount": 36,
+          "superAlphaMeanProdCorrelation": 0.6366,
+          "superAlphaMeanSelfCorrelation": 0.4463,
+          "university": "Indian Institute of Technology Kharagpur",
+          "country": "IN"
+        },
+        {
+          "user": "UA62118",
+          "weightFactor": 5.14,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.34,
+          "dataFieldsUsed": 137,
+          "submissionsCount": 90,
+          "meanProdCorrelation": 0.6996,
+          "meanSelfCorrelation": 0.1196,
+          "superAlphaSubmissionsCount": 3,
+          "superAlphaMeanProdCorrelation": 0.68,
+          "superAlphaMeanSelfCorrelation": 0.3546,
+          "university": "Indian Institute of Technology Roorkee",
+          "country": "IN"
+        },
+        {
+          "user": "YR25065",
+          "weightFactor": 3.91,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 43,
+          "submissionsCount": 42,
+          "meanProdCorrelation": 0.7051,
+          "meanSelfCorrelation": 0.55,
+          "superAlphaSubmissionsCount": 0,
+          "superAlphaMeanProdCorrelation": 0.0,
+          "superAlphaMeanSelfCorrelation": 0.0,
+          "university": "National Chengchi University",
+          "country": "TW"
+        },
+        {
+          "user": "SK78969",
+          "weightFactor": 36.91,
+          "valueFactor": 0.44,
+          "dailyOsmosisRank": 0.52,
+          "dataFieldsUsed": 6336,
+          "submissionsCount": 8428,
+          "meanProdCorrelation": 0.629,
+          "meanSelfCorrelation": 0.6106,
+          "superAlphaSubmissionsCount": 254,
+          "superAlphaMeanProdCorrelation": 0.6337,
+          "superAlphaMeanSelfCorrelation": 0.4959,
+          "university": "Indian Institute of Technology Kanpur",
+          "country": "IN"
+        },
+        {
+          "user": "RK47841",
+          "weightFactor": 140.42,
+          "valueFactor": 0.84,
+          "dailyOsmosisRank": 0.61,
+          "dataFieldsUsed": 1794,
+          "submissionsCount": 1805,
+          "meanProdCorrelation": 0.6234,
+          "meanSelfCorrelation": 0.5606,
+          "superAlphaSubmissionsCount": 946,
+          "superAlphaMeanProdCorrelation": 0.6408,
+          "superAlphaMeanSelfCorrelation": 0.6034,
+          "university": "Visvesvaraya Technological University",
+          "country": "IN"
+        },
+        {
+          "user": "TC81507",
+          "weightFactor": 0,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 20,
+          "submissionsCount": 4,
+          "meanProdCorrelation": 0.6635,
+          "meanSelfCorrelation": 0.1327,
+          "superAlphaSubmissionsCount": 1,
+          "superAlphaMeanProdCorrelation": 0.5915,
+          "superAlphaMeanSelfCorrelation": 0.2304,
+          "university": "Indian Institute of Technology Delhi",
+          "country": "KR"
+        },
+        {
+          "user": "RR99909",
+          "weightFactor": 1.99,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 62,
+          "submissionsCount": 30,
+          "meanProdCorrelation": 0.6694,
+          "meanSelfCorrelation": 0.3927,
+          "superAlphaSubmissionsCount": 2,
+          "superAlphaMeanProdCorrelation": 0.6477,
+          "superAlphaMeanSelfCorrelation": 0.3277,
+          "university": "Manipal University",
+          "country": "IN"
+        },
+        {
+          "user": "SC13445",
+          "weightFactor": 118.22,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 84,
+          "submissionsCount": 72,
+          "meanProdCorrelation": 0.5883,
+          "meanSelfCorrelation": 0.5075,
+          "superAlphaSubmissionsCount": 16,
+          "superAlphaMeanProdCorrelation": 0.6146,
+          "superAlphaMeanSelfCorrelation": 0.6215,
+          "university": "Shanghai JiaoTong  University",
+          "country": "CN"
+        },
+        {
+          "user": "JL36234",
+          "weightFactor": 0,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 31,
+          "submissionsCount": 16,
+          "meanProdCorrelation": 0.5861,
+          "meanSelfCorrelation": 0.3776,
+          "superAlphaSubmissionsCount": 0,
+          "superAlphaMeanProdCorrelation": 0.0,
+          "superAlphaMeanSelfCorrelation": 0.0,
+          "university": "Xi'an Jiaotong University",
+          "country": "CN"
+        },
+        {
+          "user": "NN52920",
+          "weightFactor": 307.31,
+          "valueFactor": 0.5,
+          "dailyOsmosisRank": 0.0,
+          "dataFieldsUsed": 78,
+          "submissionsCount": 64,
+          "meanProdCorrelation": 0.6539,
+          "meanSelfCorrelation": 0.6488,
+          "superAlphaSubmissionsCount": 3,
+          "superAlphaMeanProdCorrelation": 0.6685,
+          "superAlphaMeanSelfCorrelation": 0.6169,
+          "university": "Hanoi University of Science and Technology",
+          "country": "VN"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 368
+  },
+  "dynamic_capture": [
+    {
+      "method": "GET",
+      "observed_path": "/consultant/boards/leader",
+      "seen_count": 14,
+      "query_keys": [
+        "user"
+      ],
+      "status_codes": [
+        200
+      ],
+      "content_types": [
+        "application/json"
+      ],
+      "request_body_shape": null,
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "country": "str",
+            "dailyOsmosisRank": "float",
+            "dataFieldsUsed": "int",
+            "meanProdCorrelation": "float",
+            "meanSelfCorrelation": "float",
+            "submissionsCount": "int",
+            "superAlphaMeanProdCorrelation": "float",
+            "superAlphaMeanSelfCorrelation": "float",
+            "superAlphaSubmissionsCount": "int",
+            "university": "str",
+            "user": "str",
+            "valueFactor": "float",
+            "weightFactor": "float"
+          }
+        ]
+      }
+    }
+  ],
+  "test_results": [
+    {
+      "path": "/consultant/boards/leader",
+      "method": "GET",
+      "resolved_path": "/consultant/boards/leader",
+      "url": "https://api.worldquantbrain.com/consultant/boards/leader",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 378,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "country": "str",
+            "dailyOsmosisRank": "float",
+            "dataFieldsUsed": "int",
+            "meanProdCorrelation": "float",
+            "meanSelfCorrelation": "float",
+            "submissionsCount": "int",
+            "superAlphaMeanProdCorrelation": "float",
+            "superAlphaMeanSelfCorrelation": "float",
+            "superAlphaSubmissionsCount": "int",
+            "university": "str",
+            "user": "str",
+            "valueFactor": "float",
+            "weightFactor": "float"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

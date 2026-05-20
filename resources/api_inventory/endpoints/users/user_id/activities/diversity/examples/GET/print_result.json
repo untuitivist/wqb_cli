@@ -1,0 +1,1508 @@
+{
+  "ok": true,
+  "dry_run": false,
+  "endpoint": "/users/{user_id}/activities/diversity",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/users/JL40454/activities/diversity",
+    "params": {},
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1213,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "location": null,
+    "body": {
+      "alphas": [
+        {
+          "region": "AMR",
+          "delay": 0,
+          "alphaCount": 10,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 0,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 10
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 19,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 14,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 20,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 11,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "imbalance",
+            "name": "Imbalance"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 22,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "insiders",
+            "name": "Insiders"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "macro",
+            "name": "Macro"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 24,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 14,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 25,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "option",
+            "name": "Option"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 32,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 13,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 23,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "sentiment",
+            "name": "Sentiment"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "shortinterest",
+            "name": "Short Interest"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "alphaCount": 22,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "socialmedia",
+            "name": "Social Media"
+          }
+        },
+        {
+          "region": "AMR",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 229
+        },
+        {
+          "region": "AMR",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 239
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 28,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 11,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "broker",
+            "name": "Broker"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "imbalance",
+            "name": "Imbalance"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 15,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "insiders",
+            "name": "Insiders"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 2,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 8,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 7,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "sentiment",
+            "name": "Sentiment"
+          }
+        },
+        {
+          "region": "ASI",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 74
+        },
+        {
+          "region": "ASI",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 74
+        },
+        {
+          "region": "CHN",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "CHN",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "CHN",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "CHN",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 7
+        },
+        {
+          "region": "CHN",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 7
+        },
+        {
+          "region": "EUR",
+          "delay": 0,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 0,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 1
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 39,
+          "dataDiversity": {
+            "check": "FAIL",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 19,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "imbalance",
+            "name": "Imbalance"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 16,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 22,
+          "dataDiversity": {
+            "check": "WARN",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "EUR",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 80
+        },
+        {
+          "region": "EUR",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 81
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 36,
+          "dataDiversity": {
+            "check": "FAIL",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 12,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "macro",
+            "name": "Macro"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 25,
+          "dataDiversity": {
+            "check": "WARN",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "option",
+            "name": "Option"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 24,
+          "dataDiversity": {
+            "check": "WARN",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 17,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "socialmedia",
+            "name": "Social Media"
+          }
+        },
+        {
+          "region": "GLB",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 95
+        },
+        {
+          "region": "GLB",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 95
+        },
+        {
+          "region": "HKG",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "HKG",
+          "delay": 1,
+          "alphaCount": 2,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "HKG",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "HKG",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "HKG",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 2
+        },
+        {
+          "region": "HKG",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 2
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 21,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 6,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 6,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "imbalance",
+            "name": "Imbalance"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 38,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 2,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 12,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 24,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 10,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "sentiment",
+            "name": "Sentiment"
+          }
+        },
+        {
+          "region": "IND",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 65
+        },
+        {
+          "region": "IND",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 65
+        },
+        {
+          "region": "JPN",
+          "delay": 0,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 0,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 1
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 26,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 7,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "broker",
+            "name": "Broker"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 30,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "institutions",
+            "name": "Institutions"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 8,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 12,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 30,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "sentiment",
+            "name": "Sentiment"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "alphaCount": 2,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "socialmedia",
+            "name": "Social Media"
+          }
+        },
+        {
+          "region": "JPN",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 118
+        },
+        {
+          "region": "JPN",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 119
+        },
+        {
+          "region": "KOR",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "KOR",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 1
+        },
+        {
+          "region": "KOR",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 1
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "alphaCount": 6,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "alphaCount": 4,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "alphaCount": 8,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "alphaCount": 7,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "MEA",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 20
+        },
+        {
+          "region": "MEA",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 20
+        },
+        {
+          "region": "USA",
+          "delay": 0,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 0,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 0,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 1
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 50,
+          "dataDiversity": {
+            "check": "WARN",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "analyst",
+            "name": "Analyst"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 5,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "earnings",
+            "name": "Earnings"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 22,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "fundamental",
+            "name": "Fundamental"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "imbalance",
+            "name": "Imbalance"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 1,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "insiders",
+            "name": "Insiders"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "institutions",
+            "name": "Institutions"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "macro",
+            "name": "Macro"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 49,
+          "dataDiversity": {
+            "check": "WARN",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "model",
+            "name": "Model"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 13,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "news",
+            "name": "News"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "option",
+            "name": "Option"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 6,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "other",
+            "name": "Other"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 35,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "pv",
+            "name": "Price Volume"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 10,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "risk",
+            "name": "Risk"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 3,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "sentiment",
+            "name": "Sentiment"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "shortinterest",
+            "name": "Short Interest"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "alphaCount": 0,
+          "dataDiversity": {
+            "check": "PASS",
+            "limit": 0.3
+          },
+          "dataCategory": {
+            "id": "socialmedia",
+            "name": "Social Media"
+          }
+        },
+        {
+          "region": "USA",
+          "delay": 1,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 167
+        },
+        {
+          "region": "USA",
+          "delay": null,
+          "dataCategory": {
+            "name": null,
+            "id": null
+          },
+          "alphaCount": 168
+        }
+      ],
+      "count": 871
+    }
+  }
+}

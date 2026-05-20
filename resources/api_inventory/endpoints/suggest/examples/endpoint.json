@@ -1,0 +1,148 @@
+{
+  "path": "/suggest/examples",
+  "url_template": "https://api.worldquantbrain.com/suggest/examples",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "platform_frontend"
+  ],
+  "description": "Suggestion examples. / Discovered from platform frontend bundle.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/suggest/examples",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "NoneType",
+      "results": [
+        {
+          "settings": {
+            "instrumentType": "...",
+            "region": "...",
+            "universe": "...",
+            "delay": "...",
+            "decay": "...",
+            "neutralization": "...",
+            "truncation": "...",
+            "pasteurization": "...",
+            "unitHandling": "...",
+            "nanHandling": "...",
+            "language": "...",
+            "testPeriod": "...",
+            "maxTrade": "...",
+            "maxPosition": "..."
+          },
+          "type": "str",
+          "regular": "str"
+        }
+      ]
+    },
+    "response_sample": {
+      "count": 9,
+      "next": "http://api.worldquantbrain.com:443/suggest/examples?limit=1&offset=1",
+      "previous": null,
+      "results": [
+        {
+          "settings": {
+            "instrumentType": "EQUITY",
+            "region": "USA",
+            "universe": "TOP3000",
+            "delay": 1,
+            "decay": 0,
+            "neutralization": "SUBINDUSTRY",
+            "truncation": 0.08,
+            "pasteurization": "ON",
+            "unitHandling": "VERIFY",
+            "nanHandling": "OFF",
+            "language": "FASTEXPR",
+            "testPeriod": "P1Y",
+            "maxTrade": "OFF",
+            "maxPosition": "OFF"
+          },
+          "type": "REGULAR",
+          "regular": "/*\r\n HYPOTHESIS: If the operating income of a company is currently higher than its past 1 year history, buy the company's stock and vice-versa.\r\n \r\n IMPLEMENTATION: Using ts_rank to identify current performance of the company compared to its own history, using the fundamental data field \"operating_income\".\r\n \r\n HINT TO IMPROVE THE ALPHA: Rather than comparing the value directly, can calculating a ratio that includes stock market moves, improve the signal?\r\n */\r\n \r\n ts_rank(operating_income,252)"
+        }
+      ]
+    },
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 253
+  },
+  "test_results": [
+    {
+      "path": "/suggest/examples",
+      "method": "GET",
+      "resolved_path": "/suggest/examples",
+      "url": "https://api.worldquantbrain.com/suggest/examples",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 259,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "regular": "str",
+            "settings": {
+              "decay": "int",
+              "delay": "int",
+              "instrumentType": "str",
+              "language": "str",
+              "maxPosition": "str",
+              "maxTrade": "str",
+              "nanHandling": "str",
+              "neutralization": "str",
+              "pasteurization": "str",
+              "region": "str",
+              "testPeriod": "str",
+              "truncation": "float",
+              "unitHandling": "str",
+              "universe": "str"
+            },
+            "type": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "POST",
+      "resolved_path": "/suggest/examples",
+      "url": "https://api.worldquantbrain.com/suggest/examples",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST may mutate remote state; not executed by inventory test."
+    }
+  ]
+}

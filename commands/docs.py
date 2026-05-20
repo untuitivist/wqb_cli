@@ -47,6 +47,8 @@ def handle_docs(args: argparse.Namespace) -> int:
         if root not in target.parents and target != root:
             write_json({"ok": False, "reason": "path_outside_docs_root", "path": args.path}, args.output)
             return 1
+        if target.is_dir():
+            target = target / "README.md"
         if not target.exists() or not target.is_file():
             write_json({"ok": False, "reason": "doc_not_found", "path": args.path}, args.output)
             return 1

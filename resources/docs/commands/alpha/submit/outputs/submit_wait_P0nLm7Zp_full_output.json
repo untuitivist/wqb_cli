@@ -1,0 +1,879 @@
+{
+  "ok": false,
+  "alpha_id": "P0nLm7Zp",
+  "submit_code": 403,
+  "classification": {
+    "submit_code": 403,
+    "reason": "submit_forbidden",
+    "checks": {
+      "LOW_SHARPE": {
+        "name": "LOW_SHARPE",
+        "result": "PASS",
+        "limit": 1.58,
+        "value": 1.59
+      },
+      "LOW_FITNESS": {
+        "name": "LOW_FITNESS",
+        "result": "PASS",
+        "limit": 1.0,
+        "value": 1.16
+      },
+      "LOW_TURNOVER": {
+        "name": "LOW_TURNOVER",
+        "result": "PASS",
+        "limit": 0.01,
+        "value": 0.0345
+      },
+      "HIGH_TURNOVER": {
+        "name": "HIGH_TURNOVER",
+        "result": "PASS",
+        "limit": 0.7,
+        "value": 0.0345
+      },
+      "CONCENTRATED_WEIGHT": {
+        "name": "CONCENTRATED_WEIGHT",
+        "result": "PASS"
+      },
+      "LOW_SUB_UNIVERSE_SHARPE": {
+        "name": "LOW_SUB_UNIVERSE_SHARPE",
+        "result": "PASS",
+        "limit": 0.69,
+        "value": 0.69
+      },
+      "SELF_CORRELATION": {
+        "name": "SELF_CORRELATION",
+        "result": "PASS",
+        "limit": 0.7,
+        "value": 0.5989
+      },
+      "PROD_CORRELATION": {
+        "name": "PROD_CORRELATION",
+        "result": "FAIL",
+        "limit": 0.7,
+        "value": 0.8403
+      },
+      "REGULAR_SUBMISSION": {
+        "name": "REGULAR_SUBMISSION",
+        "result": "PASS",
+        "limit": 4,
+        "value": 0
+      },
+      "IS_LADDER_SHARPE": {
+        "name": "IS_LADDER_SHARPE",
+        "result": "PASS",
+        "year": 3,
+        "startDate": "2024-01-02",
+        "endDate": "2021-01-03",
+        "limit": 2.02,
+        "value": 2.05
+      },
+      "HT_TURNOVER": {
+        "name": "HT_TURNOVER",
+        "result": "WARNING",
+        "limit": 0.2,
+        "value": 0.0345
+      },
+      "HT_HIGH_TURNOVER_RETURNS_RATIO": {
+        "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+        "result": "WARNING",
+        "limit": 0.75,
+        "value": 0.2018
+      },
+      "MATCHES_PYRAMID": {
+        "result": "PASS",
+        "name": "MATCHES_PYRAMID",
+        "effective": 2,
+        "multiplier": 1.1,
+        "pyramids": [
+          {
+            "name": "USA/D1/PV",
+            "multiplier": 1.1
+          },
+          {
+            "name": "USA/D1/MODEL",
+            "multiplier": 1.4
+          }
+        ]
+      },
+      "DATA_DIVERSITY": {
+        "name": "DATA_DIVERSITY",
+        "result": "WARNING",
+        "fields": [
+          "chiehuang_nugget_predicted_position"
+        ],
+        "dataCategoryName": "Model"
+      },
+      "MATCHES_THEMES": {
+        "result": "WARNING",
+        "name": "MATCHES_THEMES",
+        "themes": [
+          {
+            "id": "lyvRJ3y",
+            "multiplier": 1.0,
+            "name": "All regions/D0 Power Pool May`26"
+          },
+          {
+            "id": "q4O05qy",
+            "multiplier": 1.5,
+            "name": "MEA Region Theme"
+          },
+          {
+            "id": "ZywpJvB",
+            "multiplier": 3.0,
+            "name": "After Cost HTVR Theme"
+          }
+        ]
+      }
+    }
+  },
+  "post_classification": {
+    "submit_code": 303,
+    "reason": "accepted"
+  },
+  "post": {
+    "ok": true,
+    "endpoint": "/alphas/{alpha_id}/submit",
+    "request": {
+      "method": "POST",
+      "url": "https://api.worldquantbrain.com/alphas/P0nLm7Zp/submit",
+      "params": {},
+      "mutating": true
+    },
+    "response": {
+      "status_code": 303,
+      "reason": "See Other",
+      "elapsed_ms": 1011,
+      "content_type": "text/html",
+      "allow": "GET, POST, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": "1.0",
+      "retries": 0,
+      "wait_events": [],
+      "wait_timed_out": false,
+      "max_wait_seconds": null,
+      "location": "http://api.worldquantbrain.com:443/alphas/P0nLm7Zp/submit",
+      "body": ""
+    }
+  },
+  "wait": {
+    "ok": false,
+    "endpoint": "/alphas/{alpha_id}/submit",
+    "request": {
+      "method": "GET",
+      "url": "https://api.worldquantbrain.com/alphas/P0nLm7Zp/submit",
+      "params": {},
+      "mutating": false
+    },
+    "response": {
+      "status_code": 403,
+      "reason": "Forbidden",
+      "elapsed_ms": 280,
+      "content_type": "application/json",
+      "allow": "GET, POST, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "retries": 56,
+      "wait_events": [
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        },
+        {
+          "status_code": 200,
+          "retry_after": 1.0,
+          "sleep_seconds": 2.0
+        }
+      ],
+      "wait_timed_out": false,
+      "max_wait_seconds": 1800.0,
+      "location": null,
+      "body": {
+        "is": {
+          "checks": [
+            {
+              "name": "LOW_SHARPE",
+              "result": "PASS",
+              "limit": 1.58,
+              "value": 1.59
+            },
+            {
+              "name": "LOW_FITNESS",
+              "result": "PASS",
+              "limit": 1.0,
+              "value": 1.16
+            },
+            {
+              "name": "LOW_TURNOVER",
+              "result": "PASS",
+              "limit": 0.01,
+              "value": 0.0345
+            },
+            {
+              "name": "HIGH_TURNOVER",
+              "result": "PASS",
+              "limit": 0.7,
+              "value": 0.0345
+            },
+            {
+              "name": "CONCENTRATED_WEIGHT",
+              "result": "PASS"
+            },
+            {
+              "name": "LOW_SUB_UNIVERSE_SHARPE",
+              "result": "PASS",
+              "limit": 0.69,
+              "value": 0.69
+            },
+            {
+              "name": "SELF_CORRELATION",
+              "result": "PASS",
+              "limit": 0.7,
+              "value": 0.5989
+            },
+            {
+              "name": "PROD_CORRELATION",
+              "result": "FAIL",
+              "limit": 0.7,
+              "value": 0.8403
+            },
+            {
+              "name": "REGULAR_SUBMISSION",
+              "result": "PASS",
+              "limit": 4,
+              "value": 0
+            },
+            {
+              "name": "IS_LADDER_SHARPE",
+              "result": "PASS",
+              "year": 3,
+              "startDate": "2024-01-02",
+              "endDate": "2021-01-03",
+              "limit": 2.02,
+              "value": 2.05
+            },
+            {
+              "name": "HT_TURNOVER",
+              "result": "WARNING",
+              "limit": 0.2,
+              "value": 0.0345
+            },
+            {
+              "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+              "result": "WARNING",
+              "limit": 0.75,
+              "value": 0.2018
+            },
+            {
+              "result": "PASS",
+              "name": "MATCHES_PYRAMID",
+              "effective": 2,
+              "multiplier": 1.1,
+              "pyramids": [
+                {
+                  "name": "USA/D1/PV",
+                  "multiplier": 1.1
+                },
+                {
+                  "name": "USA/D1/MODEL",
+                  "multiplier": 1.4
+                }
+              ]
+            },
+            {
+              "name": "DATA_DIVERSITY",
+              "result": "WARNING",
+              "fields": [
+                "chiehuang_nugget_predicted_position"
+              ],
+              "dataCategoryName": "Model"
+            },
+            {
+              "result": "WARNING",
+              "name": "MATCHES_THEMES",
+              "themes": [
+                {
+                  "id": "lyvRJ3y",
+                  "multiplier": 1.0,
+                  "name": "All regions/D0 Power Pool May`26"
+                },
+                {
+                  "id": "q4O05qy",
+                  "multiplier": 1.5,
+                  "name": "MEA Region Theme"
+                },
+                {
+                  "id": "ZywpJvB",
+                  "multiplier": 3.0,
+                  "name": "After Cost HTVR Theme"
+                }
+              ]
+            }
+          ],
+          "selfCorrelated": {
+            "schema": {
+              "name": "selfCorrelation",
+              "title": "Self Correlated",
+              "properties": [
+                {
+                  "name": "id",
+                  "title": "Id",
+                  "type": "string"
+                },
+                {
+                  "name": "name",
+                  "title": "Name",
+                  "type": "string"
+                },
+                {
+                  "name": "instrumentType",
+                  "title": "Instrument Type",
+                  "type": "string"
+                },
+                {
+                  "name": "region",
+                  "title": "Region",
+                  "type": "string"
+                },
+                {
+                  "name": "universe",
+                  "title": "Universe",
+                  "type": "string"
+                },
+                {
+                  "name": "correlation",
+                  "title": "Correlation",
+                  "type": "decimal"
+                },
+                {
+                  "name": "sharpe",
+                  "title": "Sharpe",
+                  "type": "decimal"
+                },
+                {
+                  "name": "returns",
+                  "title": "Returns",
+                  "type": "percent"
+                },
+                {
+                  "name": "turnover",
+                  "title": "Turnover",
+                  "type": "percent"
+                },
+                {
+                  "name": "fitness",
+                  "title": "Fitness",
+                  "type": "decimal"
+                },
+                {
+                  "name": "margin",
+                  "title": "Margin",
+                  "type": "permyriad"
+                }
+              ]
+            },
+            "records": [
+              [
+                "wj999Kl",
+                "ppc=68.65-[2025-06-10]",
+                "EQUITY",
+                "USA",
+                "TOP3000",
+                0.5989,
+                1.77,
+                0.0643,
+                0.0136,
+                1.27,
+                0.009459
+              ]
+            ],
+            "min": null,
+            "max": 0.5989
+          }
+        }
+      }
+    }
+  },
+  "alpha": {
+    "ok": true,
+    "endpoint": "/alphas/{alpha_id}",
+    "request": {
+      "method": "GET",
+      "url": "https://api.worldquantbrain.com/alphas/P0nLm7Zp",
+      "params": {},
+      "mutating": false
+    },
+    "response": {
+      "status_code": 200,
+      "reason": "OK",
+      "elapsed_ms": 357,
+      "content_type": "application/json",
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "retries": 0,
+      "wait_events": [],
+      "wait_timed_out": false,
+      "max_wait_seconds": null,
+      "location": null,
+      "body": {
+        "id": "P0nLm7Zp",
+        "type": "REGULAR",
+        "author": "JL40454",
+        "settings": {
+          "instrumentType": "EQUITY",
+          "region": "USA",
+          "universe": "TOP3000",
+          "delay": 1,
+          "decay": 3,
+          "neutralization": "SECTOR",
+          "truncation": 0.08,
+          "lookback": 252,
+          "pasteurization": "ON",
+          "maxTrade": "ON",
+          "maxPosition": "OFF",
+          "language": "PYTHON",
+          "visualization": true,
+          "startDate": "2014-01-01",
+          "endDate": "2023-12-31"
+        },
+        "regular": {
+          "code": "from brain.alphas import alpha\nimport numpy as np\nimport numpy.typing as npt\n\n\ndef _rank(x):\n    x = x.astype(float)\n    out = np.full(x.shape, np.nan, dtype=float)\n    valid = np.isfinite(x)\n    n = int(np.sum(valid))\n    if n <= 1:\n        return out\n    order = np.argsort(x[valid])\n    ranks = np.empty(n, dtype=float)\n    ranks[order] = np.arange(n, dtype=float)\n    out[valid] = (ranks / (n - 1.0)) - 0.5\n    return out\n\n\n@alpha(data=[\"chiehuang_nugget_predicted_position\", \"returns\", \"close\"], store=[])\ndef usa_d1_model_python_alpha(data, store) -> npt.NDArray[np.float32]:\n    if data.returns.shape[0] < 20:\n        return np.full(data.close.shape[1], np.nan, dtype=np.float32)\n    model_pos = data.chiehuang_nugget_predicted_position[-1]\n    signal = _rank(model_pos)\n    universe = np.isfinite(data.close[-1])\n    signal[~universe] = np.nan\n    signal[~np.isfinite(signal)] = np.nan\n    return signal.astype(np.float32)",
+          "description": "Idea: This alpha for machine alpha. This alpha for machine alpha.\nRationale for data used:  This alpha for machine alpha. This alpha for machine alpha.\nRationale for operators used:  This alpha for machine alpha. This alpha for machine alpha.",
+          "operatorCount": null
+        },
+        "dateCreated": "2026-05-20T09:33:37-04:00",
+        "dateSubmitted": null,
+        "dateModified": "2026-05-20T10:33:40-04:00",
+        "name": "pc-84.03-[2026-05-20]",
+        "favorite": false,
+        "hidden": false,
+        "color": "RED",
+        "category": null,
+        "tags": [
+          "USA/D1/PV",
+          "USA/D1/MODEL",
+          "high prod correlation",
+          "full year"
+        ],
+        "classifications": [],
+        "grade": null,
+        "stage": "IS",
+        "status": "UNSUBMITTED",
+        "is": {
+          "pnl": 6625309,
+          "bookSize": 20000000,
+          "longCount": 1695,
+          "shortCount": 1433,
+          "turnover": 0.0345,
+          "returns": 0.0664,
+          "drawdown": 0.0533,
+          "margin": 0.003844,
+          "sharpe": 1.59,
+          "fitness": 1.16,
+          "startDate": "2014-01-01",
+          "riskNeutralized": {
+            "pnl": 1993888,
+            "bookSize": 20000000,
+            "longCount": 1695,
+            "shortCount": 1433,
+            "turnover": 0.0345,
+            "returns": 0.02,
+            "drawdown": 0.0538,
+            "margin": 0.001157,
+            "fitness": 0.39,
+            "sharpe": 0.97
+          },
+          "checks": [
+            {
+              "name": "LOW_SHARPE",
+              "result": "PASS",
+              "limit": 1.58,
+              "value": 1.59
+            },
+            {
+              "name": "LOW_FITNESS",
+              "result": "PASS",
+              "limit": 1.0,
+              "value": 1.16
+            },
+            {
+              "name": "LOW_TURNOVER",
+              "result": "PASS",
+              "limit": 0.01,
+              "value": 0.0345
+            },
+            {
+              "name": "HIGH_TURNOVER",
+              "result": "PASS",
+              "limit": 0.7,
+              "value": 0.0345
+            },
+            {
+              "name": "CONCENTRATED_WEIGHT",
+              "result": "PASS"
+            },
+            {
+              "name": "LOW_SUB_UNIVERSE_SHARPE",
+              "result": "PASS",
+              "limit": 0.69,
+              "value": 0.69
+            },
+            {
+              "name": "SELF_CORRELATION",
+              "result": "PENDING"
+            },
+            {
+              "name": "DATA_DIVERSITY",
+              "result": "PENDING"
+            },
+            {
+              "name": "PROD_CORRELATION",
+              "result": "PENDING"
+            },
+            {
+              "name": "REGULAR_SUBMISSION",
+              "result": "PENDING"
+            },
+            {
+              "name": "IS_LADDER_SHARPE",
+              "result": "PASS",
+              "year": 3,
+              "startDate": "2024-01-02",
+              "endDate": "2021-01-03",
+              "limit": 2.02,
+              "value": 2.05
+            },
+            {
+              "name": "HT_TURNOVER",
+              "result": "WARNING",
+              "limit": 0.2,
+              "value": 0.0345
+            },
+            {
+              "name": "HT_HIGH_TURNOVER_RETURNS_RATIO",
+              "result": "WARNING",
+              "limit": 0.75,
+              "value": 0.2018
+            },
+            {
+              "result": "PASS",
+              "name": "MATCHES_PYRAMID",
+              "effective": 2,
+              "multiplier": 1.1,
+              "pyramids": [
+                {
+                  "name": "USA/D1/PV",
+                  "multiplier": 1.1
+                },
+                {
+                  "name": "USA/D1/MODEL",
+                  "multiplier": 1.4
+                }
+              ]
+            },
+            {
+              "result": "WARNING",
+              "name": "MATCHES_THEMES",
+              "themes": [
+                {
+                  "id": "lyvRJ3y",
+                  "multiplier": 1.0,
+                  "name": "All regions/D0 Power Pool May`26"
+                },
+                {
+                  "id": "q4O05qy",
+                  "multiplier": 1.5,
+                  "name": "MEA Region Theme"
+                },
+                {
+                  "id": "ZywpJvB",
+                  "multiplier": 3.0,
+                  "name": "After Cost HTVR Theme"
+                }
+              ]
+            }
+          ]
+        },
+        "os": null,
+        "train": null,
+        "test": null,
+        "prod": null,
+        "competitions": null,
+        "themes": null,
+        "pyramids": null,
+        "pyramidThemes": null,
+        "team": null,
+        "osmosisPoints": null,
+        "origin": "PLATFORM"
+      }
+    }
+  }
+}

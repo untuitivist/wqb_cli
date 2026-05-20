@@ -16,11 +16,13 @@ def run_wqb(*args: str) -> subprocess.CompletedProcess[str]:
     env = os.environ.copy()
     package_parent = str(REPO_ROOT.parent)
     env["PYTHONPATH"] = package_parent + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONIOENCODING"] = "utf-8"
     return subprocess.run(
         [sys.executable, "-m", "wqb_cli", *args],
         cwd=REPO_ROOT.parent,
         env=env,
         text=True,
+        encoding="utf-8",
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         timeout=30,
@@ -57,6 +59,13 @@ class CliSmokeTests(unittest.TestCase):
         nodes = {item["node"] for item in payload["nodes"]}
         self.assertIn("shortcut", nodes)
         self.assertIn("config", nodes)
+
+    def test_docs_show_accepts_node_name(self) -> None:
+        result = run_wqb("docs", "show", "alpha/submit")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertIs(payload["ok"], True)
+        self.assertIn("alpha submit", payload["text"])
 
     def test_shortcut_simulate_requires_execute(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

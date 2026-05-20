@@ -147,7 +147,7 @@ class WqbClient:
         elif prepared.method == "HEAD":
             body = None
         else:
-            body = response.text[:2000]
+            body = response.text
         return {
             "ok": 200 <= response.status_code < 400,
             "endpoint": prepared.endpoint,

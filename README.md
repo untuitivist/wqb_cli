@@ -1,75 +1,75 @@
 # WQB CLI
 
-`wqb` is an agent-first WorldQuant BRAIN CLI.
-It provides two clearly separated capabilities:
+`wqb` 是面向 agent 使用的 WorldQuant BRAIN 命令行工具。
+它把能力分成两类：
 
-- API commands call `https://api.worldquantbrain.com`.
-- Local-data commands read files under `local/`.
+- API 命令：调用 `https://api.worldquantbrain.com`。
+- 本地数据命令：读取 `local/` 下的本地文件。
 
-Local data is produced outside this package by the WebDataScope browser plugin: [leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant).
-The CLI does not directly read browser/plugin cache.
+本地数据由 WebDataScope 浏览器插件在本包之外产生：[leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)。
+CLI 不直接读取浏览器缓存或插件缓存。
 
-## Repository Layout
+## 仓库结构
 
 ```text
 .
   cli.py
-  commands/                 command groups
-  core/                     HTTP, auth, config, registry, IO, local data
+  commands/                 命令分组
+  core/                     HTTP、认证、配置、注册表、IO、本地数据
   resources/
-    api_inventory/          bundled endpoint registry and generated API docs
+    api_inventory/          随包发布的 API 端点注册表与生成文档
     docs/
-      commands/             hand-authored CLI docs and real examples
-      generated/            generated notes
-  tests/                    CLI smoke tests
-  local/                    user-local runtime data, ignored by Git
+      commands/             手写命令文档与真实示例
+      generated/            生成说明
+  tests/                    CLI 冒烟测试
+  local/                    用户本地运行数据，Git 忽略
   pyproject.toml
 ```
 
-The Python package name is still `wqb_cli`.
-`pyproject.toml` maps that package to this repository root.
+Python 包名仍然是 `wqb_cli`。
+`pyproject.toml` 将 `wqb_cli` 映射到当前仓库根目录。
 
-## Install
+## 安装
 
-Python 3.11 or newer is expected.
-The local workflow has been run with a Conda environment named `WQBRAIN`.
+要求 Python 3.11 或更高版本。
+当前本地工作流使用 Conda 环境 `WQBRAIN`。
 
 ```powershell
 conda activate WQBRAIN
 python -m pip install -e .
 ```
 
-## Authentication
+## 认证
 
-Create a local `.env` file:
+创建本地 `.env` 文件：
 
 ```powershell
 Copy-Item .env.example local/.env
 ```
 
-Set either `EMAIL` / `PASSWORD` or `WQB_EMAIL` / `WQB_PASSWORD`.
+填写 `EMAIL` / `PASSWORD` 或 `WQB_EMAIL` / `WQB_PASSWORD`。
 
-Login:
+登录：
 
 ```powershell
 wqb auth login --execute
 ```
 
-Cookies are stored under:
+Cookie 存储位置：
 
 ```text
 local/auth/cookies.json
 ```
 
-## API Commands
+## API 命令
 
-API commands use the bundled registry:
+API 命令使用随包发布的注册表：
 
 ```text
 resources/api_inventory/api_inventory_complete.json
 ```
 
-Examples:
+示例：
 
 ```powershell
 wqb api stats
@@ -80,16 +80,16 @@ wqb auth status
 wqb sim options
 ```
 
-Mutating requests require `--execute`.
-There is no dry-run mode.
-If a mutating command is run without `--execute`, the CLI returns `ok: false` with `reason: mutating_method_requires_execute`.
+会修改平台状态的请求必须显式传入 `--execute`。
+CLI 不提供 dry-run 模式。
+如果会修改状态的命令没有传入 `--execute`，返回结果会包含 `ok: false` 与 `reason: mutating_method_requires_execute`。
 
-## Local Data Import
+## 本地数据导入
 
-Local data is not bundled and must not be committed.
-All local data belongs under `local/`.
+本地数据不随包发布，也不能提交到 Git。
+所有本地数据都放在 `local/` 下。
 
-Expected structure:
+推荐结构：
 
 ```text
 local/
@@ -109,14 +109,14 @@ local/
 
 ### data_all
 
-`data_all` comes from the WebDataScope plugin-provided network-disk data package.
-Download it separately and place the files directly under:
+`data_all` 来自 WebDataScope 插件提供的网盘数据包。
+单独下载后，将文件直接放到：
 
 ```text
 local/data_all/
 ```
 
-Expected files:
+预期文件：
 
 ```text
 local/data_all/
@@ -125,7 +125,7 @@ local/data_all/
   main.ipynb
 ```
 
-Use `scope` commands to inspect it:
+使用 `scope` 命令检查：
 
 ```powershell
 wqb scope files
@@ -137,23 +137,23 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 
 ### community
 
-Community data is built from a WebDataScope export.
-The flow is:
+社区数据由 WebDataScope 导出文件构建。
+流程如下：
 
-1. Use WebDataScope to export community data as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`.
-2. Put the exported file under `local/community/`.
-3. Run `wqb community export` to build `community.sqlite3`.
-4. Query the generated SQLite database.
+1. 在 WebDataScope 中导出社区数据，格式为 `WQPCommunityState_*.json` 或 `WQPCommunityState_*.wqcs`。
+2. 将导出文件放到 `local/community/`。
+3. 运行 `wqb community export` 生成 `community.sqlite3`。
+4. 查询生成后的 SQLite 数据库。
 
-Build SQLite:
+构建 SQLite：
 
 ```powershell
 wqb community export --source local/community/WQPCommunityState_20260520_103908.json
 ```
 
-If `--source` is omitted, the CLI uses the newest `WQPCommunityState_*.json` or `*.wqcs` it can find in local export locations.
+如果省略 `--source`，CLI 会在本地导出位置中寻找最新的 `WQPCommunityState_*.json` 或 `*.wqcs`。
 
-Query examples:
+查询示例：
 
 ```powershell
 wqb community stats
@@ -161,15 +161,15 @@ wqb community search alpha --limit 3
 wqb community search neutralization --scope docs --limit 2
 ```
 
-## Command Documentation
+## 命令文档
 
-Command docs live under:
+命令文档位置：
 
 ```text
 resources/docs/commands/
 ```
 
-Useful entry points:
+常用入口：
 
 - `resources/docs/commands/README.md`
 - `resources/docs/commands/local-data/README.md`
@@ -177,52 +177,47 @@ Useful entry points:
 - `resources/docs/commands/scope/README.md`
 - `resources/docs/commands/simulations/create/examples/backtest_modes.md`
 
-API inventory docs live under:
+API 清单文档位置：
 
 ```text
 resources/api_inventory/
 ```
 
-## Simulation Rules
+## 回测规则
 
-Backtest modes and concurrency rules are documented in:
+回测模式与并发规则记录在：
 
 ```text
 resources/docs/commands/simulations/create/examples/backtest_modes.md
 ```
 
-Current operating constraints:
+当前操作约束：
 
-- `REGULAR_FASTEXPR_MULTI` single request supports up to 10 expressions.
-- Recommended `REGULAR_FASTEXPR_MULTI` batch size: 10 when `region != "GLB"`, 5 when `region == "GLB"`.
-- `REGULAR_PYTHON` cannot use multi-simulation.
-- `SUPER` uses one SUPER POST body per simulation.
-- Concurrent `SUPER` simulation requests: at most 3.
-- Concurrent `REGULAR` simulation requests: at most 8 when `region != "GLB"`, at most 4 when `region == "GLB"`.
+- `REGULAR_FASTEXPR_MULTI` 单次请求最多支持 10 条表达式。
+- `REGULAR_FASTEXPR_MULTI` 建议批量大小：`region != "GLB"` 时为 10，`region == "GLB"` 时为 5。
+- `REGULAR_PYTHON` 不能使用 multi-simulation。
+- `SUPER` 每次 simulation 使用一个 SUPER POST body。
+- `SUPER` 并发 simulation 请求最多 3 个。
+- `REGULAR` 并发 simulation 请求：`region != "GLB"` 时最多 8 个，`region == "GLB"` 时最多 4 个。
 
-## Development
+## 开发
 
-Run smoke tests:
+运行冒烟测试：
 
 ```powershell
 python -m unittest discover -s tests
 ```
 
-Build package:
+构建发布包：
 
 ```powershell
 python -m build
 ```
 
-Do not commit:
+不要提交：
 
 - `.env`
-- `local/.env`
-- `local/auth/`
-- `local/community/*.sqlite3`
-- `local/community/WQPCommunityState_*.json`
-- `local/community/WQPCommunityState_*.wqcs`
-- `local/data_all/`
+- `local/`
 - `dist/`
 - `build/`
 - `*.egg-info/`

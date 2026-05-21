@@ -40,3 +40,6 @@ Thumbs.db
 
 # Legacy generated API inventory location. Packaged inventory lives under resources/api_inventory/.
 /api_inventory/
+
+# run history
+research_runs/

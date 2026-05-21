@@ -117,6 +117,13 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("--order", result.stdout)
         self.assertIn("--type", result.stdout)
 
+    def test_alpha_list_help_includes_submission_range_filters(self) -> None:
+        result = run_wqb("alpha", "list", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--date-submitted-after", result.stdout)
+        self.assertIn("--date-submitted-before", result.stdout)
+        self.assertIn("--order", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

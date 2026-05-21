@@ -17,7 +17,9 @@
 ## 只允许的 CLI
 
 ```powershell
-wqb alpha list --output <node_dir>/alphas_today_source.json
+wqb alpha list --limit 100 --order=-dateSubmitted --date-submitted-after <et_today_00:00:00-04:00_or_-05:00> --date-submitted-before <et_tomorrow_00:00:00-04:00_or_-05:00> --output <node_dir>/alphas_today_source.json
+wqb alpha list --limit 100 --type REGULAR --order=-dateSubmitted --date-submitted-after <et_today_00:00:00-04:00_or_-05:00> --date-submitted-before <et_tomorrow_00:00:00-04:00_or_-05:00> --output <node_dir>/regular_alphas_today.json
+wqb alpha list --limit 100 --type SUPER --order=-dateSubmitted --date-submitted-after <et_today_00:00:00-04:00_or_-05:00> --date-submitted-before <et_tomorrow_00:00:00-04:00_or_-05:00> --output <node_dir>/super_alphas_today.json
 wqb user alphas-summary --output <node_dir>/alphas_summary.json
 wqb user pyramid-alphas --output <node_dir>/pyramid_alphas.json
 wqb user pyramid-multipliers --output <node_dir>/pyramid_multipliers.json
@@ -35,6 +37,8 @@ wqb user pyramid-multipliers --output <node_dir>/pyramid_multipliers.json
 可选：
 
 - `alphas_today_source.json`
+- `regular_alphas_today.json`
+- `super_alphas_today.json`
 - `alphas_summary.json`
 - `pyramid_alphas.json`
 - `pyramid_multipliers.json`

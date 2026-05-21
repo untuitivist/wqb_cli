@@ -25,6 +25,9 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     list_parser.add_argument("--color", help="Alpha color filter")
     list_parser.add_argument("--tag", help="Alpha tag filter")
     list_parser.add_argument("--date-submitted", help="dateSubmitted filter/range accepted by BRAIN API")
+    list_parser.add_argument("--date-submitted-after", help="dateSubmitted lower bound, passed as dateSubmitted>")
+    list_parser.add_argument("--date-submitted-before", help="dateSubmitted upper bound, passed as dateSubmitted<")
+    list_parser.add_argument("--order", help="Sort order, e.g. -dateSubmitted")
     list_parser.add_argument("--output", help="Write JSON result to file")
 
     simple_gets = {
@@ -148,6 +151,12 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             params["tag"] = args.tag
         if args.date_submitted:
             params["dateSubmitted"] = args.date_submitted
+        if args.date_submitted_after:
+            params["dateSubmitted>"] = args.date_submitted_after
+        if args.date_submitted_before:
+            params["dateSubmitted<"] = args.date_submitted_before
+        if args.order:
+            params["order"] = args.order
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)

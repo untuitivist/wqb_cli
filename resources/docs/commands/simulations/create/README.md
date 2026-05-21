@@ -26,3 +26,4 @@ wqb sim create --input <input.json> --execute --output <output.json>
 真实流程示例：
 
 - `examples/backtest_modes.md`：覆盖 REGULAR FASTEXPR 单跑、REGULAR FASTEXPR multi-simu、REGULAR PYTHON 单跑、SUPER 单跑四类回测。
+- `examples/input_json.md`：给出 REGULAR FASTEXPR multi、REGULAR FASTEXPR single、REGULAR PYTHON single、SUPER single 四类输入 JSON 示例。

@@ -9,6 +9,7 @@
 
 这些示例都是真实 CLI 运行结果。
 示例目标是说明请求结构、命令链路、并发约束和平台返回形态，不代表 alpha 可提交。
+完整输入 JSON 示例见 `examples/input_json.md`。
 
 ## 并行与批量规则
 
@@ -47,6 +48,8 @@ elif language == FASTEXPR:
 wqb_cli/docs/commands/simulations/create/fixtures/regular_fastexpr_single.json
 ```
 
+输入 JSON 示例见 `examples/input_json.md#regular-fastexpr-single-simulation`。
+
 创建命令：
 
 ```powershell
@@ -84,6 +87,8 @@ D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 1sA5Evcma4GlbBexARpKkiX -
 ```text
 wqb_cli/docs/commands/simulations/create/fixtures/regular_fastexpr_multi.json
 ```
+
+输入 JSON 示例见 `examples/input_json.md#regular-fastexpr-multi-simulation`。
 
 创建命令：
 
@@ -139,7 +144,7 @@ D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 3RTDPvcRM4JtczS18UmrIqML 
 经验点：
 
 - multi-simulation 的输入文件是 JSON array，长度 2 到 10。
-- 同一个 multi 请求里的 simulation 必须兼容：`type`、`instrumentType`、`region`、`delay`、`language` 等关键设置要一致。
+- 同一个 multi 请求里的 simulation 必须保持这些 settings 一致：`delay`、`region`、`instrumentType`、`language`。
 - 父任务只给 `children`，重要结果在 child simulation 里。
 - 如果 FASTEXPR multi 报表达式过多或平台通用错误，先从 10 降到 5，再降到单条。
 
@@ -150,6 +155,8 @@ D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 3RTDPvcRM4JtczS18UmrIqML 
 ```text
 wqb_cli/docs/commands/simulations/create/fixtures/regular_python_single.json
 ```
+
+输入 JSON 示例见 `examples/input_json.md#regular-python-single-simulation`。
 
 创建命令：
 
@@ -189,6 +196,8 @@ D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 2iKEQ32Xm4QFcHqoGYebfM --
 ```text
 wqb_cli/docs/commands/simulations/create/fixtures/super_single.json
 ```
+
+输入 JSON 示例见 `examples/input_json.md#super-single-simulation`。
 
 创建命令：
 

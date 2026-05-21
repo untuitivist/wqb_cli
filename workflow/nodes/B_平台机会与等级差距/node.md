@@ -21,7 +21,7 @@ wqb user consultant-summary --output <node_dir>/consultant_summary.json
 wqb consultant summary --output <node_dir>/consultant_summary_compat.json
 wqb user messages-summary --output <node_dir>/messages_summary.json
 wqb user messages --output <node_dir>/messages.json
-wqb user messages --limit 50 --offset 50 --order -dateCreated --type ANNOUNCEMENT --output <node_dir>/recent_announcements_page2.json
+wqb user messages --limit 50 --offset 50 --order=-dateCreated --type ANNOUNCEMENT --output <node_dir>/recent_announcements_page2.json
 wqb event list --output <node_dir>/events.json
 ```
 

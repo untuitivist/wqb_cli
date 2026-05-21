@@ -4,8 +4,9 @@ import argparse
 
 from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
-from ..core.io import read_json_file, write_json
+from ..core.io import parse_key_values, read_json_file, write_json
 from ..core.registry import EndpointRegistry
+from .common import add_range_argument, put_bool_if_set, put_if_set, put_range_if_set
 
 
 def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -23,7 +24,15 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     datasets_parser.add_argument("--limit", default="20", help="Result limit")
     datasets_parser.add_argument("--offset", default="0", help="Result offset")
     datasets_parser.add_argument("--search", help="Search query")
-    datasets_parser.add_argument("--category", help="Data category id")
+    datasets_parser.add_argument("--category", help="Data category filter")
+    datasets_parser.add_argument("--category-id", help="Observed platform category.id filter")
+    datasets_parser.add_argument("--theme", action=argparse.BooleanOptionalAction, default=None, help="Theme filter")
+    add_range_argument(datasets_parser, "--coverage")
+    add_range_argument(datasets_parser, "--value-score")
+    add_range_argument(datasets_parser, "--alpha-count")
+    add_range_argument(datasets_parser, "--user-count")
+    datasets_parser.add_argument("--order", help="Sort order")
+    datasets_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     datasets_parser.add_argument("--output", help="Write JSON result to file")
 
     dataset_parser = data_sub.add_parser("dataset", help="GET /data-sets/{dataset_id}")
@@ -39,6 +48,14 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     fields_parser.add_argument("--limit", default="20", help="Result limit")
     fields_parser.add_argument("--offset", default="0", help="Result offset")
     fields_parser.add_argument("--search", help="Search query")
+    fields_parser.add_argument("--category", help="Data category filter")
+    fields_parser.add_argument("--theme", action=argparse.BooleanOptionalAction, default=None, help="Theme filter")
+    add_range_argument(fields_parser, "--coverage")
+    fields_parser.add_argument("--type", dest="field_type", help="Field type")
+    add_range_argument(fields_parser, "--alpha-count")
+    add_range_argument(fields_parser, "--user-count")
+    fields_parser.add_argument("--order", help="Sort order")
+    fields_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     fields_parser.add_argument("--output", help="Write JSON result to file")
 
     fields_summary_parser = data_sub.add_parser("fields-summary", help="GET /data-fields/summary")
@@ -58,6 +75,7 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     operators_parser.add_argument("--instrument-type", help="Instrument type")
     operators_parser.add_argument("--region", help="Region")
     operators_parser.add_argument("--delay", help="Delay")
+    operators_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     operators_parser.add_argument("--output", help="Write JSON result to file")
 
 
@@ -79,10 +97,16 @@ def handle_data(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             "limit": args.limit,
             "offset": args.offset,
         }
-        if args.search:
-            params["search"] = args.search
-        if args.category:
-            params["category.id"] = args.category
+        put_if_set(params, "search", args.search)
+        put_if_set(params, "category", args.category)
+        put_if_set(params, "category.id", args.category_id)
+        put_bool_if_set(params, "theme", args.theme)
+        put_range_if_set(params, "coverage", args.coverage)
+        put_range_if_set(params, "valueScore", args.value_score)
+        put_range_if_set(params, "alphaCount", args.alpha_count)
+        put_range_if_set(params, "userCount", args.user_count)
+        put_if_set(params, "order", args.order)
+        params.update(parse_key_values(args.param))
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)
@@ -105,10 +129,16 @@ def handle_data(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             "limit": args.limit,
             "offset": args.offset,
         }
-        if args.dataset:
-            params["dataset.id"] = args.dataset
-        if args.search:
-            params["search"] = args.search
+        put_if_set(params, "dataset.id", args.dataset)
+        put_if_set(params, "search", args.search)
+        put_if_set(params, "category", args.category)
+        put_bool_if_set(params, "theme", args.theme)
+        put_range_if_set(params, "coverage", args.coverage)
+        put_if_set(params, "type", args.field_type)
+        put_range_if_set(params, "alphaCount", args.alpha_count)
+        put_range_if_set(params, "userCount", args.user_count)
+        put_if_set(params, "order", args.order)
+        params.update(parse_key_values(args.param))
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)
@@ -145,6 +175,7 @@ def handle_data(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             params["region"] = args.region
         if args.delay:
             params["delay"] = args.delay
+        params.update(parse_key_values(args.param))
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)

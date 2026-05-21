@@ -75,9 +75,17 @@ resources/api_inventory/api_inventory_complete.json
 wqb api stats
 wqb api list
 wqb api show /authentication
+wqb api params /users/self/alphas
 wqb api call GET /authentication
 wqb auth status
 wqb sim options
+```
+
+常用查询命令显式建模了相邻 `U:\Project\MainCode\3.Work\WQB\wqb` SDK 中已使用的过滤参数，也保留 `--param KEY=VALUE` 透传兜底，例如：
+
+```powershell
+wqb alpha list --settings-neutralization SUBINDUSTRY --is-sharpe ">=1.25"
+wqb data fields --dataset analyst14 --coverage ">0.8" --order=-userCount
 ```
 
 会修改平台状态的请求必须显式传入 `--execute`。

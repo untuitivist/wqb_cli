@@ -45,6 +45,10 @@ def build_parser() -> argparse.ArgumentParser:
     show_parser = api_sub.add_parser("show", help="Show one endpoint definition")
     show_parser.add_argument("path")
 
+    params_parser = api_sub.add_parser("params", help="Show query/body parameter hints for one endpoint")
+    params_parser.add_argument("path")
+    params_parser.add_argument("--output", help="Write JSON result to file")
+
     call_parser = api_sub.add_parser("call", help="Prepare or execute an endpoint call")
     call_parser.add_argument("method")
     call_parser.add_argument("path")
@@ -115,6 +119,20 @@ def handle_api(args: argparse.Namespace) -> int:
         return 0
     if args.api_command == "show":
         write_json(registry.get(args.path).raw)
+        return 0
+    if args.api_command == "params":
+        endpoint = registry.get(args.path)
+        write_json(
+            {
+                "path": endpoint.path,
+                "methods": list(endpoint.methods),
+                "path_variables": endpoint.variables,
+                "params": endpoint.params,
+                "request_body": endpoint.request_body,
+                "source": list(endpoint.source),
+            },
+            args.output,
+        )
         return 0
     if args.api_command == "call":
         endpoint = registry.get(args.path)

@@ -123,6 +123,22 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("--date-submitted-after", result.stdout)
         self.assertIn("--date-submitted-before", result.stdout)
         self.assertIn("--order", result.stdout)
+        self.assertIn("--param", result.stdout)
+
+    def test_alpha_list_help_includes_adjacent_wqb_sdk_filters(self) -> None:
+        result = run_wqb("alpha", "list", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--settings-neutralization", result.stdout)
+        self.assertIn("--is-sharpe", result.stdout)
+        self.assertIn("--os-is-sharpe-ratio", result.stdout)
+
+    def test_data_fields_help_accepts_extra_query_params(self) -> None:
+        result = run_wqb("data", "fields", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--coverage", result.stdout)
+        self.assertIn("--alpha-count", result.stdout)
+        self.assertIn("--order", result.stdout)
+        self.assertIn("--param", result.stdout)
 
 
 if __name__ == "__main__":

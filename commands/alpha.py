@@ -6,8 +6,50 @@ from typing import Any
 
 from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
-from ..core.io import read_json_file, write_json
+from ..core.io import parse_key_values, read_json_file, write_json
 from ..core.registry import EndpointRegistry
+from .common import add_range_argument, put_bool_if_set, put_if_set, put_range_if_set
+
+
+ALPHA_RANGE_FILTERS = [
+    ("--date-created", "dateCreated"),
+    ("--start-date", "os.startDate"),
+    ("--settings-decay", "settings.decay"),
+    ("--settings-truncation", "settings.truncation"),
+    ("--is-sharpe", "is.sharpe"),
+    ("--is-returns", "is.returns"),
+    ("--is-pnl", "is.pnl"),
+    ("--is-turnover", "is.turnover"),
+    ("--is-drawdown", "is.drawdown"),
+    ("--is-margin", "is.margin"),
+    ("--is-fitness", "is.fitness"),
+    ("--is-book-size", "is.bookSize"),
+    ("--is-long-count", "is.longCount"),
+    ("--is-short-count", "is.shortCount"),
+    ("--os-sharpe60", "os.sharpe60"),
+    ("--os-sharpe125", "os.sharpe125"),
+    ("--os-sharpe250", "os.sharpe250"),
+    ("--os-sharpe500", "os.sharpe500"),
+    ("--os-is-sharpe-ratio", "os.osISSharpeRatio"),
+    ("--os-pre-close-sharpe", "os.preCloseSharpe"),
+    ("--os-pre-close-sharpe-ratio", "os.preCloseSharpeRatio"),
+    ("--is-self-correlation", "is.selfCorrelation"),
+    ("--is-prod-correlation", "is.prodCorrelation"),
+]
+
+ALPHA_DIRECT_FILTERS = [
+    ("language", "settings.language"),
+    ("status", "status"),
+    ("category", "category"),
+    ("settings_region", "settings.region"),
+    ("settings_instrument_type", "settings.instrumentType"),
+    ("settings_universe", "settings.universe"),
+    ("settings_delay", "settings.delay"),
+    ("settings_neutralization", "settings.neutralization"),
+    ("settings_unit_handling", "settings.unitHandling"),
+    ("settings_nan_handling", "settings.nanHandling"),
+    ("settings_pasteurization", "settings.pasteurization"),
+]
 
 
 def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
@@ -21,13 +63,35 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     list_parser = alpha_sub.add_parser("list", help="GET /users/self/alphas")
     list_parser.add_argument("--limit", default="20", help="Result limit")
     list_parser.add_argument("--offset", default="0", help="Result offset")
+    list_parser.add_argument("--name", help="Name filter. Prefix with ~ or = for explicit name operator.")
+    list_parser.add_argument("--competition", action=argparse.BooleanOptionalAction, default=None, help="Competition filter")
     list_parser.add_argument("--type", dest="alpha_type", help="Alpha type, e.g. REGULAR or SUPER")
+    list_parser.add_argument("--language", help="settings.language filter")
+    add_range_argument(list_parser, "--date-created")
+    list_parser.add_argument("--favorite", action=argparse.BooleanOptionalAction, default=None, help="Favorite filter")
     list_parser.add_argument("--color", help="Alpha color filter")
     list_parser.add_argument("--tag", help="Alpha tag filter")
+    list_parser.add_argument("--hidden", action=argparse.BooleanOptionalAction, default=None, help="Hidden filter")
+    list_parser.add_argument("--status", help="Status filter")
+    list_parser.add_argument("--category", help="Alpha category filter")
     list_parser.add_argument("--date-submitted", help="dateSubmitted filter/range accepted by BRAIN API")
     list_parser.add_argument("--date-submitted-after", help="dateSubmitted lower bound, passed as dateSubmitted>")
     list_parser.add_argument("--date-submitted-before", help="dateSubmitted upper bound, passed as dateSubmitted<")
+    add_range_argument(list_parser, "--start-date")
+    list_parser.add_argument("--settings-region", help="settings.region filter")
+    list_parser.add_argument("--settings-instrument-type", help="settings.instrumentType filter")
+    list_parser.add_argument("--settings-universe", help="settings.universe filter")
+    list_parser.add_argument("--settings-delay", help="settings.delay filter")
+    add_range_argument(list_parser, "--settings-decay")
+    list_parser.add_argument("--settings-neutralization", help="settings.neutralization filter")
+    add_range_argument(list_parser, "--settings-truncation")
+    list_parser.add_argument("--settings-unit-handling", help="settings.unitHandling filter")
+    list_parser.add_argument("--settings-nan-handling", help="settings.nanHandling filter")
+    list_parser.add_argument("--settings-pasteurization", help="settings.pasteurization filter")
+    for flag, _ in ALPHA_RANGE_FILTERS[4:]:
+        add_range_argument(list_parser, flag)
     list_parser.add_argument("--order", help="Sort order, e.g. -dateSubmitted")
+    list_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     list_parser.add_argument("--output", help="Write JSON result to file")
 
     simple_gets = {
@@ -143,20 +207,22 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     if args.alpha_command == "list":
         endpoint = registry.get("/users/self/alphas")
         params = {"limit": args.limit, "offset": args.offset}
-        if args.alpha_type:
-            params["type"] = args.alpha_type
-        if args.color:
-            params["color"] = args.color
-        if args.tag:
-            params["tag"] = args.tag
-        if args.date_submitted:
-            params["dateSubmitted"] = args.date_submitted
-        if args.date_submitted_after:
-            params["dateSubmitted>"] = args.date_submitted_after
-        if args.date_submitted_before:
-            params["dateSubmitted<"] = args.date_submitted_before
-        if args.order:
-            params["order"] = args.order
+        _put_name_filter(params, args.name)
+        put_bool_if_set(params, "competition", args.competition)
+        put_if_set(params, "type", args.alpha_type)
+        put_bool_if_set(params, "favorite", args.favorite)
+        put_if_set(params, "color", args.color)
+        put_if_set(params, "tag", args.tag)
+        put_bool_if_set(params, "hidden", args.hidden)
+        put_if_set(params, "dateSubmitted", args.date_submitted)
+        put_if_set(params, "dateSubmitted>", args.date_submitted_after)
+        put_if_set(params, "dateSubmitted<", args.date_submitted_before)
+        for attr, param_key in ALPHA_DIRECT_FILTERS:
+            put_if_set(params, param_key, getattr(args, attr))
+        for flag, param_key in ALPHA_RANGE_FILTERS:
+            put_range_if_set(params, param_key, getattr(args, flag.removeprefix("--").replace("-", "_")))
+        put_if_set(params, "order", args.order)
+        params.update(parse_key_values(args.param))
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)
@@ -266,6 +332,18 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         write_json(result, args.output)
         return 0
     raise AssertionError(args.alpha_command)
+
+
+def _put_name_filter(params: dict[str, Any], value: str | None) -> None:
+    if value is None:
+        return
+    text = value.strip()
+    if not text:
+        return
+    if text[0] in {"~", "="}:
+        params["name" + text[0]] = text[1:]
+        return
+    params["name~"] = text
 
 
 def _submit_alpha(

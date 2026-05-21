@@ -31,7 +31,10 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     add_range_argument(datasets_parser, "--value-score")
     add_range_argument(datasets_parser, "--alpha-count")
     add_range_argument(datasets_parser, "--user-count")
-    datasets_parser.add_argument("--order", help="Sort order")
+    datasets_parser.add_argument(
+        "--order",
+        help="Sort order. Common: -coverage, coverage, -valueScore, -alphaCount, -userCount, name",
+    )
     datasets_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     datasets_parser.add_argument("--output", help="Write JSON result to file")
 
@@ -54,7 +57,10 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     fields_parser.add_argument("--type", dest="field_type", help="Field type")
     add_range_argument(fields_parser, "--alpha-count")
     add_range_argument(fields_parser, "--user-count")
-    fields_parser.add_argument("--order", help="Sort order")
+    fields_parser.add_argument(
+        "--order",
+        help="Sort order. Common: -coverage, coverage, -alphaCount, -userCount, name, dataset.id",
+    )
     fields_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     fields_parser.add_argument("--output", help="Write JSON result to file")
 

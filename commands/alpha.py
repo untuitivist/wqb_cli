@@ -90,7 +90,13 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     list_parser.add_argument("--settings-pasteurization", help="settings.pasteurization filter")
     for flag, _ in ALPHA_RANGE_FILTERS[4:]:
         add_range_argument(list_parser, flag)
-    list_parser.add_argument("--order", help="Sort order, e.g. -dateSubmitted")
+    list_parser.add_argument(
+        "--order",
+        help=(
+            "Sort order. Common: -dateSubmitted, dateSubmitted, -is.sharpe, "
+            "-is.fitness, -is.returns, -is.turnover, -os.sharpe250, -os.sharpe500"
+        ),
+    )
     list_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     list_parser.add_argument("--output", help="Write JSON result to file")
 

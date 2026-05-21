@@ -133,6 +133,9 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("--os-is-sharpe-ratio", result.stdout)
         self.assertIn("-dateSubmitted", result.stdout)
         self.assertIn("-is.fitness", result.stdout)
+        self.assertIn("SUBINDUSTRY", result.stdout)
+        self.assertIn(">=1.58", result.stdout)
+        self.assertIn(">=0.001", result.stdout)
 
     def test_data_fields_help_accepts_extra_query_params(self) -> None:
         result = run_wqb("data", "fields", "--help")
@@ -140,6 +143,8 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("--coverage", result.stdout)
         self.assertIn("--alpha-count", result.stdout)
         self.assertIn("--order", result.stdout)
+        self.assertIn("MATRIX", result.stdout)
+        self.assertIn(">0.8", result.stdout)
         self.assertIn("-userCount", result.stdout)
         self.assertIn("--param", result.stdout)
 
@@ -148,6 +153,9 @@ class CliSmokeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("-valueScore", result.stdout)
         self.assertIn("-alphaCount", result.stdout)
+        self.assertIn("model, analyst", result.stdout)
+        self.assertIn("fundamental", result.stdout)
+        self.assertIn(">=5", result.stdout)
 
 
 if __name__ == "__main__":

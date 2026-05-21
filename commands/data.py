@@ -17,20 +17,27 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     categories_parser.add_argument("--output", help="Write JSON result to file")
 
     datasets_parser = data_sub.add_parser("datasets", help="GET /data-sets")
-    datasets_parser.add_argument("--instrument-type", default="EQUITY", help="Instrument type")
-    datasets_parser.add_argument("--region", default="USA", help="Region")
-    datasets_parser.add_argument("--delay", default="1", help="Delay")
-    datasets_parser.add_argument("--universe", default="TOP3000", help="Universe")
+    datasets_parser.add_argument("--instrument-type", default="EQUITY", help="Instrument type. Common: EQUITY.")
+    datasets_parser.add_argument("--region", default="USA", help="Region. Common: USA, EUR, GLB, ASI, CHN, JPN, AMR.")
+    datasets_parser.add_argument("--delay", default="1", help="Delay. Common: 1; also 0.")
+    datasets_parser.add_argument(
+        "--universe",
+        default="TOP3000",
+        help="Universe. Common: TOP3000, TOP1000, TOP500, TOP2500, TOP1200, TOP800, TOP600, TOP2000U.",
+    )
     datasets_parser.add_argument("--limit", default="20", help="Result limit")
     datasets_parser.add_argument("--offset", default="0", help="Result offset")
     datasets_parser.add_argument("--search", help="Search query")
-    datasets_parser.add_argument("--category", help="Data category filter")
+    datasets_parser.add_argument(
+        "--category",
+        help="Data category filter. Common: model, analyst, fundamental, pv, other, news, risk, sentiment, earnings.",
+    )
     datasets_parser.add_argument("--category-id", help="Observed platform category.id filter")
     datasets_parser.add_argument("--theme", action=argparse.BooleanOptionalAction, default=None, help="Theme filter")
-    add_range_argument(datasets_parser, "--coverage")
-    add_range_argument(datasets_parser, "--value-score")
-    add_range_argument(datasets_parser, "--alpha-count")
-    add_range_argument(datasets_parser, "--user-count")
+    add_range_argument(datasets_parser, "--coverage", help="Coverage range. Common filters: >0.8, >0.9, =1.0.")
+    add_range_argument(datasets_parser, "--value-score", help="Value score range. Common values: 2..7; high score: >=5.")
+    add_range_argument(datasets_parser, "--alpha-count", help="Alpha count range. Use low values for underused datasets or sort by -alphaCount.")
+    add_range_argument(datasets_parser, "--user-count", help="User count range. Use low values for underused datasets or sort by -userCount.")
     datasets_parser.add_argument(
         "--order",
         help="Sort order. Common: -coverage, coverage, -valueScore, -alphaCount, -userCount, name",
@@ -44,19 +51,26 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
 
     fields_parser = data_sub.add_parser("fields", help="GET /data-fields")
     fields_parser.add_argument("--dataset", help="Dataset id")
-    fields_parser.add_argument("--instrument-type", default="EQUITY", help="Instrument type")
-    fields_parser.add_argument("--region", default="USA", help="Region")
-    fields_parser.add_argument("--delay", default="1", help="Delay")
-    fields_parser.add_argument("--universe", default="TOP3000", help="Universe")
+    fields_parser.add_argument("--instrument-type", default="EQUITY", help="Instrument type. Common: EQUITY.")
+    fields_parser.add_argument("--region", default="USA", help="Region. Common: USA, EUR, GLB, ASI, CHN, JPN, AMR.")
+    fields_parser.add_argument("--delay", default="1", help="Delay. Common: 1; also 0.")
+    fields_parser.add_argument(
+        "--universe",
+        default="TOP3000",
+        help="Universe. Common: TOP3000, TOP1000, TOP500, TOP2500, TOP1200, TOP800, TOP600, TOP2000U.",
+    )
     fields_parser.add_argument("--limit", default="20", help="Result limit")
     fields_parser.add_argument("--offset", default="0", help="Result offset")
     fields_parser.add_argument("--search", help="Search query")
-    fields_parser.add_argument("--category", help="Data category filter")
+    fields_parser.add_argument(
+        "--category",
+        help="Data category filter. Common: model, analyst, fundamental, pv, other, news, risk, sentiment, earnings.",
+    )
     fields_parser.add_argument("--theme", action=argparse.BooleanOptionalAction, default=None, help="Theme filter")
-    add_range_argument(fields_parser, "--coverage")
-    fields_parser.add_argument("--type", dest="field_type", help="Field type")
-    add_range_argument(fields_parser, "--alpha-count")
-    add_range_argument(fields_parser, "--user-count")
+    add_range_argument(fields_parser, "--coverage", help="Coverage range. Common filters: >0.8, >0.9, =1.0.")
+    fields_parser.add_argument("--type", dest="field_type", help="Field type. Common: MATRIX, VECTOR, GROUP.")
+    add_range_argument(fields_parser, "--alpha-count", help="Alpha count range. Many fields are 0; sort by -alphaCount for mature fields.")
+    add_range_argument(fields_parser, "--user-count", help="User count range. Many fields are 0; sort by -userCount for mature fields.")
     fields_parser.add_argument(
         "--order",
         help="Sort order. Common: -coverage, coverage, -alphaCount, -userCount, name, dataset.id",
@@ -78,9 +92,9 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     field_parser.add_argument("--output", help="Write JSON result to file")
 
     operators_parser = data_sub.add_parser("operators", help="GET /operators")
-    operators_parser.add_argument("--instrument-type", help="Instrument type")
-    operators_parser.add_argument("--region", help="Region")
-    operators_parser.add_argument("--delay", help="Delay")
+    operators_parser.add_argument("--instrument-type", help="Instrument type. Common: EQUITY.")
+    operators_parser.add_argument("--region", help="Region. Common: USA, EUR, GLB, ASI, CHN, JPN, AMR.")
+    operators_parser.add_argument("--delay", help="Delay. Common: 1; also 0.")
     operators_parser.add_argument("--param", action="append", help="Extra query parameter KEY=VALUE")
     operators_parser.add_argument("--output", help="Write JSON result to file")
 

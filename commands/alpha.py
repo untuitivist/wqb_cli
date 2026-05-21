@@ -51,6 +51,32 @@ ALPHA_DIRECT_FILTERS = [
     ("settings_pasteurization", "settings.pasteurization"),
 ]
 
+ALPHA_RANGE_HELP = {
+    "--date-created": "dateCreated range. Common: >2026-01-01T00:00:00-0500, <2026-05-01T00:00:00-0500.",
+    "--start-date": "os.startDate range.",
+    "--settings-decay": "settings.decay range. Common values: 0, 1, 3, 4, 5, 6, 8, 10, 12, 15, 20, 30, 60.",
+    "--settings-truncation": "settings.truncation range. Common values: 0.08, 0.01, 0.04, 0.05, 0.06, 0.1, 0.15, 0.2.",
+    "--is-sharpe": "is.sharpe range. Common candidate filters: >=1.58 or >=1; weak bucket: >=1 and <1.58.",
+    "--is-returns": "is.returns range.",
+    "--is-pnl": "is.pnl range.",
+    "--is-turnover": "is.turnover range. Common: >=0.01 and <=0.7.",
+    "--is-drawdown": "is.drawdown range.",
+    "--is-margin": "is.margin range. Common: >=0.001; looser: >=0.0005.",
+    "--is-fitness": "is.fitness range. Common: >=1 or >=1.5.",
+    "--is-book-size": "is.bookSize range.",
+    "--is-long-count": "is.longCount range.",
+    "--is-short-count": "is.shortCount range.",
+    "--os-sharpe60": "os.sharpe60 range.",
+    "--os-sharpe125": "os.sharpe125 range.",
+    "--os-sharpe250": "os.sharpe250 range. Common order field: -os.sharpe250.",
+    "--os-sharpe500": "os.sharpe500 range. Common order field: -os.sharpe500.",
+    "--os-is-sharpe-ratio": "os.osISSharpeRatio range.",
+    "--os-pre-close-sharpe": "os.preCloseSharpe range.",
+    "--os-pre-close-sharpe-ratio": "os.preCloseSharpeRatio range.",
+    "--is-self-correlation": "is.selfCorrelation range.",
+    "--is-prod-correlation": "is.prodCorrelation range. Common flags: >0.5, >0.7.",
+}
+
 
 def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     alpha = subparsers.add_parser("alpha", help="Alpha API commands")
@@ -65,31 +91,42 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     list_parser.add_argument("--offset", default="0", help="Result offset")
     list_parser.add_argument("--name", help="Name filter. Prefix with ~ or = for explicit name operator.")
     list_parser.add_argument("--competition", action=argparse.BooleanOptionalAction, default=None, help="Competition filter")
-    list_parser.add_argument("--type", dest="alpha_type", help="Alpha type, e.g. REGULAR or SUPER")
-    list_parser.add_argument("--language", help="settings.language filter")
-    add_range_argument(list_parser, "--date-created")
+    list_parser.add_argument("--type", dest="alpha_type", help="Alpha type. Common: REGULAR; occasional: SUPER.")
+    list_parser.add_argument("--language", help="settings.language filter. Common: FASTEXPR; also PYTHON.")
+    add_range_argument(list_parser, "--date-created", help=ALPHA_RANGE_HELP["--date-created"])
     list_parser.add_argument("--favorite", action=argparse.BooleanOptionalAction, default=None, help="Favorite filter")
-    list_parser.add_argument("--color", help="Alpha color filter")
+    list_parser.add_argument("--color", help="Alpha color filter. Common: GREEN, BLUE, PURPLE, YELLOW, RED.")
     list_parser.add_argument("--tag", help="Alpha tag filter")
-    list_parser.add_argument("--hidden", action=argparse.BooleanOptionalAction, default=None, help="Hidden filter")
-    list_parser.add_argument("--status", help="Status filter")
+    list_parser.add_argument(
+        "--hidden",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Hidden filter. Common: --no-hidden for candidates; --hidden for bad archived alphas.",
+    )
+    list_parser.add_argument("--status", help="Status filter. Common: UNSUBMITTED.")
     list_parser.add_argument("--category", help="Alpha category filter")
     list_parser.add_argument("--date-submitted", help="dateSubmitted filter/range accepted by BRAIN API")
     list_parser.add_argument("--date-submitted-after", help="dateSubmitted lower bound, passed as dateSubmitted>")
     list_parser.add_argument("--date-submitted-before", help="dateSubmitted upper bound, passed as dateSubmitted<")
-    add_range_argument(list_parser, "--start-date")
-    list_parser.add_argument("--settings-region", help="settings.region filter")
-    list_parser.add_argument("--settings-instrument-type", help="settings.instrumentType filter")
-    list_parser.add_argument("--settings-universe", help="settings.universe filter")
-    list_parser.add_argument("--settings-delay", help="settings.delay filter")
-    add_range_argument(list_parser, "--settings-decay")
-    list_parser.add_argument("--settings-neutralization", help="settings.neutralization filter")
-    add_range_argument(list_parser, "--settings-truncation")
-    list_parser.add_argument("--settings-unit-handling", help="settings.unitHandling filter")
-    list_parser.add_argument("--settings-nan-handling", help="settings.nanHandling filter")
-    list_parser.add_argument("--settings-pasteurization", help="settings.pasteurization filter")
+    add_range_argument(list_parser, "--start-date", help=ALPHA_RANGE_HELP["--start-date"])
+    list_parser.add_argument("--settings-region", help="settings.region filter. Common: USA, EUR, GLB, ASI, CHN, JPN, AMR.")
+    list_parser.add_argument("--settings-instrument-type", help="settings.instrumentType filter. Common: EQUITY.")
+    list_parser.add_argument(
+        "--settings-universe",
+        help="settings.universe filter. Common: TOP3000, TOP1000, TOP500, TOP2500, TOP1200, TOP800, TOP600, TOP2000U.",
+    )
+    list_parser.add_argument("--settings-delay", help="settings.delay filter. Common: 1; also 0.")
+    add_range_argument(list_parser, "--settings-decay", help=ALPHA_RANGE_HELP["--settings-decay"])
+    list_parser.add_argument(
+        "--settings-neutralization",
+        help="settings.neutralization filter. Common: SUBINDUSTRY, INDUSTRY, MARKET, NONE, SECTOR, STATISTICAL.",
+    )
+    add_range_argument(list_parser, "--settings-truncation", help=ALPHA_RANGE_HELP["--settings-truncation"])
+    list_parser.add_argument("--settings-unit-handling", help="settings.unitHandling filter. Common: VERIFY.")
+    list_parser.add_argument("--settings-nan-handling", help="settings.nanHandling filter. Common: ON, OFF.")
+    list_parser.add_argument("--settings-pasteurization", help="settings.pasteurization filter. Common: ON.")
     for flag, _ in ALPHA_RANGE_FILTERS[4:]:
-        add_range_argument(list_parser, flag)
+        add_range_argument(list_parser, flag, help=ALPHA_RANGE_HELP[flag])
     list_parser.add_argument(
         "--order",
         help=(

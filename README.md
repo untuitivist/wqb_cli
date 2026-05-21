@@ -88,6 +88,16 @@ wqb alpha list --settings-neutralization SUBINDUSTRY --is-sharpe ">=1.25"
 wqb data fields --dataset analyst14 --coverage ">0.8" --order=-userCount
 ```
 
+这些显式参数的 `--help` 文档里写了本地 `U:\Project\MainCode\3.Work\WQB` 工作流中常用的取值和阈值示例。
+需要确认参数怎么填时，优先看命令帮助：
+
+```powershell
+wqb alpha list --help
+wqb data datasets --help
+wqb data fields --help
+wqb data operators --help
+```
+
 会修改平台状态的请求必须显式传入 `--execute`。
 CLI 不提供 dry-run 模式。
 如果会修改状态的命令没有传入 `--execute`，返回结果会包含 `ok: false` 与 `reason: mutating_method_requires_execute`。

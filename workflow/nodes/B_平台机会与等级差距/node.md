@@ -21,6 +21,7 @@ wqb user consultant-summary --output <node_dir>/consultant_summary.json
 wqb consultant summary --output <node_dir>/consultant_summary_compat.json
 wqb user messages-summary --output <node_dir>/messages_summary.json
 wqb user messages --output <node_dir>/messages.json
+wqb user messages --limit 50 --offset 50 --order -dateCreated --type ANNOUNCEMENT --output <node_dir>/recent_announcements_page2.json
 wqb event list --output <node_dir>/events.json
 ```
 
@@ -37,6 +38,8 @@ wqb event list --output <node_dir>/events.json
 
 - `messages_summary.json`
 - `messages.json`
+- `recent_announcements_page2.json`
+- `recent_theme.md`：从 `recent_announcements_page2.json` 中按 `dateCreated` 由近到远查找标题或正文包含 `Theme` / `theme` 的公告，记录最近 theme 的名称、时间、multiplier、duration、region/turnover 等约束。
 - `events.json`
 
 ## 等级硬指标

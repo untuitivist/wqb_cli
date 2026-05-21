@@ -21,6 +21,8 @@ def add_user_parser(subparsers: argparse._SubParsersAction) -> None:
     messages_parser = user_sub.add_parser("messages", help="GET /users/self/messages")
     messages_parser.add_argument("--limit", default="20", help="Result limit")
     messages_parser.add_argument("--offset", default="0", help="Result offset")
+    messages_parser.add_argument("--order", help="Sort order, e.g. -dateCreated")
+    messages_parser.add_argument("--type", help="Message type filter, e.g. ANNOUNCEMENT or NOTIFICATION")
     messages_parser.add_argument("--output", help="Write JSON result to file")
 
     users_parser = user_sub.add_parser("list", help="GET /users")
@@ -89,7 +91,12 @@ def handle_user(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     if args.user_command == "messages":
         endpoint = registry.get("/users/self/messages")
         client = WqbClient(registry, session_from_cookies(args.cookies))
-        prepared = client.prepare(endpoint, "GET", params={"limit": args.limit, "offset": args.offset})
+        params = {"limit": args.limit, "offset": args.offset}
+        if args.order:
+            params["order"] = args.order
+        if args.type:
+            params["type"] = args.type
+        prepared = client.prepare(endpoint, "GET", params=params)
         result = client.call(prepared)
         write_json(result, args.output)
         return 0

@@ -111,6 +111,12 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("pickle-summary", result.stdout)
         self.assertIn("alpha-rows", result.stdout)
 
+    def test_user_messages_help_includes_filters(self) -> None:
+        result = run_wqb("user", "messages", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--order", result.stdout)
+        self.assertIn("--type", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

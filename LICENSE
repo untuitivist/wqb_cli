@@ -1,21 +1,53 @@
-MIT License
+wqb-cli License
 
-Copyright (c) 2026 Wiz
+Copyright (c) 2026 wiz
+Original repository: https://github.com/untuitivist/wqb_cli
+Author GitHub: https://github.com/untuitivist
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is licensed under the GNU General Public License version 3.0
+only, with the Commons Clause License Condition v1.0 added.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+SPDX-License-Identifier: GPL-3.0-only WITH Commons-Clause
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+You may use, copy, modify, and redistribute this software under the terms of
+the GNU General Public License version 3.0 only, except that the Commons Clause
+below removes the right to Sell the Software as defined by that clause.
+
+Any use, copy, modification, redistribution, or derivative work must preserve
+the following attribution:
+
+  Original author: wiz
+  Original repository: https://github.com/untuitivist/wqb_cli
+  Author GitHub: https://github.com/untuitivist
+
+The full GNU General Public License version 3.0 text is available from the
+Free Software Foundation:
+
+  https://www.gnu.org/licenses/gpl-3.0.txt
+
+Commons Clause License Condition v1.0
+
+The Software is provided to you by the Licensor under the License, as defined
+below, subject to the following condition.
+
+Without limiting other conditions in the License, the grant of rights under the
+License will not include, and the License does not grant to you, the right to
+Sell the Software.
+
+For purposes of the foregoing, "Sell" means practicing any or all of the rights
+granted to you under the License to provide to third parties, for a fee or other
+consideration (including without limitation fees for hosting or consulting/
+support services related to the Software), a product or service whose value
+derives, entirely or substantially, from the functionality of the Software. Any
+license notice or attribution required by the License must also include this
+Commons Clause License Condition notice.
+
+Software: wqb-cli
+
+License: GNU General Public License version 3.0 only
+
+Licensor: wiz
+
+Important note: Applying the Commons Clause to GPL-3.0 removes this project
+from the standard OSI open-source category. The source remains available, but
+commercial sale of the Software itself is not licensed.

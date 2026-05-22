@@ -13,7 +13,7 @@
 可选：
 - E 的 `super_constraints.json`
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb sim options --output <node_dir>/sim_options.json

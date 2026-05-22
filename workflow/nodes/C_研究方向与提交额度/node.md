@@ -14,7 +14,7 @@
 
 - B 的等级差距。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb alpha list --limit 100 --order=-dateSubmitted --date-submitted-after <et_today_00:00:00-04:00_or_-05:00> --date-submitted-before <et_tomorrow_00:00:00-04:00_or_-05:00> --output <node_dir>/alphas_today_source.json

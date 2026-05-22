@@ -15,7 +15,7 @@
 
 - 需要 patch 的 alpha 描述、tag、说明。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb alpha patch <alpha_id> --input <node_dir>/alpha_patch__alpha_id.json --output <node_dir>/patch_result__alpha_id.json

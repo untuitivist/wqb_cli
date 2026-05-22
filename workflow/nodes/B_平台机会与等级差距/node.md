@@ -14,7 +14,7 @@
 
 - 上一季度 `currentLevel`。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb user consultant-summary --output <node_dir>/consultant_summary.json

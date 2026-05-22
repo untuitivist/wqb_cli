@@ -19,7 +19,7 @@ D 必须服务当前季度 genius 定级，不允许把全部历史塔当作当�
 - 历史 K 诊断。
 - 全部历史塔背景，但只能作为背景，不能作为当前季度塔。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb user consultant-summary --output <node_dir>/consultant_summary.json

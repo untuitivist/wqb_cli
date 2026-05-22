@@ -16,7 +16,7 @@
 
 - 用户提供的帖子、论文或材料。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb community stats --output <node_dir>/community_stats.json

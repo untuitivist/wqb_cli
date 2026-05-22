@@ -15,7 +15,7 @@
 - C 的提交额度。
 - B 的等级 gap。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb alpha get <alpha_id> --output <node_dir>/alpha__alpha_id.json

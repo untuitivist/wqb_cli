@@ -14,7 +14,7 @@
 
 - 最近 purple、tag 为 `!OWN` 的 super alpha 作为额度检查参考。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb alpha list --output <node_dir>/super_alpha_candidates.json

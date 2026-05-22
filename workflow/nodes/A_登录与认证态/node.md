@@ -15,7 +15,7 @@
 
 - 已存在的 `wqb_cli/local/auth/cookies.json`。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb --help

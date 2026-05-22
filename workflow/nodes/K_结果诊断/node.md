@@ -18,7 +18,7 @@
 - 历史 K 节点。
 - visualization 结果和 recordsets。
 
-## 只允许的 CLI
+## 推荐使用的 CLI
 
 ```powershell
 wqb alpha get <alpha_id> --output <node_dir>/alpha__alpha_id.json

@@ -1,5 +1,9 @@
 # wqb-cli
 
+<p align="center">
+  <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
+</p>
+
 English | [简体中文](README_CN.md)
 
 `wqb-cli` is an agent-native command line toolkit for working with the WorldQuant BRAIN API and local research data.

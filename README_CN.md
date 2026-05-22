@@ -1,5 +1,9 @@
 # wqb-cli
 
+<p align="center">
+  <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
+</p>
+
 [English](README.md) | 简体中文
 
 `wqb-cli` 是一个 agent-native 的 WorldQuant BRAIN 命令行工具，用于把认证、API 查询、alpha 检查、回测提交、正式提交、本地数据筛选和社区数据检索组织成可复用的研究流程。

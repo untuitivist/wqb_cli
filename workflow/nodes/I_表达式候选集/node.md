@@ -2,7 +2,7 @@
 
 ## 目标
 
-I 只回答一件事：`把 H 已经确认的字段机制翻译成可回测表达式，并检查 operator 与语法约束。`
+I 只回答一件事：把 H 已经确认的字段机制翻译成可回测表达式，并检查 operator 与语法约束。
 
 I 不重新做字段筛选，不重新做机制搜索，不把 H 和 F 的工作混进来。
 
@@ -23,9 +23,9 @@ I 不重新做字段筛选，不重新做机制搜索，不把 H 和 F 的工作
 
 - 字段已由 F 选出
 - 字段意义已由 H 说明
-- 社区与论文证据已由 H 记录
+- 社区、文档、平台、论文证据已由 G 提供并由 H 吸收
 
-如果这些前提不满足，I 应回退 H 或 F，而不是自己补做。
+如果这些前提不满足，I 应回退 `H` 或 `F`，而不是自己补做。
 
 ## 允许的 CLI
 
@@ -37,7 +37,7 @@ wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
 
 说明：
 - I 可以重新读取字段 meta 做校验
-- I 不应把社区/arXiv 搜索当成主任务；若发现 H 证据不足，应回退 H
+- I 不应把社区或 arXiv 搜索当成主任务；如果发现 H 证据不足，应回退 H
 
 ## 输出
 
@@ -55,28 +55,29 @@ wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
 
 - 每条候选必须绑定到单一主机制：`single_mechanism=true`
 - 禁止线性混合多个独立收益信号
-- 允许同一机制下的：
+- 允许单一机制下的：
   - 同字段时间平滑
   - 同字段非线性变换
   - 同字段关系量
-  - 同机制内的多元关系表达式，如 `corr(a, b)`、`ts_regression(y, x, d)`
+  - 同机制内部的多元关系表达式，如 `corr(a, b)`、`ts_regression(y, x, d)`
 - 如果一个表达式需要第二个独立收益来源才能成立，该候选直接作废
 
 ## operator 参数硬约束
 
-- `ts_quantile(x, d, driver='gaussian')`：字符串参数必须用单引号
+- `ts_quantile(x, d, driver='gaussian')`，字符串参数必须用单引号
 - `kth_element(x, d, k=?)`
 - `ts_theilsen(x, y, d)`
-- `ts_weighted_decay(x, k=0.5)`：`k` 不可省略
-- `hump_decay(x, p=0)`：`p` 不可省略
-- `group_mean(x, weight, group)`：`weight` 不可省略，可写 `1`
+- `ts_weighted_decay(x, k=0.5)`，`k` 不可省略
+- `hump_decay(x, p=0)`，`p` 不可省略
+- `group_mean(x, weight, group)`，`weight` 不可省略，可填 `1`
 - `ts_target_tvr_decay(x, lambda_min=0, lambda_max=1, target_tvr=0.1)`
 - `ts_target_tvr_hump(x, lambda_min=0, lambda_max=1, target_tvr=0.1)`
-- `ts_poly_regression(y, x, d, k=1)`：`k` 不可省略
+- `ts_poly_regression(y, x, d, k=1)`，`k` 不可省略
 
 ## 表达式输出要求
 
 `expression_candidates.json` 中每条候选至少包含：
+
 - `field_id`
 - `dataset_id`
 - `mechanism_id`
@@ -103,7 +104,7 @@ I 负责：
 I 不负责：
 - 再次选字段
 - 再次定义字段经济学意义
-- 再次做社区/论文主搜索
+- 再次做社区、文档、平台、论文主搜索
 - 为了过指标临时拼第二机制
 
 ## 下一跳

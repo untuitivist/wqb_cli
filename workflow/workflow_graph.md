@@ -2,7 +2,7 @@
 
 本目录定义研究流程，不实现任何运行脚本。
 
-所有节点只能调用 `wqb` CLI 或人工读取节点产物，不允许新建 `.py`、`.bat`、`.ps1` 等脚本来替代 CLI。
+所有节点只允许调用 `wqb` CLI，或人工读取节点产物；不允许新建 `.py`、`.bat`、`.ps1` 等脚本来替代 CLI。
 
 ## 运行目录规则
 
@@ -26,7 +26,7 @@ research_runs/
 
 ```mermaid
 flowchart TD
-    A["A 登录与认证状态"] --> B["B 平台机会与等级差距"]
+    A["A 登录与认证态"] --> B["B 平台机会与等级差距"]
     A --> C["C 研究方向与提交额度"]
 
     B --> D["D Regular 主塔选择"]
@@ -65,13 +65,13 @@ flowchart TD
   - `margin > 0.1%`
 - F 字段筛选优先级：
   - OS 差的数据不用
-  - 已使用 datafield 硬排除
-  - 已使用 dataset 尽量不用
+  - 已使用 `datafield` 硬排除
+  - 已使用 `dataset` 尽量不用
 - J 并发规则：
-  - Regular 非 GLB 最多 8 槽
-  - Regular GLB 最多 4 槽
-  - Super 最多 3 槽
-- K 必须读 visualization 结果；无 visualization 的结果只能作弱证据
+  - Regular 非 `GLB` 最多 `8` 槽
+  - Regular `GLB` 最多 `4` 槽
+  - Super 最多 `3` 槽
+- K 必须读 visualization 结果；没有 visualization 的结果只能作弱证据
 - K 必须记录真实 `alpha_id` 与完整结果，不能只看 child alpha id
 
 ## G 节点硬规则
@@ -80,7 +80,7 @@ G 必须同时完成：
 - 本地社区库搜索
 - 官方文档搜索
 - 平台资料搜索
-- 相关论文/研报搜索
+- 相关论文或研报搜索
 
 如果环境里存在 `arxiv_cli`，必须优先使用：
 

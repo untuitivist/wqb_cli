@@ -2,11 +2,25 @@
 
 [English](README.md) | 简体中文
 
-`wqb-cli` 是一个面向 agent 使用的 WorldQuant BRAIN 命令行工具，用于把认证、API 查询、alpha 检查、回测提交、正式提交、本地数据筛选和社区数据检索组织成可复用的研究流程。
+`wqb-cli` 是一个 agent-native 的 WorldQuant BRAIN 命令行工具，用于把认证、API 查询、alpha 检查、回测提交、正式提交、本地数据筛选和社区数据检索组织成可复用的研究流程。
+
+它优先服务编码 agent 和长流程研究 agent，而不是只给人手工敲命令使用的薄封装。命令会输出结构化 JSON，保留原始 API 上下文，等待平台异步结果，并自然适配可重复的研究节点流程。
 
 - 仓库：[untuitivist/wqb_cli](https://github.com/untuitivist/wqb_cli)
 - 作者：[wiz](https://github.com/untuitivist)
 - 许可证：GPL-3.0-only with Commons Clause，详见 [LICENSE](LICENSE)。
+
+## Agent-Native 设计
+
+`wqb-cli` 的设计目标是让 agent 可以在不依赖浏览器状态、不依赖人工点击的情况下，可检查、可复用、可追踪地操作 BRAIN 工作流：
+
+- 命令输出结构化结果，可用 `--output` 保存，并交给后续 workflow 节点继续使用。
+- simulation、submit check、alpha check、recordsets 等异步结果都有明确等待语义。
+- 随包提供 API inventory 和命令文档，agent 可以本地检查 endpoint 与参数。
+- `workflow/` 下提供可复用节点文档，明确输入、允许命令、必要输出和成功条件。
+- 本地数据命令读取 `local/` 下的稳定文件，不直接抓取浏览器或插件缓存。
+- 命令输出保留 request/response 上下文，包括状态码、参数、Location、retry 事件和返回体。
+- 不保留 dry-run 分支，避免自动化流程歧义：命令要么真实调用 API 并等待结果，要么明确失败。
 
 ## 功能概览
 

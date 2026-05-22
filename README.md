@@ -2,13 +2,25 @@
 
 English | [简体中文](README_CN.md)
 
-`wqb-cli` is an agent-first command line toolkit for working with the WorldQuant BRAIN API and local research data.
+`wqb-cli` is an agent-native command line toolkit for working with the WorldQuant BRAIN API and local research data.
 
-It is designed for repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation submission, alpha submission checks, local `data_all` screening, and community-data search.
+It is built for coding agents and long-running research agents first, not as a thin human-only wrapper. Commands produce structured JSON, preserve raw API context, wait for asynchronous platform results, and fit naturally into repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation submission, alpha submission checks, local `data_all` screening, and community-data search.
 
 - Repository: [untuitivist/wqb_cli](https://github.com/untuitivist/wqb_cli)
 - Author: [wiz](https://github.com/untuitivist)
 - License: GPL-3.0-only with Commons Clause. See [LICENSE](LICENSE).
+
+## Agent-Native Design
+
+`wqb-cli` is designed so an agent can operate it safely and inspectably without relying on browser state or manual clicking:
+
+- Structured command outputs that can be saved with `--output` and consumed by later workflow nodes.
+- Explicit wait semantics for simulations, submit checks, alpha checks, recordsets, and other asynchronous API results.
+- Bundled API inventory and command docs so agents can inspect available endpoints locally.
+- Reusable workflow node documents under `workflow/`, with clear inputs, allowed commands, required outputs, and success criteria.
+- Local data commands that read stable files under `local/` instead of scraping browser/plugin caches directly.
+- Raw request and response context preserved in command output, including status codes, parameters, locations, retry events, and result bodies.
+- No dry-run branch to confuse automation: commands either call the API, wait for the requested result, or fail clearly.
 
 ## What This Tool Provides
 

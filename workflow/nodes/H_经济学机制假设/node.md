@@ -33,6 +33,8 @@ H 必须严格按下面顺序执行：
 
 ```powershell
 wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
+python -m arxiv_cli --help
+python -m arxiv_cli search query --all <mechanism_keyword> --max-results 10 --sort-by relevance --output <node_dir>/arxiv__<field_id>__<keyword>.json
 ```
 
 说明：

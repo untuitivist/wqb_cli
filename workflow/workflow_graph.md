@@ -85,6 +85,9 @@ G 必须同时完成：
 如果环境里存在 `arxiv_cli`，必须优先使用：
 
 ```powershell
+python -m arxiv_cli --help
+python -m arxiv_cli search --help
+python -m arxiv_cli search query --help
 python -m arxiv_cli ...
 ```
 

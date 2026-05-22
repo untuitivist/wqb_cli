@@ -45,6 +45,9 @@ wqb community search <keyword> --limit 20 --output <node_dir>/community_search__
 wqb docs list --output <node_dir>/docs_list.json
 wqb docs show <doc_path> --output <node_dir>/docs__<doc_name>.md
 wqb search <keyword> --output <node_dir>/platform_search__<keyword>.json
+python -m arxiv_cli --help
+python -m arxiv_cli search --help
+python -m arxiv_cli search query --help
 python -m arxiv_cli search query --all <keyword> --max-results 10 --sort-by relevance --output <node_dir>/arxiv__<keyword>.json
 ```
 

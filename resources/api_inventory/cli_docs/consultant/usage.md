@@ -14,10 +14,10 @@ python -m wqb_cli api show "/consultant"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/consultant" --dry-run
+python -m wqb_cli api call GET "/consultant"
 ```
 
 实际执行:

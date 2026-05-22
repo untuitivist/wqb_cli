@@ -52,7 +52,7 @@ Copy-Item .env.example local/.env
 登录：
 
 ```powershell
-wqb auth login --execute
+wqb auth login
 ```
 
 Cookie 存储位置：
@@ -98,9 +98,7 @@ wqb data fields --help
 wqb data operators --help
 ```
 
-会修改平台状态的请求必须显式传入 `--execute`。
-CLI 不提供 dry-run 模式。
-如果会修改状态的命令没有传入 `--execute`，返回结果会包含 `ok: false` 与 `reason: mutating_method_requires_execute`。
+会修改平台状态的命令会直接发送请求。
 
 ## 本地数据导入
 

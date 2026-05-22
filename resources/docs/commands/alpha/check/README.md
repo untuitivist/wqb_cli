@@ -5,8 +5,10 @@ Run or fetch platform checks for an alpha.
 Command:
 
 ```powershell
-wqb alpha check <alpha_id> --output <output.json>
+wqb alpha check <alpha_id> --max-wait-seconds 900 --output <output.json>
 ```
+
+`alpha check` follows `Retry-After` by default and returns only when the check body is ready, the request fails, or the wait reaches `--max-wait-seconds`.
 
 Generic API equivalent:
 
@@ -26,4 +28,3 @@ Important checks include:
 - `REGULAR_SUBMISSION`
 - `LOW_2Y_SHARPE`
 - `MATCHES_PYRAMID`
-

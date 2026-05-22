@@ -52,7 +52,6 @@ def add_user_parser(subparsers: argparse._SubParsersAction) -> None:
 
     consultant_tutorial_patch = user_sub.add_parser("consultant-tutorial-patch", help="PATCH /users/self/consultant/tutorial/summary")
     consultant_tutorial_patch.add_argument("--input", required=True, help="JSON file containing patch body")
-    consultant_tutorial_patch.add_argument("--execute", action="store_true", help="Actually patch tutorial summary")
     consultant_tutorial_patch.add_argument("--output", help="Write JSON result to file")
 
     get_parser = user_sub.add_parser("get", help="GET /users/{user_id}")
@@ -137,7 +136,7 @@ def handle_user(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     if args.user_command == "consultant-tutorial-patch":
         endpoint = registry.get("/users/self/consultant/tutorial/summary")
         client = WqbClient(registry, session_from_cookies(args.cookies))
-        prepared = client.prepare(endpoint, "PATCH", json_body=read_json_file(args.input), execute=args.execute)
+        prepared = client.prepare(endpoint, "PATCH", json_body=read_json_file(args.input))
         result = client.call(prepared)
         write_json(result, args.output)
         return 0

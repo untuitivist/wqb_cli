@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /suggest/fields --execute --json "{\"prompt\":\"analyst estimates\"}"
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /suggest/fields --json "{\"prompt\":\"analyst estimates\"}"

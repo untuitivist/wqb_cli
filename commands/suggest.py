@@ -15,7 +15,6 @@ def add_suggest_parser(subparsers: argparse._SubParsersAction) -> None:
         parser = suggest_sub.add_parser(name, help=f"GET/POST /suggest/{name}")
         parser.add_argument("--method", choices=["GET", "POST"], default="GET")
         parser.add_argument("--input", help="JSON file for POST body")
-        parser.add_argument("--execute", action="store_true", help="Actually execute POST")
         parser.add_argument("--output", help="Write JSON result to file")
 
 
@@ -24,7 +23,7 @@ def handle_suggest(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         endpoint = registry.get(f"/suggest/{args.suggest_command}")
         payload = read_json_file(args.input) if args.input else None
         client = WqbClient(registry, session_from_cookies(args.cookies))
-        prepared = client.prepare(endpoint, args.method, json_body=payload, execute=args.execute)
+        prepared = client.prepare(endpoint, args.method, json_body=payload)
         result = client.call(prepared)
         write_json(result, args.output)
         return 0

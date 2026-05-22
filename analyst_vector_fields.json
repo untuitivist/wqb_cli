@@ -1,0 +1,557 @@
+{
+  "ok": true,
+  "endpoint": "/data-fields",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/data-fields",
+    "params": {
+      "instrumentType": "EQUITY",
+      "region": "USA",
+      "delay": "1",
+      "universe": "TOP3000",
+      "limit": "20",
+      "offset": "0",
+      "category": "analyst",
+      "type": "VECTOR"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 1463,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": null,
+    "body": {
+      "count": 2727,
+      "results": [
+        {
+          "id": "absolute_price_change_today",
+          "description": "Change in stock price since previous day close",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.1963,
+          "userCount": 4,
+          "alphaCount": 4,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "active_insurance_coverage_value",
+          "description": "Total insurance in force (e.g., face value of policies in force), in reported units/currency",
+          "dataset": {
+            "id": "analyst49",
+            "name": "Analyst Estimation Data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.0036,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "actuals_reporting_currency",
+          "description": "Home currency of instrument",
+          "dataset": {
+            "id": "analyst4",
+            "name": "Analyst Estimate Data for Equity"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.9876,
+          "userCount": 114,
+          "alphaCount": 234,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "adjusted_return_for_bias",
+          "description": "The return on the idea adjusted for contributor or model bias.",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.2476,
+          "userCount": 4,
+          "alphaCount": 5,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_company_capital",
+          "description": "Total capital as defined by Value Line (sum of long-term debt, preferred stock at liquidation/redemption value, and common equity including intangibles), in currency",
+          "dataset": {
+            "id": "analyst49",
+            "name": "Analyst Estimation Data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.0205,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_idea_return",
+          "description": "The sum of realized and unrealized returns for the trade idea.",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.1947,
+          "userCount": 1,
+          "alphaCount": 4,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_loans_held",
+          "description": "Total loans outstanding, across relevant loan categories, in reported currency",
+          "dataset": {
+            "id": "analyst49",
+            "name": "Analyst Estimation Data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.0151,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_return_ex_fx",
+          "description": "The total return for the idea excluding foreign exchange effects.",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.1947,
+          "userCount": 1,
+          "alphaCount": 1,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_return_percent",
+          "description": "The total return as a percentage of average investment.",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.1991,
+          "userCount": 2,
+          "alphaCount": 2,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "aggregate_trade_return",
+          "description": "Sum of realised and unrealised returns",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.1958,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "allocated_funds_currency",
+          "description": "The currency used for the investment in the trade idea.",
+          "dataset": {
+            "id": "analyst45",
+            "name": "Analyst Trade Ideas"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 1.0,
+          "coverage": 0.2498,
+          "userCount": 2,
+          "alphaCount": 2,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_ari_score_presentation",
+          "description": "The ARI score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 2,
+          "alphaCount": 2,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_cli_score_presentation",
+          "description": "The CLI score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_dcs_score_presentation",
+          "description": "The DCS score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_fkgl_score_presentation",
+          "description": "The FKGL score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_forward_looking_sentiment_presentation",
+          "description": "Forward-looking sentiment score for sell-side analysts during the presentation section",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.0512,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_fre_score_presentation",
+          "description": "The FRE score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_gfi_score_presentation",
+          "description": "The GFI score of Sell Side Analysts in Presentation",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_lix_score_presentation",
+          "description": "LIX readability score of sell-side analysts’ remarks during the presentation section",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.2542,
+          "userCount": 1,
+          "alphaCount": 1,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        },
+        {
+          "id": "analyst_lix_score_qa",
+          "description": "The LIX score of Sell Side analysts during the Q&A section",
+          "dataset": {
+            "id": "analyst83",
+            "name": "Smart Conference call transcript data"
+          },
+          "category": {
+            "id": "analyst",
+            "name": "Analyst"
+          },
+          "subcategory": {
+            "id": "analyst-analyst-estimates",
+            "name": "Analyst Estimates"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7769,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.2,
+          "themes": []
+        }
+      ]
+    }
+  }
+}

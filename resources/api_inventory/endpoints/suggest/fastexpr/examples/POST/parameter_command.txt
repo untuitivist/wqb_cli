@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /suggest/fastexpr --execute --json {\"prompt\":\"rank(close)\"}
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /suggest/fastexpr --json {\"prompt\":\"rank(close)\"}

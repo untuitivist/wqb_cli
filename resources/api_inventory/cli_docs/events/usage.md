@@ -14,10 +14,10 @@ python -m wqb_cli api show "/events"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/events" --param limit=1 --dry-run
+python -m wqb_cli api call GET "/events" --param limit=1
 ```
 
 实际执行:
@@ -33,10 +33,10 @@ python -m wqb_cli api call GET "/events" --param limit=1
 
 ### `OPTIONS`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call OPTIONS "/events" --param limit=1 --dry-run
+python -m wqb_cli api call OPTIONS "/events" --param limit=1
 ```
 
 实际执行:

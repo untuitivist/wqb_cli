@@ -14,10 +14,10 @@ python -m wqb_cli api show "/tutorial-pages"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/tutorial-pages" --dry-run
+python -m wqb_cli api call GET "/tutorial-pages"
 ```
 
 实际执行:

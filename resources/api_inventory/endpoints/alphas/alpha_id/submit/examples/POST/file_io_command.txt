@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --input api_inventory\endpoints\alphas\alpha_id\submit\examples\POST\input.json --execute --output api_inventory\endpoints\alphas\alpha_id\submit\examples\POST\file_output.json
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --input api_inventory\endpoints\alphas\alpha_id\submit\examples\POST\input.json --output api_inventory\endpoints\alphas\alpha_id\submit\examples\POST\file_output.json

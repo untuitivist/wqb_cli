@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call PATCH /users/self/consultant/tutorial/summary --execute --json {\"completedSteps\":[]}
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call PATCH /users/self/consultant/tutorial/summary --json {\"completedSteps\":[]}

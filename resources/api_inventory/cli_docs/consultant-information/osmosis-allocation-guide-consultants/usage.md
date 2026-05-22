@@ -14,10 +14,10 @@ python -m wqb_cli api show "/consultant-information/osmosis-allocation-guide-con
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/consultant-information/osmosis-allocation-guide-consultants" --dry-run
+python -m wqb_cli api call GET "/consultant-information/osmosis-allocation-guide-consultants"
 ```
 
 实际执行:

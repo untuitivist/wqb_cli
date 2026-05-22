@@ -1,6 +1,6 @@
 # config Notes
 
-Credential resolution order for `wqb auth login --execute`:
+Credential resolution order for `wqb auth login`:
 
 - explicit `--email` / `--password`
 - JSON `--input`
@@ -13,5 +13,5 @@ Recommended setup:
 1. `wqb config init`
 2. `wqb config set auth.email <email>`
 3. `wqb config set-secret auth.password <password>`
-4. `wqb auth login --execute`
+4. `wqb auth login`
 

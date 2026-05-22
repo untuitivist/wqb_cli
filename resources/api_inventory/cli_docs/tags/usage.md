@@ -14,10 +14,10 @@ python -m wqb_cli api show "/tags"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/tags" --dry-run
+python -m wqb_cli api call GET "/tags"
 ```
 
 实际执行:

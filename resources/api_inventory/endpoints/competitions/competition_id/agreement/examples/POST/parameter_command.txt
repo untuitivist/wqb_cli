@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /competitions/{competition_id}/agreement --var competition_id=challenge --execute --json {\"example\":true}
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /competitions/{competition_id}/agreement --var competition_id=challenge --json {\"example\":true}

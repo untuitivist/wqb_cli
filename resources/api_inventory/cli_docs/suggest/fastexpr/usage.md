@@ -14,10 +14,10 @@ python -m wqb_cli api show "/suggest/fastexpr"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/suggest/fastexpr" --dry-run
+python -m wqb_cli api call GET "/suggest/fastexpr"
 ```
 
 实际执行:
@@ -33,16 +33,15 @@ python -m wqb_cli api call GET "/suggest/fastexpr"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/suggest/fastexpr" --dry-run
+python -m wqb_cli api call POST "/suggest/fastexpr"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/suggest/fastexpr" --execute
+python -m wqb_cli api call POST "/suggest/fastexpr"
 ```
 
 测试记录:

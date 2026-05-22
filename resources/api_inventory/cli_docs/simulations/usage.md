@@ -14,10 +14,10 @@ python -m wqb_cli api show "/simulations"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/simulations" --dry-run
+python -m wqb_cli api call GET "/simulations"
 ```
 
 实际执行:
@@ -33,10 +33,10 @@ python -m wqb_cli api call GET "/simulations"
 
 ### `OPTIONS`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call OPTIONS "/simulations" --dry-run
+python -m wqb_cli api call OPTIONS "/simulations"
 ```
 
 实际执行:
@@ -52,16 +52,15 @@ python -m wqb_cli api call OPTIONS "/simulations"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/simulations" --dry-run
+python -m wqb_cli api call POST "/simulations"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/simulations" --execute
+python -m wqb_cli api call POST "/simulations"
 ```
 
 测试记录:

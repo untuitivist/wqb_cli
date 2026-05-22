@@ -14,10 +14,10 @@ python -m wqb_cli api show "/authentication/brainlabs"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/authentication/brainlabs" --dry-run
+python -m wqb_cli api call GET "/authentication/brainlabs"
 ```
 
 实际执行:

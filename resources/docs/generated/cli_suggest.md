@@ -11,10 +11,9 @@
 
 安全策略:
 
-- `POST` 默认只 dry-run。
-- 必须显式 `--execute` 才会实际发送 prompt/context。
+- `POST` 会直接发送 prompt/context。
 
 验证记录:
 
-- 所有命令已完成 dry-run。
+- 所有命令已完成参数检查。
 - `GET` 实际调用已执行，当前平台真实状态为 `401 Unauthorized` 或 `404 Not Found`。

@@ -1,11 +1,11 @@
-﻿# auth login
+# auth login
 
 Authenticate against BRAIN and persist cookies for later CLI calls.
 
 Command:
 
 ```powershell
-wqb api call POST /authentication --env-auth --input <input.json> --execute --output <output.json>
+wqb api call POST /authentication --env-auth --input <input.json> --output <output.json>
 ```
 
 Use `--env-auth` so credentials are read from `wqb_cli/local/.env`.

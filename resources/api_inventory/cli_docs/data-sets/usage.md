@@ -14,10 +14,10 @@ python -m wqb_cli api show "/data-sets"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/data-sets" --param instrumentType=EQUITY --param region=USA --param delay=1 --param universe=TOP3000 --param limit=1 --dry-run
+python -m wqb_cli api call GET "/data-sets" --param instrumentType=EQUITY --param region=USA --param delay=1 --param universe=TOP3000 --param limit=1
 ```
 
 实际执行:

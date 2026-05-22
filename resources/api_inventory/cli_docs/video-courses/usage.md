@@ -14,10 +14,10 @@ python -m wqb_cli api show "/video-courses"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/video-courses" --dry-run
+python -m wqb_cli api call GET "/video-courses"
 ```
 
 实际执行:

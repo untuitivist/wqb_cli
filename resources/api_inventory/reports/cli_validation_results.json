@@ -251,12 +251,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/alphas/{alpha_id}/alphas",
@@ -524,12 +524,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/authentication",
@@ -545,12 +545,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/authentication",
@@ -608,12 +608,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/authentication/brainlabs",
@@ -841,12 +841,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/configuration",
@@ -1252,12 +1252,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/data-sets/{dataset_id}",
@@ -1294,12 +1294,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/events",
@@ -1487,12 +1487,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/simulations/super-selection",
@@ -1529,12 +1529,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/simulations/{simulation_id}",
@@ -1592,12 +1592,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/suggest/expression",
@@ -1634,12 +1634,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/suggest/fastexpr",
@@ -1676,12 +1676,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/suggest/fields",
@@ -1718,12 +1718,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/tags",
@@ -1888,12 +1888,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/email/reverify",
@@ -1930,12 +1930,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/email/verify",
@@ -1972,12 +1972,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/password/change",
@@ -2014,12 +2014,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/password/forgot",
@@ -2056,12 +2056,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/password/reset",
@@ -2098,12 +2098,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/user/token",
@@ -2140,12 +2140,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/users",
@@ -2396,12 +2396,12 @@
         "headers": {},
         "mutating": true,
         "executable": false,
-        "reason": "mutating_method_requires_execute"
+        "reason": "mutating_request_executed"
       },
       "executed": false,
       "call_ok": null,
       "status_code": null,
-      "reason": "mutating method verified as dry-run only without --execute"
+      "reason": "mutating method requires"
     },
     {
       "path": "/users/self/messages",

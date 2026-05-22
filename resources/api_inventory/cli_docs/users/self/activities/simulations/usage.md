@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/self/activities/simulations"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/self/activities/simulations" --dry-run
+python -m wqb_cli api call GET "/users/self/activities/simulations"
 ```
 
 实际执行:

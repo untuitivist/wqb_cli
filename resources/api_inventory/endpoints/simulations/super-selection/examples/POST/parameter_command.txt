@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /simulations/super-selection --execute --json {\"selection\":\"all\",\"combo\":\"equal\"}
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /simulations/super-selection --json {\"selection\":\"all\",\"combo\":\"equal\"}

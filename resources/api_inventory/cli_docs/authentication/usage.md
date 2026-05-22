@@ -14,16 +14,15 @@ python -m wqb_cli api show "/authentication"
 
 ### `DELETE`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call DELETE "/authentication" --dry-run
+python -m wqb_cli api call DELETE "/authentication"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call DELETE "/authentication" --execute
+python -m wqb_cli api call DELETE "/authentication"
 ```
 
 测试记录:
@@ -33,10 +32,10 @@ python -m wqb_cli api call DELETE "/authentication" --execute
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/authentication" --dry-run
+python -m wqb_cli api call GET "/authentication"
 ```
 
 实际执行:
@@ -52,10 +51,10 @@ python -m wqb_cli api call GET "/authentication"
 
 ### `HEAD`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call HEAD "/authentication" --dry-run
+python -m wqb_cli api call HEAD "/authentication"
 ```
 
 实际执行:
@@ -71,16 +70,15 @@ python -m wqb_cli api call HEAD "/authentication"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/authentication" --dry-run
+python -m wqb_cli api call POST "/authentication"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/authentication" --execute
+python -m wqb_cli api call POST "/authentication"
 ```
 
 测试记录:

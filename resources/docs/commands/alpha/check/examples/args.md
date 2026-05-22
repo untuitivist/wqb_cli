@@ -3,7 +3,7 @@
 Real command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe alpha check YPNOpk3W --output <output.json>
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe alpha check YPNOpk3W --max-wait-seconds 900 --output <output.json>
 ```
 
 Real full-check output:
@@ -25,4 +25,3 @@ Observed full-check result:
   "LOW_2Y_SHARPE": 2.19
 }
 ```
-

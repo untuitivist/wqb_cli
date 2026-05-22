@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /user/password/change --input api_inventory\endpoints\user\password\change\examples\POST\input.json --execute --output api_inventory\endpoints\user\password\change\examples\POST\file_output.json
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /user/password/change --input api_inventory\endpoints\user\password\change\examples\POST\input.json --output api_inventory\endpoints\user\password\change\examples\POST\file_output.json

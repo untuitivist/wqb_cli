@@ -84,7 +84,6 @@ def add_data_parser(subparsers: argparse._SubParsersAction) -> None:
     dataset_search_parser = data_sub.add_parser("dataset-search", help="GET/POST /data-sets/search")
     dataset_search_parser.add_argument("--method", choices=["GET", "POST"], default="GET")
     dataset_search_parser.add_argument("--input", help="JSON file for POST body")
-    dataset_search_parser.add_argument("--execute", action="store_true", help="Actually execute POST")
     dataset_search_parser.add_argument("--output", help="Write JSON result to file")
 
     field_parser = data_sub.add_parser("field", help="GET /data-fields/{field_id}")
@@ -182,7 +181,7 @@ def handle_data(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         endpoint = registry.get("/data-sets/search")
         body = read_json_file(args.input) if args.input else None
         client = WqbClient(registry, session_from_cookies(args.cookies))
-        prepared = client.prepare(endpoint, args.method, json_body=body, execute=args.execute)
+        prepared = client.prepare(endpoint, args.method, json_body=body)
         result = client.call(prepared)
         write_json(result, args.output)
         return 0

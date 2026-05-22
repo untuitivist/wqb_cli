@@ -19,10 +19,10 @@
 
 ```powershell
 wqb alpha get <alpha_id> --output <node_dir>/alpha__alpha_id.json
-wqb alpha check <alpha_id> --output <node_dir>/alpha_check__alpha_id.json
-wqb alpha correlation self <alpha_id> --output <node_dir>/self_corr__alpha_id.json
-wqb alpha correlation prod <alpha_id> --output <node_dir>/prod_corr__alpha_id.json
-wqb alpha performance-comparison <alpha_id> --output <node_dir>/performance_comparison__alpha_id.json
+wqb alpha check <alpha_id> --max-wait-seconds 900 --output <node_dir>/alpha_check__alpha_id.json
+wqb alpha correlation self <alpha_id> --max-wait-seconds 900 --output <node_dir>/self_corr__alpha_id.json
+wqb alpha correlation prod <alpha_id> --max-wait-seconds 900 --output <node_dir>/prod_corr__alpha_id.json
+wqb alpha performance-comparison <alpha_id> --max-wait-seconds 900 --output <node_dir>/performance_comparison__alpha_id.json
 ```
 
 ## 输出

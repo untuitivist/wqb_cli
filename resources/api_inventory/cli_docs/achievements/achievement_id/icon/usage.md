@@ -14,10 +14,10 @@ python -m wqb_cli api show "/achievements/{achievement_id}/icon"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/achievements/{achievement_id}/icon" --var achievement_id=ALPHA_PERF_EXCELLENT --dry-run
+python -m wqb_cli api call GET "/achievements/{achievement_id}/icon" --var achievement_id=ALPHA_PERF_EXCELLENT
 ```
 
 实际执行:

@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     params_parser.add_argument("path")
     params_parser.add_argument("--output", help="Write JSON result to file")
 
-    call_parser = api_sub.add_parser("call", help="Prepare or execute an endpoint call")
+    call_parser = api_sub.add_parser("call", help="Execute an endpoint call")
     call_parser.add_argument("method")
     call_parser.add_argument("path")
     call_parser.add_argument("--var", action="append", help="Template variable KEY=VALUE")
@@ -58,7 +58,6 @@ def build_parser() -> argparse.ArgumentParser:
     call_parser.add_argument("--json", help="Inline JSON request body")
     call_parser.add_argument("--env-auth", action="store_true", help="For POST /authentication, read EMAIL/PASSWORD from wqb_cli/local/.env")
     call_parser.add_argument("--output", help="Write JSON result to file")
-    call_parser.add_argument("--execute", action="store_true", help="Allow mutating methods to execute")
 
     auth = sub.add_parser("auth", help="Authentication helpers")
     auth_sub = auth.add_subparsers(dest="auth_command", required=True)
@@ -70,9 +69,7 @@ def build_parser() -> argparse.ArgumentParser:
     login_parser.add_argument("--password", help="Password override; prefer keyring or .env for normal use")
     login_parser.add_argument("--expiry", type=int, default=3600, help="Token expiry seconds")
     login_parser.add_argument("--config", dest="config_path", help="Path to local config.json")
-    login_parser.add_argument("--execute", action="store_true", help="Actually execute login")
     logout_parser = auth_sub.add_parser("logout", help="DELETE /authentication")
-    logout_parser.add_argument("--execute", action="store_true", help="Actually delete auth session")
     for name in ["brainlabs", "persona", "support", "workday"]:
         auth_sub.add_parser(name, help=f"GET /authentication/{name}")
     add_account_parser(sub)
@@ -158,7 +155,6 @@ def handle_api(args: argparse.Namespace) -> int:
             path_vars={key: str(value) for key, value in path_vars.items()},
             params=params,
             json_body=json_body,
-            execute=args.execute,
         )
         result = client.call(prepared)
         if (
@@ -194,15 +190,15 @@ def handle_auth(args: argparse.Namespace) -> int:
             expiry=args.expiry,
             config_path=args.config_path,
         )
-        prepared = client.prepare(endpoint, "POST", json_body=payload, execute=args.execute)
+        prepared = client.prepare(endpoint, "POST", json_body=payload)
         result = client.call(prepared)
-        if args.execute and result.get("ok"):
+        if result.get("ok"):
             save_cookie_payload(client.session, args.cookies)
         write_json(result)
         return 0
     if args.auth_command == "logout":
         endpoint = registry.get("/authentication")
-        prepared = client.prepare(endpoint, "DELETE", execute=args.execute)
+        prepared = client.prepare(endpoint, "DELETE")
         result = client.call(prepared)
         write_json(result)
         return 0

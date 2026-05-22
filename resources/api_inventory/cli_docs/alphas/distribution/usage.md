@@ -14,10 +14,10 @@ python -m wqb_cli api show "/alphas/distribution"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/alphas/distribution" --dry-run
+python -m wqb_cli api call GET "/alphas/distribution"
 ```
 
 实际执行:

@@ -14,10 +14,10 @@ python -m wqb_cli api show "/simulations/{simulation_id}"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/simulations/{simulation_id}" --var simulation_id=2UnwIe7g5jEcCgDvI4GpqO --dry-run
+python -m wqb_cli api call GET "/simulations/{simulation_id}" --var simulation_id=2UnwIe7g5jEcCgDvI4GpqO
 ```
 
 实际执行:

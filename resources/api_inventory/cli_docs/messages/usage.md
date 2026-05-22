@@ -14,10 +14,10 @@ python -m wqb_cli api show "/messages"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/messages" --dry-run
+python -m wqb_cli api call GET "/messages"
 ```
 
 实际执行:

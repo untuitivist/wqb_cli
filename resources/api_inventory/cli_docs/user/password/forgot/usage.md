@@ -14,10 +14,10 @@ python -m wqb_cli api show "/user/password/forgot"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/user/password/forgot" --dry-run
+python -m wqb_cli api call GET "/user/password/forgot"
 ```
 
 实际执行:
@@ -33,16 +33,15 @@ python -m wqb_cli api call GET "/user/password/forgot"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/user/password/forgot" --dry-run
+python -m wqb_cli api call POST "/user/password/forgot"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/user/password/forgot" --execute
+python -m wqb_cli api call POST "/user/password/forgot"
 ```
 
 测试记录:

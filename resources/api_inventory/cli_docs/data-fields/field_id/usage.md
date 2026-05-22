@@ -14,10 +14,10 @@ python -m wqb_cli api show "/data-fields/{field_id}"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/data-fields/{field_id}" --var field_id=abnormal_news_sentiment_1d --dry-run
+python -m wqb_cli api call GET "/data-fields/{field_id}" --var field_id=abnormal_news_sentiment_1d
 ```
 
 实际执行:

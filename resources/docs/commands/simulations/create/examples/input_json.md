@@ -1,6 +1,6 @@
 # Simulation 输入 JSON 示例
 
-这些 JSON 都可以直接保存为 `--input` 文件后交给 `wqb sim create --execute`。
+这些 JSON 都可以直接保存为 `--input` 文件后交给 `wqb sim create`。
 
 ## REGULAR FASTEXPR multi-simulation
 

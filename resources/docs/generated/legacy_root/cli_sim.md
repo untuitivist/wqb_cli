@@ -1,41 +1,40 @@
 # WQB Simulation CLI
 
-`wqb sim` �?simulation 相关命令层�?
+`wqb sim` wraps simulation APIs.
+
 ## `wqb sim options`
 
-获取 `/simulations` �?POST schema�?
 Raw API:
 
 ```text
 OPTIONS /simulations
 ```
 
-命令:
+Command:
 
 ```powershell
 wqb sim options
 ```
 
-验证记录:
-
 ## `wqb sim get`
 
-获取 simulation 状态或完成结果�?
+Get a simulation status or final result. The command follows `Retry-After` until the final response or `--max-wait-seconds`.
+
 Raw API:
 
 ```text
 GET /simulations/{simulation_id}
 ```
 
-命令:
+Command:
 
 ```powershell
-wqb sim get 2UnwIe7g5jEcCgDvI4GpqO
+wqb sim get 2UnwIe7g5jEcCgDvI4GpqO --max-wait-seconds 900
 ```
 
-验证记录:
-
 ## `wqb sim create`
+
+Create a simulation and wait for the final result. For multi-simulation, child simulations are also waited and included under top-level `children`. The initial `201 Created` is only `201 Created, waiting for results...`.
 
 Raw API:
 
@@ -43,16 +42,8 @@ Raw API:
 POST /simulations
 ```
 
-示例输入:
+Command:
 
 ```powershell
-api_inventory/examples/simulation_regular_close.json
+wqb sim create --input api_inventory/examples/simulation_regular_close.json --max-wait-seconds 900
 ```
-
-显式执行:
-
-```powershell
-wqb sim create --input api_inventory/examples/simulation_regular_close.json --execute
-```
-
-验证记录:

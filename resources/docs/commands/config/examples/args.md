@@ -28,6 +28,6 @@ D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe config set-secret auth.password "
 Login using keyring/config/env fallback:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe auth login --execute
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe auth login
 ```
 

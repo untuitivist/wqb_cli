@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users" --param limit=1 --dry-run
+python -m wqb_cli api call GET "/users" --param limit=1
 ```
 
 实际执行:

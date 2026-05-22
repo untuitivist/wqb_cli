@@ -3,7 +3,7 @@
 Real command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe alpha recordsets YPNOpk3W --output "wqb_cli\\docs\\commands\alpha\recordsets\outputs\recordsets_list_output.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe alpha recordsets YPNOpk3W --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\alpha\recordsets\outputs\recordsets_list_output.json"
 ```
 
 Real output:
@@ -27,4 +27,3 @@ Observed result:
   ]
 }
 ```
-

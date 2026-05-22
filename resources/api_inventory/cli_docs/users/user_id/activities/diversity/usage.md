@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/{user_id}/activities/diversity"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/{user_id}/activities/diversity" --var user_id=JL40454 --param grouping=region,delay,dataCategory --dry-run
+python -m wqb_cli api call GET "/users/{user_id}/activities/diversity" --var user_id=JL40454 --param grouping=region,delay,dataCategory
 ```
 
 实际执行:

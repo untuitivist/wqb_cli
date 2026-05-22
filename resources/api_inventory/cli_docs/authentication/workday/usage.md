@@ -14,10 +14,10 @@ python -m wqb_cli api show "/authentication/workday"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/authentication/workday" --dry-run
+python -m wqb_cli api call GET "/authentication/workday"
 ```
 
 实际执行:

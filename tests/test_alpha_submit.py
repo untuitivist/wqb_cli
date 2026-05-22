@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from wqb_cli.commands.alpha import (
+    _classify_submit_post,
     _classify_submit_wait,
     _response_body,
     _wait_submit_status,
@@ -92,6 +93,11 @@ class AlphaSubmitTests(unittest.TestCase):
         classified = _classify_submit_wait(result)
         self.assertEqual(classified["submit_code"], 200)
         self.assertEqual(classified["reason"], "already_submitted")
+
+    def test_classify_submit_post_success_as_api_accepted_only(self) -> None:
+        classified = _classify_submit_post({"response": {"status_code": 303}})
+        self.assertEqual(classified["submit_code"], 303)
+        self.assertEqual(classified["reason"], "submit_api_accepted")
 
     def test_wait_submit_status_times_out_on_retry_after(self) -> None:
         client = SimpleNamespace(

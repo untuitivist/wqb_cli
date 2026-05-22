@@ -1,9 +1,9 @@
 # WQB Simulation CLI
 
-`wqb sim` 封装 simulation 接口。
+`wqb sim` wraps simulation APIs.
 
-已覆盖：`list`、`options`、`get`、`create`、`super-selection`。
+Covered commands: `list`, `options`, `get`, `create`, `super-selection`.
 
-安全策略：`create` 和 `super-selection --method POST` 默认 dry-run，必须 `--execute` 才会执行。
+Wait policy: `wqb sim create` creates the simulation and then waits for the final simulation result by default. For multi-simulation, child simulations are also waited and included under top-level `children`. `201 Created` is only the intermediate `201 Created, waiting for results...` state.
 
-完整 endpoint 到命令映射见 `api_inventory/BUSINESS_CLI_COVERAGE.md`。
+See `api_inventory/BUSINESS_CLI_COVERAGE.md` for the complete endpoint-to-command mapping.

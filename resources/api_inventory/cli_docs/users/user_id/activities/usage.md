@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/{user_id}/activities"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/{user_id}/activities" --var user_id=JL40454 --dry-run
+python -m wqb_cli api call GET "/users/{user_id}/activities" --var user_id=JL40454
 ```
 
 实际执行:

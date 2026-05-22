@@ -18,8 +18,8 @@
 ## 只允许的 CLI
 
 ```powershell
-wqb alpha patch <alpha_id> --input <node_dir>/alpha_patch__alpha_id.json --execute --output <node_dir>/patch_result__alpha_id.json
-wqb alpha submit <alpha_id> --execute --output <node_dir>/submit_result__alpha_id.json
+wqb alpha patch <alpha_id> --input <node_dir>/alpha_patch__alpha_id.json --output <node_dir>/patch_result__alpha_id.json
+wqb alpha submit <alpha_id> --output <node_dir>/submit_result__alpha_id.json
 wqb alpha get <alpha_id> --output <node_dir>/alpha_after_submit__alpha_id.json
 ```
 

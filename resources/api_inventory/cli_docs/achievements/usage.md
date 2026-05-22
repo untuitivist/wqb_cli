@@ -14,10 +14,10 @@ python -m wqb_cli api show "/achievements"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/achievements" --dry-run
+python -m wqb_cli api call GET "/achievements"
 ```
 
 实际执行:

@@ -2,8 +2,8 @@
 
 - Generated at: `2026-05-18T17:45:12.523838+00:00`
 - Endpoint count: `104`
-- 所有 endpoint 都支持 `api show` 和 `api call --dry-run`。
-- `GET/HEAD/OPTIONS` 可直接执行；`POST/PATCH/PUT/DELETE` 必须加 `--execute`。
+- 所有 endpoint 都支持 `api show` 和 `api call`。
+- `GET/HEAD/OPTIONS/POST/PATCH/PUT/DELETE` 都会直接发送请求。
 - 参数既可命令行传入，也可用 `--input request.json` 传入。
 
 ## 全局命令

@@ -58,7 +58,7 @@ GET /alphas/{alpha_id}/check
 命令:
 
 ```powershell
-wqb alpha check vR5p8vqb
+wqb alpha check vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:
@@ -75,7 +75,7 @@ GET /alphas/{alpha_id}/recordsets
 命令:
 
 ```powershell
-wqb alpha recordsets vR5p8vqb
+wqb alpha recordsets vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:
@@ -109,7 +109,7 @@ GET /alphas/{alpha_id}/correlations/self
 命令:
 
 ```powershell
-wqb alpha correlation self vR5p8vqb
+wqb alpha correlation self vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:
@@ -126,7 +126,7 @@ GET /alphas/{alpha_id}/correlations/prod
 命令:
 
 ```powershell
-wqb alpha correlation prod vR5p8vqb
+wqb alpha correlation prod vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:
@@ -143,7 +143,7 @@ GET /alphas/{alpha_id}/correlations/power-pool
 命令:
 
 ```powershell
-wqb alpha correlation power-pool vR5p8vqb
+wqb alpha correlation power-pool vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:
@@ -160,7 +160,7 @@ GET /alphas/{alpha_id}/performance-comparison
 命令:
 
 ```powershell
-wqb alpha performance-comparison vR5p8vqb
+wqb alpha performance-comparison vR5p8vqb --max-wait-seconds 900
 ```
 
 验证记录:

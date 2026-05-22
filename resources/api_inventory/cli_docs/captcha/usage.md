@@ -14,10 +14,10 @@ python -m wqb_cli api show "/captcha"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/captcha" --dry-run
+python -m wqb_cli api call GET "/captcha"
 ```
 
 实际执行:

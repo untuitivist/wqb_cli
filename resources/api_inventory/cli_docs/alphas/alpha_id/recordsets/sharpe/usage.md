@@ -14,10 +14,10 @@ python -m wqb_cli api show "/alphas/{alpha_id}/recordsets/sharpe"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/alphas/{alpha_id}/recordsets/sharpe" --var alpha_id=vR5p8vqb --dry-run
+python -m wqb_cli api call GET "/alphas/{alpha_id}/recordsets/sharpe" --var alpha_id=vR5p8vqb
 ```
 
 实际执行:

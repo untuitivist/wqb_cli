@@ -14,10 +14,10 @@ python -m wqb_cli api show "/competitions/{competition_id}"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/competitions/{competition_id}" --var competition_id=challenge --dry-run
+python -m wqb_cli api call GET "/competitions/{competition_id}" --var competition_id=challenge
 ```
 
 实际执行:

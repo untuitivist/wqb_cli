@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /errors/api/2/envelope --input api_inventory\endpoints\errors\api\2\envelope\examples\POST\input.json --execute --output api_inventory\endpoints\errors\api\2\envelope\examples\POST\file_output.json
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /errors/api/2/envelope --input api_inventory\endpoints\errors\api\2\envelope\examples\POST\input.json --output api_inventory\endpoints\errors\api\2\envelope\examples\POST\file_output.json

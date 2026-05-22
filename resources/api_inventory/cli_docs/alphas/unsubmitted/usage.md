@@ -14,10 +14,10 @@ python -m wqb_cli api show "/alphas/unsubmitted"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/alphas/unsubmitted" --dry-run
+python -m wqb_cli api call GET "/alphas/unsubmitted"
 ```
 
 实际执行:

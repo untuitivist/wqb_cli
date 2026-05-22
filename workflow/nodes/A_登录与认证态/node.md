@@ -20,7 +20,7 @@
 ```powershell
 wqb --help
 wqb auth status
-wqb auth login --execute
+wqb auth login
 wqb auth status
 ```
 

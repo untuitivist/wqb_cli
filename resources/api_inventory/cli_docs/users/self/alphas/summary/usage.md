@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/self/alphas/summary"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/self/alphas/summary" --dry-run
+python -m wqb_cli api call GET "/users/self/alphas/summary"
 ```
 
 实际执行:

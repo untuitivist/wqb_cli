@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/self/consultant/tutorial/summary"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/self/consultant/tutorial/summary" --dry-run
+python -m wqb_cli api call GET "/users/self/consultant/tutorial/summary"
 ```
 
 实际执行:
@@ -33,16 +33,15 @@ python -m wqb_cli api call GET "/users/self/consultant/tutorial/summary"
 
 ### `PATCH`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call PATCH "/users/self/consultant/tutorial/summary" --dry-run
+python -m wqb_cli api call PATCH "/users/self/consultant/tutorial/summary"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call PATCH "/users/self/consultant/tutorial/summary" --execute
+python -m wqb_cli api call PATCH "/users/self/consultant/tutorial/summary"
 ```
 
 测试记录:

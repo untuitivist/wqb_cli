@@ -14,10 +14,10 @@ python -m wqb_cli api show "/data-sets/{dataset_id}"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/data-sets/{dataset_id}" --var dataset_id=analyst10 --dry-run
+python -m wqb_cli api call GET "/data-sets/{dataset_id}" --var dataset_id=analyst10
 ```
 
 实际执行:

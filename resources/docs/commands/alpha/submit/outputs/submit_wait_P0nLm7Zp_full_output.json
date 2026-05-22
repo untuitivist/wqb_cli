@@ -128,7 +128,7 @@
   },
   "post_classification": {
     "submit_code": 303,
-    "reason": "accepted"
+    "reason": "submit_api_accepted"
   },
   "post": {
     "ok": true,

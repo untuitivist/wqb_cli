@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/self/activities/pyramid-multipliers"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/self/activities/pyramid-multipliers" --dry-run
+python -m wqb_cli api call GET "/users/self/activities/pyramid-multipliers"
 ```
 
 实际执行:

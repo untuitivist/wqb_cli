@@ -8,6 +8,6 @@
 - `wqb competition get <competition_id>`
 - `wqb competition agreement <competition_id> --method GET|POST`
 
-安全策略：agreement 的 `POST` 默认 dry-run，必须 `--execute` 才会执行。
+安全策略：agreement 的 `POST` 会直接发送请求。
 
 完整 endpoint 到命令映射见 `api_inventory/BUSINESS_CLI_COVERAGE.md`。

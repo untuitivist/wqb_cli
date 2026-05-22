@@ -14,10 +14,10 @@ python -m wqb_cli api show "/events/{event_id}"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/events/{event_id}" --var event_id=zO8y3jm --dry-run
+python -m wqb_cli api call GET "/events/{event_id}" --var event_id=zO8y3jm
 ```
 
 实际执行:

@@ -67,36 +67,16 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIs(payload["ok"], True)
         self.assertIn("alpha submit", payload["text"])
 
-    def test_shortcut_simulate_requires_execute(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            payload = Path(tmp) / "sim.json"
-            payload.write_text(
-                json.dumps(
-                    {
-                        "type": "REGULAR",
-                        "settings": {
-                            "instrumentType": "EQUITY",
-                            "region": "USA",
-                            "universe": "TOP3000",
-                            "delay": 1,
-                            "decay": 1,
-                            "neutralization": "SUBINDUSTRY",
-                            "truncation": 0.08,
-                            "pasteurization": "ON",
-                            "unitHandling": "VERIFY",
-                            "nanHandling": "OFF",
-                            "language": "FASTEXPR",
-                            "visualization": False,
-                        },
-                        "regular": "close",
-                    }
-                ),
-                encoding="utf-8",
-            )
-            result = run_wqb("shortcut", "simulate", "--input", str(payload))
-            self.assertEqual(result.returncode, 1)
-            body = json.loads(result.stdout)
-            self.assertEqual(body["create"]["reason"], "mutating_method_requires_execute")
+    def test_shortcut_simulate_help_has_no_execute_gate(self) -> None:
+        result = run_wqb("shortcut", "simulate", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("--execute", result.stdout)
+        self.assertNotIn("--wait", result.stdout)
+
+    def test_sim_create_help_waits_by_default(self) -> None:
+        result = run_wqb("sim", "create", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("--max-wait-seconds", result.stdout)
 
     def test_scope_files_smoke(self) -> None:
         result = run_wqb("scope", "files")
@@ -124,6 +104,17 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("--date-submitted-before", result.stdout)
         self.assertIn("--order", result.stdout)
         self.assertIn("--param", result.stdout)
+
+    def test_alpha_waiting_commands_include_max_wait(self) -> None:
+        for args in [
+            ("alpha", "check", "--help"),
+            ("alpha", "recordsets", "--help"),
+            ("alpha", "correlation", "prod", "--help"),
+            ("alpha", "performance-comparison", "--help"),
+        ]:
+            result = run_wqb(*args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("--max-wait-seconds", result.stdout)
 
     def test_alpha_list_help_includes_adjacent_wqb_sdk_filters(self) -> None:
         result = run_wqb("alpha", "list", "--help")

@@ -14,10 +14,10 @@ python -m wqb_cli api show "/authentication/persona"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/authentication/persona" --dry-run
+python -m wqb_cli api call GET "/authentication/persona"
 ```
 
 实际执行:

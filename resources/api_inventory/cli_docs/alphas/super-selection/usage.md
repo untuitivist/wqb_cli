@@ -14,10 +14,10 @@ python -m wqb_cli api show "/alphas/super-selection"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/alphas/super-selection" --dry-run
+python -m wqb_cli api call GET "/alphas/super-selection"
 ```
 
 实际执行:

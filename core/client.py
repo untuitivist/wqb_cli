@@ -9,7 +9,6 @@ import requests
 from .registry import Endpoint, EndpointRegistry
 
 
-SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
 
 
@@ -39,7 +38,6 @@ class WqbClient:
         path_vars: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json_body: Any = None,
-        execute: bool = False,
     ) -> PreparedRequest:
         method = method.upper()
         path_vars = path_vars or {}
@@ -52,12 +50,10 @@ class WqbClient:
                 continue
             resolved = resolved.replace("{" + name + "}", str(value))
         mutating = method in MUTATING_METHODS
-        executable = not missing and (method in SAFE_METHODS or execute)
+        executable = not missing
         reason = None
         if missing:
             reason = "missing_path_variables: " + ", ".join(missing)
-        elif mutating and not execute:
-            reason = "mutating_method_requires_execute"
         return PreparedRequest(
             endpoint=endpoint.path,
             method=method,

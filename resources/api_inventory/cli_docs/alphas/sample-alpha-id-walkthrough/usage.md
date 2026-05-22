@@ -14,10 +14,10 @@ python -m wqb_cli api show "/alphas/sample-alpha-id-walkthrough"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/alphas/sample-alpha-id-walkthrough" --dry-run
+python -m wqb_cli api call GET "/alphas/sample-alpha-id-walkthrough"
 ```
 
 实际执行:

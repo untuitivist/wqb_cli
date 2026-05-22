@@ -1,29 +1,43 @@
-﻿# simulations create
+# simulations create
 
-提交一个 simulation 请求。
+Create a simulation and wait for the final platform result.
 
-命令：
+Command:
 
 ```powershell
-wqb sim create --input <input.json> --execute --output <output.json>
+wqb sim create --input <input.json> --output <output.json>
 ```
 
-`--execute` 是必需的，因为这是会创建平台资源的写操作。
+Default wait cap:
 
-成功判断：
+```powershell
+wqb sim create --input <input.json> --max-wait-seconds 900 --output <output.json>
+```
 
-- `response.status_code = 201`
-- `response.location` 包含 `/simulations/<simulation_id>`
-- `response.retry_after` 可能包含初始等待建议
+`sim create` now returns only after the simulation has a final result or the wait fails/times out. The initial `201 Created` is preserved under `create` and classified as:
 
-并行与批量约束：
+```text
+201 Created, waiting for results...
+```
 
-- `REGULAR_FASTEXPR_MULTI` 单请求最多 10 条；建议非 `GLB` 用 10，`GLB` 用 5。
-- `REGULAR_PYTHON` 不能 multi，只能单条请求。
-- `SUPER` 按单条 SUPER 请求跑，外部并发最多 3。
-- `REGULAR` 外部并发：非 `GLB` 最多 8，`GLB` 最多 4。
+That `201` means the API accepted the request and created a simulation resource. It is not final backtest success and it is not proof that an alpha was generated.
 
-真实流程示例：
+Final success is determined by the waited result:
 
-- `examples/backtest_modes.md`：覆盖 REGULAR FASTEXPR 单跑、REGULAR FASTEXPR multi-simu、REGULAR PYTHON 单跑、SUPER 单跑四类回测。
-- `examples/input_json.md`：给出 REGULAR FASTEXPR multi、REGULAR FASTEXPR single、REGULAR PYTHON single、SUPER single 四类输入 JSON 示例。
+- `classification.status = COMPLETE` means the simulation finished normally.
+- `classification.status = WARNING` means the simulation finished with platform warnings; if `alpha` is present, the alpha was generated.
+- `classification.status = ERROR`, `FAIL`, or `FAILED` means platform execution failed.
+- `classification.reason = simulation_wait_timed_out` means the CLI reached `--max-wait-seconds` before a final result.
+- For multi-simulation, the parent can finish with `children`; `sim create` also waits for those child simulations and includes them under top-level `children`.
+
+Parallel and batch constraints:
+
+- `REGULAR_FASTEXPR_MULTI`: max 10 expressions in one request. Use 10 outside `GLB`, 5 for `GLB`.
+- `REGULAR_PYTHON`: no multi-simulation; one expression per request.
+- `SUPER`: one SUPER request per simulation; external concurrency max 3.
+- External REGULAR concurrency: max 8 outside `GLB`, max 4 for `GLB`.
+
+Examples:
+
+- `examples/backtest_modes.md`: REGULAR FASTEXPR single, REGULAR FASTEXPR multi, REGULAR PYTHON single, and SUPER single.
+- `examples/input_json.md`: input JSON bodies for those modes.

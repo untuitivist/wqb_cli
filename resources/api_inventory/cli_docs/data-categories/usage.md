@@ -14,10 +14,10 @@ python -m wqb_cli api show "/data-categories"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/data-categories" --dry-run
+python -m wqb_cli api call GET "/data-categories"
 ```
 
 实际执行:

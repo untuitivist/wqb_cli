@@ -1,1 +1,1 @@
-D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --var alpha_id=not-a-real-alpha-id --execute --json {\"example\":true}
+D:\_soft\Anaconda\envs\WQBRAIN\python.exe -m wqb_cli api call POST /alphas/{alpha_id}/submit --var alpha_id=not-a-real-alpha-id --json {\"example\":true}

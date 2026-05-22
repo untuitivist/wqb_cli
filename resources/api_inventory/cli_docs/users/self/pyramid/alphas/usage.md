@@ -14,10 +14,10 @@ python -m wqb_cli api show "/users/self/pyramid/alphas"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/users/self/pyramid/alphas" --dry-run
+python -m wqb_cli api call GET "/users/self/pyramid/alphas"
 ```
 
 实际执行:

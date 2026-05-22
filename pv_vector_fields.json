@@ -1,0 +1,557 @@
+{
+  "ok": true,
+  "endpoint": "/data-fields",
+  "request": {
+    "method": "GET",
+    "url": "https://api.worldquantbrain.com/data-fields",
+    "params": {
+      "instrumentType": "EQUITY",
+      "region": "USA",
+      "delay": "1",
+      "universe": "TOP3000",
+      "limit": "20",
+      "offset": "0",
+      "category": "pv",
+      "type": "VECTOR"
+    },
+    "mutating": false
+  },
+  "response": {
+    "status_code": 200,
+    "reason": "OK",
+    "elapsed_ms": 2152,
+    "content_type": "application/json",
+    "allow": "GET, HEAD, OPTIONS",
+    "retry_after": null,
+    "retries": 0,
+    "wait_events": [],
+    "wait_timed_out": false,
+    "max_wait_seconds": null,
+    "location": null,
+    "body": {
+      "count": 713,
+      "results": [
+        {
+          "id": "average_time_improved_price_sec",
+          "description": "Average time associated with price-improved executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.8116,
+          "coverage": 0.9918,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "average_time_outside_bid_ask_sec",
+          "description": "Outside-the-Quote Average Time (seconds)",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5942,
+          "coverage": 0.9684,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "average_time_outside_market_quote_sec",
+          "description": "Average time associated with outside-the-quote executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5674,
+          "coverage": 0.9655,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "average_time_outside_quote_sec",
+          "description": "Average time to execute for out-of-quote executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.8116,
+          "coverage": 0.9918,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "average_time_price_improvement_sec",
+          "description": "Average time to execution for price-improved trades, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5942,
+          "coverage": 0.8854,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "bid_price_value",
+          "description": "The current bid price for the fund as of the reporting date; the highest price buyers are willing to pay",
+          "dataset": {
+            "id": "pv64",
+            "name": "Fund Holding Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-price-volume",
+            "name": "Price Volume"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7363,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "company_linkage_score_10k_all_v2",
+          "description": "Module-specific integer metrics quantifying the strength or frequency of event-driven relationships (derived from 10-K filings) between the subject stock and related stocks on that date. The meaning of the score depends on the specific logic of the module and is not comparable across modules or dates",
+          "dataset": {
+            "id": "pv73",
+            "name": "Custom Relationship Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6457,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "company_linkage_score_float_10k_all_v2",
+          "description": "Continuous, normalized measure (often a float such as z-score or percentage) representing the strength or relevance of the 10-K filing relationship between the subject stock and its related stocks on that date. These values must be interpreted within the context of the module and date only",
+          "dataset": {
+            "id": "pv73",
+            "name": "Custom Relationship Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6457,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "company_linkage_type_10k_all_v2",
+          "description": "Directional (A→B), variable-length list of stocks with which the subject stock has an empirically verified, recent relationship based on 10-K filing events on that date",
+          "dataset": {
+            "id": "pv73",
+            "name": "Custom Relationship Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.6457,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "current_industry_code_r3000e",
+          "description": "Current Russell industry classification before the change",
+          "dataset": {
+            "id": "pv48",
+            "name": "US Market Index Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-price-volume",
+            "name": "Price Volume"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.8108,
+          "coverage": 0.3978,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "entity_relationship_direction_flag_top1000",
+          "description": "Relationship score based on price and volume, in Top 1000 Universe",
+          "dataset": {
+            "id": "pv73",
+            "name": "Custom Relationship Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.1699,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "entity_relationship_indicator_top1000",
+          "description": "Relationship score based on price and volume, in Top 1000 Universe",
+          "dataset": {
+            "id": "pv73",
+            "name": "Custom Relationship Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.1699,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "growth_share_change_amt_dynamic",
+          "description": "Change in Growth sleeve shares (NEW minus CUR)",
+          "dataset": {
+            "id": "pv48",
+            "name": "US Market Index Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-price-volume",
+            "name": "Price Volume"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.7927,
+          "coverage": 0.2171,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "growth_share_change_amt_r3000",
+          "description": "Change in Growth sleeve shares (after minus before)",
+          "dataset": {
+            "id": "pv48",
+            "name": "US Market Index Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-price-volume",
+            "name": "Price Volume"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.256,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "highest_bid_price_2",
+          "description": "The current bid price for the security—i.e., the highest price a buyer is willing to pay",
+          "dataset": {
+            "id": "pv64",
+            "name": "Fund Holding Data"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-price-volume",
+            "name": "Price Volume"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.9507,
+          "coverage": 0.7442,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "mean_time_at_bid_ask_quote_sec",
+          "description": "At-the-Quote Average Time (seconds)",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5942,
+          "coverage": 0.9684,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "mean_time_at_market_quote_sec",
+          "description": "Average time for at-the-quote executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5674,
+          "coverage": 0.9655,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "mean_time_at_quoted_price_sec",
+          "description": "Average time to execution for at-the-quote executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5942,
+          "coverage": 0.8854,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "mean_time_improved_price_sec",
+          "description": "Average time to execution for price-improved shares, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.8116,
+          "coverage": 0.9918,
+          "userCount": 0,
+          "alphaCount": 0,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        },
+        {
+          "id": "mean_time_outside_quote_sec",
+          "description": "Average time to execution for outside-the-quote executions, in seconds",
+          "dataset": {
+            "id": "pv52",
+            "name": "Order Excecution Summary"
+          },
+          "category": {
+            "id": "pv",
+            "name": "Price Volume"
+          },
+          "subcategory": {
+            "id": "pv-relationship",
+            "name": "Relationship"
+          },
+          "region": "USA",
+          "delay": 1,
+          "universe": "TOP3000",
+          "type": "VECTOR",
+          "dateCoverage": 0.5942,
+          "coverage": 0.8854,
+          "userCount": 1,
+          "alphaCount": 1,
+          "pyramidMultiplier": 1.1,
+          "themes": []
+        }
+      ]
+    }
+  }
+}

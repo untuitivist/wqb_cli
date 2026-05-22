@@ -14,9 +14,8 @@ POST /errors/api/2/envelope
 
 安全策略:
 
-- 默认只 dry-run。
-- 必须显式 `--execute` 才会实际发送错误上报。
+- `POST` 会直接发送错误上报。
 
 验证记录:
 
-- dry-run 已通过。
+- 参数检查已通过。

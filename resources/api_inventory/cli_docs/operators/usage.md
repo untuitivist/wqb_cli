@@ -14,10 +14,10 @@ python -m wqb_cli api show "/operators"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/operators" --dry-run
+python -m wqb_cli api call GET "/operators"
 ```
 
 实际执行:

@@ -19,7 +19,7 @@
 ```powershell
 wqb alpha list --output <node_dir>/super_alpha_candidates.json
 wqb alpha get <alpha_id> --output <node_dir>/reference_super_alpha.json
-wqb alpha check <alpha_id> --output <node_dir>/reference_super_check.json
+wqb alpha check <alpha_id> --max-wait-seconds 900 --output <node_dir>/reference_super_check.json
 wqb sim super-selection --output <node_dir>/super_selection_options.json
 ```
 

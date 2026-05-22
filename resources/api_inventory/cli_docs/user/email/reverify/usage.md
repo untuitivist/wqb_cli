@@ -14,10 +14,10 @@ python -m wqb_cli api show "/user/email/reverify"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/user/email/reverify" --dry-run
+python -m wqb_cli api call GET "/user/email/reverify"
 ```
 
 实际执行:
@@ -33,16 +33,15 @@ python -m wqb_cli api call GET "/user/email/reverify"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/user/email/reverify" --dry-run
+python -m wqb_cli api call POST "/user/email/reverify"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/user/email/reverify" --execute
+python -m wqb_cli api call POST "/user/email/reverify"
 ```
 
 测试记录:

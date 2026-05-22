@@ -47,7 +47,7 @@ def run_endpoint(
     params: dict[str, Any] | None = None,
     json_body: Any = None,
     wait_retry_after: bool = False,
-    execute: bool = False,
+    max_wait_seconds: float | None = 900.0,
 ) -> int:
     endpoint = registry.get(path)
     client = WqbClient(registry, session_from_cookies(args.cookies))
@@ -57,9 +57,10 @@ def run_endpoint(
         path_vars=path_vars or {},
         params=params or {},
         json_body=json_body,
-        execute=execute,
     )
     output = getattr(args, "output", None)
-    result = client.call(prepared, wait_retry_after=wait_retry_after)
+    result = client.call(prepared, wait_retry_after=wait_retry_after, max_wait_seconds=max_wait_seconds if wait_retry_after else None)
     write_json(result, output)
+    if wait_retry_after and (result.get("response") or {}).get("wait_timed_out"):
+        return 1
     return 0

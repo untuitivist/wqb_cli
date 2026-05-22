@@ -14,10 +14,10 @@ python -m wqb_cli api show "/suggest/examples"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/suggest/examples" --dry-run
+python -m wqb_cli api call GET "/suggest/examples"
 ```
 
 实际执行:
@@ -33,16 +33,15 @@ python -m wqb_cli api call GET "/suggest/examples"
 
 ### `POST`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call POST "/suggest/examples" --dry-run
+python -m wqb_cli api call POST "/suggest/examples"
 ```
 
-实际执行需要显式 `--execute`，默认不会执行以避免远端副作用。
 
 ```powershell
-python -m wqb_cli api call POST "/suggest/examples" --execute
+python -m wqb_cli api call POST "/suggest/examples"
 ```
 
 测试记录:

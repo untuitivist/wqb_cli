@@ -14,10 +14,10 @@ python -m wqb_cli api show "/authentication/support"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/authentication/support" --dry-run
+python -m wqb_cli api call GET "/authentication/support"
 ```
 
 实际执行:

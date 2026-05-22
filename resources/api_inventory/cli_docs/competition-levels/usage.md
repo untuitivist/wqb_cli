@@ -14,10 +14,10 @@ python -m wqb_cli api show "/competition-levels"
 
 ### `GET`
 
-Dry-run:
+Command:
 
 ```powershell
-python -m wqb_cli api call GET "/competition-levels" --dry-run
+python -m wqb_cli api call GET "/competition-levels"
 ```
 
 实际执行:

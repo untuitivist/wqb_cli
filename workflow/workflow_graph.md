@@ -90,11 +90,13 @@ workflow/nodes/{节点名}/node.md
 - D 节点选择 Regular 主塔时，必须优先考虑当前季度 `alphaCount < 3` 的 D1 塔。
 - D 节点排序优先级：补足点塔缺口优先，其次 multiplier，其次可做性和 performance 提升；overused data 不高于点塔优先级。
 - `main_tower.json` 必须记录当前塔的 `alphaCount` 和 `neededToLight = max(0, 3 - alphaCount)`。
-## 硬规则：严禁混信号
+## 硬规则：禁止线性混信号
 
+- 这里的“禁止混信号”，特指禁止把多个独立收益信号做线性拼接或线性加权。
 - 严禁用线性加权把多个不同经济机制拼成一个 alpha，例如 `0.532 * stable + 0.208 * revision + 0.136 * reversal + 0.104 * liquidity + 0.020 * volatility`。
 - 一个 alpha 只能有一个主经济机制，表达式必须围绕该机制构建。
-- 允许的辅助项只限于同一机制内部的标准化、去极值、缺失值处理、行业/组内中性化、衰减或单一风险门控；辅助项不能成为独立收益来源。
+- 允许的辅助项只限于同一机制内部的标准化、去极值、缺失值处理、行业/组内中性化、衰减、幂次、分段、同字段时间平滑或单一风险门控；辅助项不能成为独立收益来源。
+- 允许多元表达式与关系型表达式，例如 `corr(a, b)`、`covariance(a, b)`、`regression(y, x)`、同机制下的价量/字段交互；前提是它们共同服务于同一个主机制，而不是把两个独立 alpha 生硬拼接。
 - 目标塔是什么，主信号就必须来自该塔 category。禁止用其他 category 的强信号加少量目标塔字段来蹭 pyramid 分类。
 - 如果目标塔主字段连续失败，K 必须回 D/F/H 重新选择塔、字段或机制；禁止通过混入 PV、MODEL、LIQUIDITY、VOLATILITY 等其他强信号硬凑指标。
 - I 节点生成候选时必须在 `operator_constraints_check.md` 或候选说明中标注 `single_mechanism=true`，并解释为什么不是混信号。

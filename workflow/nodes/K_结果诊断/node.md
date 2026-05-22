@@ -65,9 +65,10 @@ wqb alpha correlation prod <alpha_id> --max-wait-seconds 900 --output <node_dir>
 
 - 明确下一跳并写入 `next_node.json`。
 - 到 M 前不停止 agent loop。
-## 硬规则：混信号候选直接判失败
+## 硬规则：线性混信号候选直接判失败
 
 - K 诊断时，如果候选依赖多个独立经济机制线性加权，即使指标过线也不能进入 L/M。
+- 如果候选只是围绕单一主字段/单一主机制做非线性变换、时间平滑、幂次、分段或门控，不应按“混信号”判失败。
 - 发现混信号时，`next_node.json` 必须指向 `H` 或 `D`，原因写 `mixed_signal_forbidden`。
 - 目标塔和主要收益来源不一致时，不能因为 `MATCHES_PYRAMID` 通过就提交。
 - 可提交 alpha 必须同时满足硬指标、相关性/ladder 检查，以及单一经济机制约束。

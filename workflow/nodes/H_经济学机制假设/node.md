@@ -2,70 +2,101 @@
 
 ## 目标
 
-综合 B/D/E/F/G 和 K 回退信息，形成可以转成表达式的经济学机制假设。
+H 只回答一件事：`候选 datafield 到底在表达什么经济学含义，这个含义有没有社区/论文证据支持，是否值得进入表达式构建。`
+
+H 不负责拼表达式，不负责调 operator，不负责回测参数。
 
 ## 输入
 
 必要：
-
-- B 的 `level_gap.md`。
-- D 的 `main_tower.json`。
-- F 的 `candidate_datafields.json`。
-- G 的 `community_lessons.md` 与 `platform_docs_lessons.md`。
+- B 的 `level_gap.md`
+- D 的 `main_tower.json`
+- F 的 `candidate_datafields.json`
+- G 的社区/文档经验产物
 
 可选：
+- E 的 `super_constraints.json`
+- K 的 `diagnosis.md`
 
-- E 的 `super_constraints.json`。
-- K 的 `diagnosis.md`。
+## 先后顺序
 
-## 只允许的 CLI
+H 必须严格按下面顺序执行：
+
+1. 读取 F 输出的候选字段池，不先发明机制。
+2. 用 `wqb data field <field_id>` 读取字段描述、dataset、category、coverage。
+3. 基于字段描述提炼 1 到 3 个机制关键词。
+4. 先搜社区，再搜论文。
+5. 最后才形成机制假设。
+
+## 允许的 CLI
 
 ```powershell
-wqb data field <field_id> --output <node_dir>/field_meta__field.json
-wqb data operators --output <node_dir>/operators.json
-wqb community search <mechanism_keyword> --limit 10 --output <node_dir>/mechanism_community.json
-wqb community search <template_keyword> --limit 10 --output <node_dir>/template_community.json
-wqb community search <paper_keyword> --limit 10 --output <node_dir>/paper_community.json
+wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
+wqb community search <keyword> --limit 10 --output <node_dir>/community__<field_id>__<keyword>.json
+python -m arxiv_cli search query --all <keyword> --max-results 10 --sort-by relevance --output <node_dir>/arxiv__<field_id>__<keyword>.json
 ```
+
+说明：
+- 论文搜索必须优先使用 `python -m arxiv_cli ...`
+- 只有 `arxiv_cli` 不可用或接口失败时，才允许退回其他工具
 
 ## 输出
 
 必要：
-
-- `mechanism_hypotheses.json`：机制、字段、方向、预期失败模式。
-- `mechanism_priority.md`：排序理由。
+- `field_meanings.json`
+- `mechanism_hypotheses.json`
+- `mechanism_priority.md`
 - `node_summary.md`
 
 可选：
-
 - `field_meta__*.json`
-- `mechanism_community.json`
-- `template_community.json`
-- `paper_community.json`
+- `community__*.json`
+- `arxiv__*.json`
+
+## 字段筛选规则
+
+- H 只处理 F 已经放进候选池的字段。
+- H 可以淘汰字段，但不能新增未经过 F 的字段。
+- H 必须优先淘汰“字段描述不清、机制无法解释、外部证据太弱”的字段。
+- H 必须明确区分“字段名称像模型”与“字段经济学含义清楚”。
+- 对 `MODEL` 塔，优先保留描述明确的传统机制字段，如估值、成长、surprise、分析师修正、质量、动量；谨慎对待纯黑盒 `dl/nugget/predict` 风格字段。
+
+## 社区与论文搜索义务
+
+对每个候选字段，H 至少要回答四个问题：
+
+1. 这个字段的官方描述是什么？
+2. 这个字段最像哪类社区模板或社区机制讨论？
+3. 这类机制在论文里通常对应什么经济学故事？
+4. 它为什么适合当前 tower，而不是别的字段更适合？
+
+搜索要求：
+- 社区搜索关键词必须从字段描述出发，而不是只搜字段 id。
+- 论文搜索关键词必须是机制词，如 `free cash flow to price`、`earnings surprise`、`analyst revision`、`inventory change`、`price momentum`。
+- 如果社区模板与论文逻辑互相冲突，优先保守，降低该字段优先级。
 
 ## 成功条件
 
-- 每个机制都能明确映射到候选字段和表达式构造方向。
-- 明确为什么该机制服务当前主塔或 super 约束。
-- 明确记录 agent 实际搜过哪些社区模板、研报线索或论文线索，以及最终为什么选当前机制而不是其他模板。
+- `mechanism_hypotheses.json` 中每条机制都明确绑定到具体字段。
+- 每条机制都带有至少一条社区证据和一条论文证据，或清楚记录为什么论文证据不足。
+- H 输出后，I 可以在不重新解释经济学含义的前提下直接构造表达式。
+
+## 明确边界
+
+H 负责：
+- 选字段意义
+- 查字段描述
+- 搜社区
+- 搜论文
+- 给机制解释
+- 做字段优先级排序
+
+H 不负责：
+- 写 alpha 表达式
+- 选 operator 细节
+- 选 decay / truncation / neutralization
+- 为了过指标而混机制
 
 ## 下一跳
 
 - `I 表达式候选集`
-## 硬规则：单一经济机制
-
-- H 只能提出单一主机制假设，不能把多个独立收益来源拼接成一个候选。
-- 禁止把模型稳定性、模型修正、短期反转、流动性、波动率等多个独立机制用固定权重相加。
-- 允许围绕同一主机制做非线性处理、同字段时间平滑、幂次、分段或门控，但这些都必须服务于同一个因果链，不能形成第二个独立收益来源。
-- 允许在同一主机制内部提出多元关系假设，例如字段-字段相关性、字段对收益/价格行为的回归关系、同机制内部的交互项；但必须能解释为同一条经济学因果链。
-- 机制假设必须说明主因果链条：为什么该字段或价格行为会带来收益。
-- 风险控制可以存在，但必须是门控、中性化或过滤，不能作为独立 alpha 信号贡献主要收益。
-
-## 搜索义务：社区模板、研报与论文
-
-- H 不是直接套固定模板，而是必须先主动搜索社区中最接近当前字段/机制/塔目标的模板帖子，再决定机制假设。
-- H 必须同时搜索研报与论文线索；如果本地社区库里有论文复现、研报摘要、Alpha 灵感贴，优先把这些当作经济学解释来源。
-- H 在搜索论文前，必须先检查当前环境里是否已有 `arxiv_cli` 或等价 arXiv CLI；如果有，优先使用；如果没有，再退回其他可行工具进行论文搜索。
-- 对每个候选机制，H 必须回答三个问题：社区里最像的模板是什么；它背后的经济学含义是什么；为什么该模板适合当前 datafield / 当前塔。
-- 如果搜索后发现最相关模板依赖的是另一条独立机制，H 应回退并重选机制，而不是直接把模板硬拼到当前字段上。
-- 对 MODEL 塔，H 必须优先搜索“model / template / corr / regression / non-linear / alpha 灵感 / paper / research”这一类关键词，再决定是否做稳定性、关系量、非线性或交互型机制。

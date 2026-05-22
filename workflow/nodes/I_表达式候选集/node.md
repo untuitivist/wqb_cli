@@ -2,80 +2,110 @@
 
 ## 目标
 
-把 H 的机制假设转成可回测表达式批次，并严格遵守 operator 约束。
+I 只回答一件事：`把 H 已经确认的字段机制翻译成可回测表达式，并检查 operator 与语法约束。`
+
+I 不重新做字段筛选，不重新做机制搜索，不把 H 和 F 的工作混进来。
 
 ## 输入
 
 必要：
-
-- H 的 `mechanism_hypotheses.json`。
-- F 的 `candidate_datafields.json`。
-- D 的 `main_tower.json`。
+- H 的 `field_meanings.json`
+- H 的 `mechanism_hypotheses.json`
+- F 的 `candidate_datafields.json`
+- D 的 `main_tower.json`
 
 可选：
+- K 的 `diagnosis.md`
 
-- K 回退的表达式弱点。
+## 前提
 
-## 只允许的 CLI
+进入 I 之前，必须已经满足：
+
+- 字段已由 F 选出
+- 字段意义已由 H 说明
+- 社区与论文证据已由 H 记录
+
+如果这些前提不满足，I 应回退 H 或 F，而不是自己补做。
+
+## 允许的 CLI
 
 ```powershell
 wqb data operators --output <node_dir>/operators.json
-wqb data fields --output <node_dir>/platform_fields.json
 wqb docs show simulations/create/README.md --output <node_dir>/simulation_create_doc.md
-wqb community search <template_keyword> --limit 10 --output <node_dir>/template_community.json
-wqb community search <paper_keyword> --limit 10 --output <node_dir>/paper_community.json
+wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
 ```
+
+说明：
+- I 可以重新读取字段 meta 做校验
+- I 不应把社区/arXiv 搜索当成主任务；若发现 H 证据不足，应回退 H
 
 ## 输出
 
 必要：
-
-- `expression_candidates.json`：表达式、settings、字段来源、机制来源。
+- `expression_candidates.json`
 - `operator_constraints_check.md`
 - `node_summary.md`
 
 可选：
-
 - `operators.json`
 - `simulation_create_doc.md`
-- `template_community.json`
-- `paper_community.json`
+- `field_meta__*.json`
 
-## operator 硬约束
+## 表达式构建规则
 
-- `ts_quantile(x, d, driver='gaussian')`：字符串参数必须用单引号。
+- 每条候选必须绑定到单一主机制：`single_mechanism=true`
+- 禁止线性混合多个独立收益信号
+- 允许同一机制下的：
+  - 同字段时间平滑
+  - 同字段非线性变换
+  - 同字段关系量
+  - 同机制内的多元关系表达式，如 `corr(a, b)`、`ts_regression(y, x, d)`
+- 如果一个表达式需要第二个独立收益来源才能成立，该候选直接作废
+
+## operator 参数硬约束
+
+- `ts_quantile(x, d, driver='gaussian')`：字符串参数必须用单引号
 - `kth_element(x, d, k=?)`
 - `ts_theilsen(x, y, d)`
-- `ts_weighted_decay(x, k=0.5)`：`k` 不可省略。
-- `hump_decay(x, p=0)`：`p` 不可省略。
-- `group_mean(x, weight, group)`：`weight` 不可省略，可填 `1`。
+- `ts_weighted_decay(x, k=0.5)`：`k` 不可省略
+- `hump_decay(x, p=0)`：`p` 不可省略
+- `group_mean(x, weight, group)`：`weight` 不可省略，可写 `1`
 - `ts_target_tvr_decay(x, lambda_min=0, lambda_max=1, target_tvr=0.1)`
 - `ts_target_tvr_hump(x, lambda_min=0, lambda_max=1, target_tvr=0.1)`
-- `ts_poly_regression(y, x, d, k=1)`：`k` 不可省略。
+- `ts_poly_regression(y, x, d, k=1)`：`k` 不可省略
+
+## 表达式输出要求
+
+`expression_candidates.json` 中每条候选至少包含：
+- `field_id`
+- `dataset_id`
+- `mechanism_id`
+- `single_mechanism`
+- `expression`
+- `language`
+- `settings`
+- `why_not_mixed_signal`
+- `source_mechanism_refs`
 
 ## 成功条件
 
-- 形成可直接传给 J 的候选表达式。
-- 每条表达式都有机制来源和字段来源。
-- 每条表达式都能追溯到 agent 实际搜索过的社区模板、研报线索或论文线索，而不是凭空拍脑袋生成。
+- I 输出的候选可以直接进入 J 回测
+- 每条候选都能追溯到 H 的字段意义和机制解释
+- 每条候选都通过 operator 与参数规范检查
+
+## 明确边界
+
+I 负责：
+- 把机制翻译成表达式
+- 做语法与 operator 检查
+- 组织回测批次候选
+
+I 不负责：
+- 再次选字段
+- 再次定义字段经济学意义
+- 再次做社区/论文主搜索
+- 为了过指标临时拼第二机制
 
 ## 下一跳
 
 - `J 并行回测`
-## 硬规则：禁止线性混信号表达式
-
-- 禁止生成 `a * signal1 + b * signal2 + c * signal3` 这类线性加权混信号表达式，尤其是跨机制混合。
-- 明确禁止类似 `0.532 * stable + 0.208 * revision + 0.136 * reversal + 0.104 * liquidity + 0.020 * volatility` 的构造。
-- 候选表达式必须保持单一主机制；如需处理风险，只能使用非收益型控制，例如过滤、截尾、中性化、衰减或同一字段内部变换。
-- 允许多元表达式与关系型表达式，例如 `corr(a, b)`、`covariance(a, b)`、`ts_regression(y, x, d)`，以及同机制内部的字段交互；但它们必须围绕同一个经济学假设，不能把两个独立收益来源伪装成“多元表达式”。
-- 每条候选必须标注 `single_mechanism=true`，并写明主机制字段、目标塔 category、为什么不属于混信号。
-- 如果为了过指标必须引入另一个独立 alpha 来源，该候选应作废并回 H/D。
-
-## 搜索义务：从模板到表达式
-
-- I 生成候选前，agent 必须先搜索社区中最接近当前机制的模板帖子，再把模板翻译成当前字段可执行的表达式，而不是直接凭经验拼表达式。
-- I 必须额外搜索研报与论文线索，用来校验模板背后的经济学逻辑是否站得住，而不是只抄表达式外壳。
-- I 在搜索论文前，必须先检查当前环境里是否已有 `arxiv_cli` 或等价 arXiv CLI；如果有，优先使用；如果没有，再退回其他可行工具进行论文搜索。
-- I 允许从社区模板中抽象出“排序型”“相关型”“回归型”“非线性型”“交互型”等结构，但必须重写成服务当前主机制的表达式，不能把模板中的原始独立信号照搬进来。
-- 对 MODEL 塔，I 必须优先搜索和比较 `model`、`template`、`corr`、`regression`、`non-linear`、`alpha 灵感`、`paper`、`research` 这类关键词下的模板，再决定表达式结构。
-- `expression_candidates.json` 必须写明每条候选引用了哪些搜索结果、采用了什么模板结构、为什么它仍然属于 `single_mechanism=true`。

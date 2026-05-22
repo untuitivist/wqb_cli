@@ -1,111 +1,283 @@
-# WQB CLI
+# wqb-cli
 
-`wqb` 是面向 agent 使用的 WorldQuant BRAIN 命令行工具。
-它把能力分成两类：
+`wqb-cli` is an agent-first command line toolkit for working with the WorldQuant BRAIN API and local research data.
 
-- API 命令：调用 `https://api.worldquantbrain.com`。
-- 本地数据命令：读取 `local/` 下的本地文件。
+It is designed for repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation submission, alpha submission checks, local `data_all` screening, and community-data search.
 
-本地数据由 WebDataScope 浏览器插件在本包之外产生：[leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)。
-CLI 不直接读取浏览器缓存或插件缓存。
+- Repository: [untuitivist/wqb_cli](https://github.com/untuitivist/wqb_cli)
+- Author: [wiz](https://github.com/untuitivist)
+- License: GPL-3.0-only with Commons Clause. See [LICENSE](LICENSE).
 
-## 仓库结构
+## What This Tool Provides
 
-```text
-.
-  cli.py
-  commands/                 命令分组
-  core/                     HTTP、认证、配置、注册表、IO、本地数据
-  resources/
-    api_inventory/          随包发布的 API 端点注册表与生成文档
-    docs/
-      commands/             手写命令文档与真实示例
-      generated/            生成说明
-  tests/                    CLI 冒烟测试
-  local/                    用户本地运行数据，Git 忽略
-  pyproject.toml
+- API commands for `https://api.worldquantbrain.com`.
+- Auth helpers that store cookies locally.
+- Simulation commands for REGULAR FASTEXPR, REGULAR PYTHON, and SUPER backtests.
+- Alpha commands for listing, checking, recordsets, correlations, and submit workflows.
+- Local data commands for `data_all` / `all_data.pickle` screening.
+- Local community-data import and search commands.
+- Bundled endpoint inventory and command documentation.
+- Workflow documents for structured research nodes under `workflow/`.
+
+## Important Notes
+
+- This project is not affiliated with WorldQuant or WorldQuant BRAIN.
+- Mutating commands send real API requests. There is no dry-run mode.
+- Commands that need asynchronous results wait for completion or fail on timeout. Simulation-style waits default to 900 seconds where applicable.
+- Local data files are intentionally not committed. Keep credentials, cookies, community exports, and `data_all` files under `local/`.
+- The license is source-available but not OSI open source because Commons Clause restricts selling the software.
+
+## Requirements
+
+- Python 3.11 or newer.
+- A WorldQuant BRAIN account.
+- Windows PowerShell is the primary tested shell.
+- Recommended local Conda environment: `WQBRAIN`.
+
+## Installation
+
+Clone the repository:
+
+```powershell
+git clone https://github.com/untuitivist/wqb_cli.git
+cd wqb_cli
 ```
 
-Python 包名仍然是 `wqb_cli`。
-`pyproject.toml` 将 `wqb_cli` 映射到当前仓库根目录。
-
-## 安装
-
-要求 Python 3.11 或更高版本。
-当前本地工作流使用 Conda 环境 `WQBRAIN`。
+Install in editable mode:
 
 ```powershell
 conda activate WQBRAIN
 python -m pip install -e .
 ```
 
-## 认证
-
-创建本地 `.env` 文件：
+Confirm the CLI is available:
 
 ```powershell
+wqb --help
+wqb auth status
+```
+
+If `wqb` is not on `PATH`, run commands through Python from the parent directory:
+
+```powershell
+python -m wqb_cli --help
+```
+
+## Package Metadata
+
+The Python distribution name is `wqb-cli`.
+
+The import/package name is `wqb_cli`.
+
+The command line entry point is:
+
+```powershell
+wqb
+```
+
+Current package version:
+
+```toml
+version = "0.3.1"
+```
+
+## Authentication
+
+Create a local environment file:
+
+```powershell
+New-Item -ItemType Directory -Force local
 Copy-Item .env.example local/.env
 ```
 
-填写 `EMAIL` / `PASSWORD` 或 `WQB_EMAIL` / `WQB_PASSWORD`。
+Fill in one of the following credential pairs:
 
-登录：
+```text
+EMAIL=...
+PASSWORD=...
+```
+
+or:
+
+```text
+WQB_EMAIL=...
+WQB_PASSWORD=...
+```
+
+Login:
 
 ```powershell
 wqb auth login
 ```
 
-Cookie 存储位置：
+Check authentication:
+
+```powershell
+wqb auth status
+```
+
+Cookies are stored locally:
 
 ```text
 local/auth/cookies.json
 ```
 
-## API 命令
+Do not commit `local/`, `.env`, or cookie files.
 
-API 命令使用随包发布的注册表：
+## Repository Layout
 
 ```text
-resources/api_inventory/api_inventory_complete.json
+.
+  cli.py
+  commands/                 CLI command groups
+  core/                     HTTP, auth, config, registry, IO, local stores
+  resources/
+    api_inventory/          Bundled API endpoint inventory
+    docs/
+      commands/             Handwritten command docs and examples
+      generated/            Generated command references
+  workflow/                 Research workflow node documents
+  tests/                    Test suite
+  local/                    User-local runtime data, ignored by Git
+  LICENSE
+  pyproject.toml
+  README.md
 ```
 
-示例：
+## Common API Commands
+
+Inspect the bundled API inventory:
 
 ```powershell
 wqb api stats
 wqb api list
 wqb api show /authentication
 wqb api params /users/self/alphas
+```
+
+Call a safe endpoint:
+
+```powershell
 wqb api call GET /authentication
-wqb auth status
+```
+
+Inspect simulation options:
+
+```powershell
 wqb sim options
 ```
 
-常用查询命令显式建模了相邻 `U:\Project\MainCode\3.Work\WQB\wqb` SDK 中已使用的过滤参数，也保留 `--param KEY=VALUE` 透传兜底，例如：
+Most high-level query commands expose common filters directly and still allow raw query parameters through `--param KEY=VALUE`.
+
+Examples:
 
 ```powershell
 wqb alpha list --settings-neutralization SUBINDUSTRY --is-sharpe ">=1.25"
 wqb data fields --dataset analyst14 --coverage ">0.8" --order=-userCount
+wqb data datasets --category pv --region USA --delay 1 --limit 20
 ```
 
-这些显式参数的 `--help` 文档里写了本地 `U:\Project\MainCode\3.Work\WQB` 工作流中常用的取值和阈值示例。
-需要确认参数怎么填时，优先看命令帮助：
+When in doubt, check command help:
 
 ```powershell
 wqb alpha list --help
 wqb data datasets --help
 wqb data fields --help
 wqb data operators --help
+wqb sim create --help
 ```
 
-会修改平台状态的命令会直接发送请求。
+## Alpha Listing Examples
 
-## 本地数据导入
+Recent ACTIVE REGULAR alphas for a region/delay:
 
-本地数据不随包发布，也不能提交到 Git。
-所有本地数据都放在 `local/` 下。
+```powershell
+wqb alpha list `
+  --type REGULAR `
+  --settings-region CHN `
+  --settings-delay 1 `
+  --settings-instrument-type EQUITY `
+  --limit 100 `
+  --order=-dateSubmitted `
+  --status ACTIVE
+```
 
-推荐结构：
+Tower-tag lookup, when tags are maintained:
+
+```powershell
+wqb alpha list `
+  --type REGULAR `
+  --settings-region CHN `
+  --settings-delay 1 `
+  --settings-instrument-type EQUITY `
+  --limit 100 `
+  --order=-dateSubmitted `
+  --status ACTIVE `
+  --tag CHN/D1/PV
+```
+
+If the tag result is empty or inconsistent, fall back to the region/delay query and inspect `pyramids[].name` locally.
+
+Do not rely on `--param pyramid=pv` for alpha listing. It is accepted by the server but does not filter results in observed tests.
+
+## Simulation Workflows
+
+Create a simulation from a JSON body:
+
+```powershell
+wqb sim create --input body.json --output simulation_result.json
+```
+
+By default, `sim create` waits for the simulation result or fails on timeout. For multi-simulation requests, child simulations are also waited and reported.
+
+Get an existing simulation:
+
+```powershell
+wqb sim get <simulation_id> --max-wait-seconds 900 --output simulation.json
+```
+
+Simulation examples are documented here:
+
+```text
+resources/docs/commands/simulations/create/examples/input_json.md
+resources/docs/commands/simulations/create/examples/backtest_modes.md
+```
+
+Supported documented example bodies include:
+
+- REGULAR FASTEXPR multi-simulation.
+- REGULAR FASTEXPR single simulation.
+- REGULAR PYTHON single simulation.
+- SUPER simulation.
+
+For REGULAR FASTEXPR multi-simulation, the shared settings requirement is limited to:
+
+- `delay`
+- `region`
+- `instrumentType`
+- `language`
+
+## Submit Workflow
+
+Submit an alpha:
+
+```powershell
+wqb alpha submit <alpha_id> --output submit_result.json
+```
+
+The CLI distinguishes API acceptance from final submit success.
+
+- `201 Created` means the submit request was accepted by the API.
+- Final success requires polling the submit/check result until the submit check succeeds.
+- If an intermediate response is printed, it should be read as `201 Created, waiting for results...`.
+
+Commands that wait for platform-side results return only after a final result, a request failure, or timeout.
+
+## Local Data Setup
+
+Local data is not bundled and must not be committed.
+
+Recommended layout:
 
 ```text
 local/
@@ -125,15 +297,17 @@ local/
 
 ### data_all
 
-`data_all` 来自 WebDataScope 插件提供的网盘数据包。
-其中 `all_data.pickle` 不随本仓库发布，需要从 WebDataScope 插件 README 中提供的百度网盘链接单独下载。
-下载后，将文件直接放到：
+`data_all` comes from the WebDataScope plugin's network-disk data package:
+
+[leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)
+
+`all_data.pickle` is not released with this repository. Download it from the Baidu Netdisk link provided by the WebDataScope plugin README, then place it under:
 
 ```text
 local/data_all/
 ```
 
-预期文件：
+Expected files:
 
 ```text
 local/data_all/
@@ -142,35 +316,35 @@ local/data_all/
   main.ipynb
 ```
 
-使用 `scope` 命令检查：
+Check local data:
 
 ```powershell
 wqb scope files
 wqb scope list
+wqb scope show USA_1 --output local/scope_usa_1.json
 wqb scope top USA_1 --group datafield --min-count 5 --limit 10
 wqb scope pickle-summary USA_1 --sample 1
 wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,sharpe,fitness,turnover,margin
 ```
 
-### community
+### Community Data
 
-社区数据由 WebDataScope 导出文件构建。
-流程如下：
+Community data is imported from WebDataScope exports.
 
-1. 在 WebDataScope 中导出社区数据，格式为 `WQPCommunityState_*.json` 或 `WQPCommunityState_*.wqcs`。
-2. 将导出文件放到 `local/community/`。
-3. 运行 `wqb community export` 生成 `community.sqlite3`。
-4. 查询生成后的 SQLite 数据库。
+1. Export community data from WebDataScope as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`.
+2. Put the export under `local/community/`.
+3. Build the local SQLite database.
+4. Query the generated database.
 
-构建 SQLite：
+Build SQLite:
 
 ```powershell
 wqb community export --source local/community/WQPCommunityState_20260520_103908.json
 ```
 
-如果省略 `--source`，CLI 会在本地导出位置中寻找最新的 `WQPCommunityState_*.json` 或 `*.wqcs`。
+If `--source` is omitted, the CLI searches for the latest `WQPCommunityState_*.json` or `*.wqcs` under the local community directory.
 
-查询示例：
+Query examples:
 
 ```powershell
 wqb community stats
@@ -178,63 +352,138 @@ wqb community search alpha --limit 3
 wqb community search neutralization --scope docs --limit 2
 ```
 
-## 命令文档
+## Research Workflow Documents
 
-命令文档位置：
+The structured workflow is documented under:
+
+```text
+workflow/
+```
+
+Each node describes:
+
+- required inputs
+- allowed CLI commands
+- required outputs
+- success criteria
+- next nodes
+
+The main graph is:
+
+```text
+workflow/workflow_graph.md
+```
+
+Node F is responsible for datafield feasibility. It now prefers tower tags such as `CHN/D1/PV` to discover existing ACTIVE REGULAR alphas, then falls back to region/delay full scans and local `pyramids[].name` inspection.
+
+## Command Documentation
+
+Command documentation lives in:
 
 ```text
 resources/docs/commands/
 ```
 
-常用入口：
+Useful entry points:
 
 - `resources/docs/commands/README.md`
 - `resources/docs/commands/local-data/README.md`
 - `resources/docs/commands/community/README.md`
 - `resources/docs/commands/scope/README.md`
 - `resources/docs/commands/simulations/create/examples/backtest_modes.md`
+- `resources/docs/commands/simulations/create/examples/input_json.md`
 
-API 清单文档位置：
+Bundled API inventory:
 
 ```text
 resources/api_inventory/
 ```
 
-## 回测规则
+## Development
 
-回测模式与并发规则记录在：
-
-```text
-resources/docs/commands/simulations/create/examples/backtest_modes.md
-```
-
-当前操作约束：
-
-- `REGULAR_FASTEXPR_MULTI` 单次请求最多支持 10 条表达式。
-- `REGULAR_FASTEXPR_MULTI` 建议批量大小：`region != "GLB"` 时为 10，`region == "GLB"` 时为 5。
-- `REGULAR_PYTHON` 不能使用 multi-simulation。
-- `SUPER` 每次 simulation 使用一个 SUPER POST body。
-- `SUPER` 并发 simulation 请求最多 3 个。
-- `REGULAR` 并发 simulation 请求：`region != "GLB"` 时最多 8 个，`region == "GLB"` 时最多 4 个。
-
-## 开发
-
-运行冒烟测试：
+Install editable package:
 
 ```powershell
-python -m unittest discover -s tests
+python -m pip install -e .
 ```
 
-构建发布包：
+Run tests from the repository root:
+
+```powershell
+$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
+python -m pytest tests
+```
+
+Build package artifacts:
 
 ```powershell
 python -m build
 ```
 
-不要提交：
+Do not commit:
 
 - `.env`
 - `local/`
 - `dist/`
 - `build/`
 - `*.egg-info/`
+- credentials or cookies
+
+## Troubleshooting
+
+### `ModuleNotFoundError: No module named 'wqb_cli'`
+
+Run tests with the parent directory on `PYTHONPATH`:
+
+```powershell
+$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
+python -m pytest tests
+```
+
+Or install editable mode again:
+
+```powershell
+python -m pip install -e .
+```
+
+### `WARNING: Ignoring invalid distribution ~qb-cli`
+
+This is usually a stale pip uninstall/install artifact under `site-packages`. If the install succeeds, it does not block normal use. To clean it, inspect the active environment's `Lib/site-packages` directory and remove stale `~qb*` distribution folders.
+
+### `wqb.exe is installed ... which is not on PATH`
+
+Use the full Python module form or add the printed scripts directory to `PATH`:
+
+```powershell
+python -m wqb_cli --help
+```
+
+## Release
+
+Current release:
+
+[wqb-cli 0.3.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.1)
+
+Release checklist:
+
+1. Update `version` in `pyproject.toml`.
+2. Run editable install.
+3. Run tests.
+4. Commit changes.
+5. Tag the release, for example `v0.3.1`.
+6. Push the branch and tag.
+7. Publish a GitHub Release.
+
+## License
+
+This project is licensed under GPL-3.0-only with the Commons Clause License Condition v1.0.
+
+Required attribution:
+
+```text
+Original author: wiz
+Original repository: https://github.com/untuitivist/wqb_cli
+Author GitHub: https://github.com/untuitivist
+```
+
+The Commons Clause removes the right to sell the software as defined in [LICENSE](LICENSE). This means the source is available, but the project is not OSI open source.

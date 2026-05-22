@@ -1,5 +1,7 @@
 # wqb-cli
 
+English | [简体中文](README_CN.md)
+
 `wqb-cli` is an agent-first command line toolkit for working with the WorldQuant BRAIN API and local research data.
 
 It is designed for repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation submission, alpha submission checks, local `data_all` screening, and community-data search.

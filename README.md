@@ -126,7 +126,8 @@ local/
 ### data_all
 
 `data_all` 来自 WebDataScope 插件提供的网盘数据包。
-单独下载后，将文件直接放到：
+其中 `all_data.pickle` 不随本仓库发布，需要从 WebDataScope 插件 README 中提供的百度网盘链接单独下载。
+下载后，将文件直接放到：
 
 ```text
 local/data_all/

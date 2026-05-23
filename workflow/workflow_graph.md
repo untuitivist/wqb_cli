@@ -19,6 +19,8 @@ research_runs/
 
 约束：
 - 每个 node 只写自己的子目录
+- 每个 node 运行时都要在 WQBRAIN conda环境调用 `wqb` CLI
+- 每个 node 运行时都要在 wqb_cli\workflow\nodes 目录下读一遍对应节点的 `node.md` 文件
 - 每个 node 必须保存 `commands.md`、原始输出、`node_summary.md`
 - 到达 `M` 前 agent loop 不允许停止
 

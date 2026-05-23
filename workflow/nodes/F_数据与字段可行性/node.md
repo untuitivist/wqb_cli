@@ -21,6 +21,9 @@ F 负责两件事：
 
 ## 推荐使用的 CLI
 
+
+### 找候选字段
+
 候选字段与历史表现：
 
 ```powershell
@@ -33,7 +36,9 @@ wqb data fields --output <node_dir>/platform_fields.json
 wqb data datasets --output <node_dir>/platform_datasets.json
 ```
 
-目标塔下已有 ACTIVE REGULAR alpha，优先尝试 tag 精确筛选：
+### 找目标塔下已经用过的 alpha/datafield
+
+**目标塔下已有 ACTIVE REGULAR alpha，优先尝试 tag 精确筛选：**
 
 ```powershell
 wqb alpha list `

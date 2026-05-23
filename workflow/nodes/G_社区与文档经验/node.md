@@ -41,14 +41,40 @@ G 必须同时完成以下四类搜索，缺任何一类都不能算完成：
 ## 推荐 CLI
 
 ```powershell
-wqb community search <keyword> --limit 20 --output <node_dir>/community_search__<keyword>.json
+# 社区搜索
+wqb community search "volume" --limit 20 --output <node_dir>/community_search__volume.json
+wqb community search "price" --limit 20 --output <node_dir>/community_search__price.json
+wqb community search "technical" --limit 20 --output <node_dir>/community_search__technical.json
+
+# 官方文档
 wqb docs list --output <node_dir>/docs_list.json
-wqb docs show <doc_path> --output <node_dir>/docs__<doc_name>.md
-wqb search <keyword> --output <node_dir>/platform_search__<keyword>.json
-python -m arxiv_cli --help
-python -m arxiv_cli search --help
-python -m arxiv_cli search query --help
-python -m arxiv_cli search query --all <keyword> --max-results 10 --sort-by relevance --output <node_dir>/arxiv__<keyword>.json
+wqb docs show "simulations" --output <node_dir>/docs__simulations.md
+wqb docs show "alpha_submission" --output <node_dir>/docs__alpha_submission.md
+
+# 平台资料搜索
+wqb search "volume" --output <node_dir>/platform_search__volume.json
+wqb search "price" --output <node_dir>/platform_search__price.json
+wqb search "momentum" --output <node_dir>/platform_search__momentum.json
+
+# arxiv-cli 基础检查
+arxiv --help
+arxiv search --help
+arxiv search query --help
+
+# arxiv-cli - 简单 AND 查询（search query）
+arxiv search query --all "volume" --all "price" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__volume_price.json
+arxiv search query --all "momentum" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__momentum.json
+arxiv search query --all "volatility" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__volatility.json
+
+# arxiv-cli - 复杂 OR 查询（search raw）
+arxiv search raw "cat:q-fin.ST AND (all:\"volume price\" OR all:\"technical indicator\" OR all:\"trading factor\")" --max-results 10 --sort-by relevance --output <node_dir>/arxiv__quant_factors.json
+
+# arxiv-cli - dry-run 预览（先看查询是否构造正确）
+arxiv search query --all "volume" --all "price" --category q-fin.ST --dry-run
+arxiv search raw "cat:q-fin.ST AND (all:\"volume price\" OR all:\"technical indicator\")" --dry-run
+
+# arxiv-cli - 文本格式快速预览
+arxiv search raw "cat:q-fin.ST AND (all:\"volume price\" OR all:\"technical indicator\")" --max-results 5 --format text
 ```
 
 ## 输出

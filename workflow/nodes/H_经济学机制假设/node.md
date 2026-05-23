@@ -29,12 +29,34 @@ H 必须严格按下面顺序执行：
 5. 判断字段经济学含义是否清晰、证据是否足够、是否适配当前 tower
 6. 形成机制假设与优先级
 
-## 允许的 CLI
+## 推荐 CLI
 
 ```powershell
-wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
-python -m arxiv_cli --help
-python -m arxiv_cli search query --all <mechanism_keyword> --max-results 10 --sort-by relevance --output <node_dir>/arxiv__<field_id>__<keyword>.json
+# 读取字段元数据
+wqb data field "close" --output <node_dir>/field_meta__close.json
+wqb data field "volume" --output <node_dir>/field_meta__volume.json
+wqb data field "vwap" --output <node_dir>/field_meta__vwap.json
+wqb data field "returns" --output <node_dir>/field_meta__returns.json
+
+# arxiv-cli - 注意：论文搜索主要是 G 的职责
+# 如果 H 读取 G 的结果，只有 G 证据不足时才补搜
+arxiv --help
+arxiv search query --help
+arxiv search raw --help
+
+# arxiv-cli - 补充搜索机制关键词（如果 G 不够）
+arxiv search query --all "momentum" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__momentum.json
+arxiv search query --all "volatility" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__volatility.json
+
+# arxiv-cli - 复杂查询特定机制
+arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --max-results 8 --sort-by relevance --output <node_dir>/arxiv__momentum_mechanism.json
+
+# arxiv-cli - 先 dry-run 预览
+arxiv search query --all "momentum" --category q-fin.ST --dry-run
+arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --dry-run
+
+# arxiv-cli - 文本格式快速检查
+arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --max-results 5 --format text
 ```
 
 说明：

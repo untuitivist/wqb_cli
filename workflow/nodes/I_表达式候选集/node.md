@@ -27,7 +27,7 @@ I 不重新做字段筛选，不重新做机制搜索，不把 H 和 F 的工作
 
 如果这些前提不满足，I 应回退 `H` 或 `F`，而不是自己补做。
 
-## 允许的 CLI
+## 推荐的 CLI
 
 ```powershell
 wqb data operators --output <node_dir>/operators.json
@@ -61,6 +61,7 @@ wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
   - 同字段关系量
   - 同机制内部的多元关系表达式，如 `corr(a, b)`、`ts_regression(y, x, d)`
 - 如果一个表达式需要第二个独立收益来源才能成立，该候选直接作废
+- python alpha不许使用for等循环进行表达式构建, 时间复杂度不能超过O(n), 直接用numpy函数
 
 ## operator 参数硬约束
 

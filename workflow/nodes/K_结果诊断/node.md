@@ -48,7 +48,7 @@ wqb alpha correlation prod <alpha_id> --max-wait-seconds 900 --output <node_dir>
 - `fitness > 1`
 - `1% < turnover < 70%`
 - `margin > 0.1%`
-- visualization 结果优先级更高；没有 visualization 的结果只能作为弱证据
+- "checks"下的元素里的"result"没有FAIL状态
 
 ## 硬要求：必须回退
 

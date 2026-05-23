@@ -55,6 +55,7 @@ wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
 
 - 每条候选必须绑定到单一主机制：`single_mechanism=true`
 - 禁止线性混合多个独立收益信号
+- OperatorCount < = 5, FieldCount < = 2
 - 允许单一机制下的：
   - 同字段时间平滑
   - 同字段非线性变换

@@ -84,6 +84,7 @@ D 必须使用 `consultant_summary.json` 中的当前季度起止日期，或按
 - 禁止用无参 `wqb user pyramid-alphas` 的全量历史 counts 判断当前季度塔是否点亮。
 - D 选择主塔时必须优先考虑当前季度 `alphaCount < 3` 的 D1 塔；D0 仍然在 D1 补足前降级。
 - `main_tower.json` 必须写入 `alphaCount`、`neededToLight = max(0, 3 - alphaCount)`、`multiplier` 和选择理由。
+
 ## 硬规则：主塔与主信号一致
 
 - D 选择的目标塔决定本轮主信号 category。

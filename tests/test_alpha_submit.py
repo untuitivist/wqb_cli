@@ -5,9 +5,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from wqb_cli.commands.alpha import (
+    _call_waiting_alpha,
     _classify_submit_post,
     _classify_submit_wait,
     _response_body,
+    _should_retry_alpha_with_basic_auth,
     _wait_submit_status,
 )
 
@@ -38,8 +40,10 @@ class FakeSession:
     def __init__(self, responses: list[FakeResponse]) -> None:
         self.responses = responses
         self.calls = 0
+        self.kwargs_history: list[dict[str, object]] = []
 
     def request(self, *args: object, **kwargs: object) -> FakeResponse:
+        self.kwargs_history.append(dict(kwargs))
         response = self.responses[min(self.calls, len(self.responses) - 1)]
         self.calls += 1
         return response
@@ -129,6 +133,58 @@ class AlphaSubmitTests(unittest.TestCase):
         self.assertTrue(result["response"]["wait_timed_out"])
         self.assertEqual(result["response"]["wait_events"][0]["reason"], "max_wait_seconds_exceeded")
         self.assertEqual(_classify_submit_wait(result)["submit_code"], 408)
+
+    def test_alpha_check_retries_with_basic_auth_after_cookie_401(self) -> None:
+        session = FakeSession(
+            [
+                FakeResponse(
+                    status_code=401,
+                    reason="Unauthorized",
+                    headers={"Content-Type": "application/json"},
+                    json_body={"detail": "Incorrect authentication credentials."},
+                ),
+                FakeResponse(
+                    status_code=200,
+                    reason="OK",
+                    headers={"Content-Type": "application/json"},
+                    json_body={"is": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]}},
+                ),
+            ]
+        )
+        client = SimpleNamespace(session=session, call=None)
+
+        from wqb_cli.core.client import WqbClient, PreparedRequest
+
+        client = WqbClient(SimpleNamespace(base_url="https://api.worldquantbrain.com"), session)
+        prepared = PreparedRequest(
+            endpoint="/alphas/{alpha_id}/check",
+            method="GET",
+            url="https://api.worldquantbrain.com/alphas/demo/check",
+            params={},
+            json_body=None,
+            headers={},
+            auth=None,
+            mutating=False,
+            executable=True,
+            reason=None,
+        )
+        result = _call_waiting_alpha(client, prepared, 60.0, basic_auth=("user@example.com", "secret"))
+        self.assertTrue(result["ok"])
+        self.assertEqual(session.calls, 2)
+        self.assertIsNone(session.kwargs_history[0].get("auth"))
+        self.assertEqual(session.kwargs_history[1].get("auth"), ("user@example.com", "secret"))
+
+    def test_alpha_basic_auth_retry_only_for_alpha_401(self) -> None:
+        result = {
+            "ok": False,
+            "response": {"status_code": 401},
+        }
+        prepared = SimpleNamespace(endpoint="/users/self/alphas", auth=None)
+        self.assertFalse(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
+        prepared = SimpleNamespace(endpoint="/alphas/{alpha_id}/check", auth=("u", "p"))
+        self.assertFalse(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
+        prepared = SimpleNamespace(endpoint="/alphas/{alpha_id}/check", auth=None)
+        self.assertTrue(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from typing import Any, Callable
 _MAX_JSON_DEPTH = 64
 _MAX_JSON_NODES = 10_000
 _MAX_JSON_STRING_LENGTH = 1_000_000
+_MISSING = object()
 
 
 class ContextError(ValueError):
@@ -229,28 +230,10 @@ def _is_secret_key(key: str) -> bool:
     secret_markers = ("password", "apikey", "authorization", "cookie", "secret")
     if any(marker in compact for marker in secret_markers):
         return True
-    token_prefixes = {
-        "access",
-        "api",
-        "auth",
-        "bearer",
-        "csrf",
-        "id",
-        "oauth",
-        "oauth2",
-        "refresh",
-        "session",
-    }
-    if compact == "token" or any(
-        compact == f"{prefix}token" for prefix in token_prefixes
-    ):
+    if compact.endswith("token"):
         return True
     camel_split = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
     segments = [part.casefold() for part in re.split(r"[^A-Za-z0-9]+", camel_split) if part]
-    if segments and segments[-1] == "token" and any(
-        segment in token_prefixes for segment in segments[:-1]
-    ):
-        return True
     return (
         len(segments) >= 2
         and segments[0] == "token"
@@ -296,13 +279,30 @@ def _optional_identifier(value: Any, label: str) -> str | None:
 
 
 def _required_plan_lock(plan: dict[str, Any]) -> tuple[int, str]:
-    version = plan.get("version", plan.get("plan_version"))
-    plan_hash = plan.get("hash", plan.get("plan_hash"))
+    version = _coalesce_alias(plan, "version", "plan_version", "plan version")
+    plan_hash = _coalesce_alias(plan, "hash", "plan_hash", "plan hash")
     if type(version) is not int or version <= 0:
         raise ContextError("plan version must be a positive integer")
     if type(plan_hash) is not str or not plan_hash.strip():
         raise ContextError("plan hash must be a nonblank string")
     return version, plan_hash
+
+
+def _coalesce_alias(
+    values: dict[str, Any],
+    primary_key: str,
+    alias_key: str,
+    label: str,
+) -> Any:
+    primary = values.get(primary_key, _MISSING)
+    alias = values.get(alias_key, _MISSING)
+    if primary is _MISSING:
+        return None if alias is _MISSING else alias
+    if alias is _MISSING:
+        return primary
+    if type(primary) is not type(alias) or primary != alias:
+        raise ContextError(f"{label} aliases must match")
+    return primary
 
 
 def _validate_experiences(value: Any) -> list[str]:

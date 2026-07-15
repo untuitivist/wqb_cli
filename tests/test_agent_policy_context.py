@@ -630,6 +630,18 @@ class ContextBuilderTests(unittest.TestCase):
         context = builder.for_operator(task="task-1", plan=valid, evidence_refs=[])
         self.assertEqual(context["plan_lock"], {"version": 1, "hash": "plan-hash"})
 
+        dual_aliases = {
+            **valid,
+            "plan_version": 1,
+            "plan_hash": "plan-hash",
+        }
+        context = builder.for_operator(
+            task="task-1",
+            plan=dual_aliases,
+            evidence_refs=[],
+        )
+        self.assertEqual(context["plan_lock"], {"version": 1, "hash": "plan-hash"})
+
         invalid_plans = (
             {"hash": "plan-hash", "tasks": valid["tasks"]},
             {"version": 1, "tasks": valid["tasks"]},
@@ -651,6 +663,21 @@ class ContextBuilderTests(unittest.TestCase):
                 plan={"version": 0, "hash": "invalid", "tasks": valid["tasks"]},
                 evidence_refs=["artifact:a"],
             )
+        self.assertEqual(calls, [])
+
+        conflicting_aliases = (
+            {**dual_aliases, "plan_version": 2},
+            {**dual_aliases, "plan_version": True},
+            {**dual_aliases, "plan_hash": "other-hash"},
+        )
+        for plan in conflicting_aliases:
+            with self.subTest(conflicting_aliases=plan):
+                with self.assertRaises(ContextError):
+                    builder.for_operator(
+                        task="task-1",
+                        plan=plan,
+                        evidence_refs=["artifact:a"],
+                    )
         self.assertEqual(calls, [])
 
     def test_operator_normalizes_task_id_selectors_and_rejects_conflicts(self) -> None:
@@ -752,6 +779,14 @@ class ContextBuilderTests(unittest.TestCase):
             "accesstoken": "value-11",
             "access_token": "value-12",
             "token_value": "value-13",
+            "githubToken": "value-14",
+            "github_token": "value-15",
+            "GITHUBTOKEN": "value-16",
+            "serviceToken": "value-17",
+            "jwtToken": "value-18",
+            "contosoToken": "value-19",
+            "token_key": "value-20",
+            "token_secret": "value-21",
             "tokenization": "ordinary-word",
             "token_bucket": "rate-limit-state",
         }

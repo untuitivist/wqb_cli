@@ -5,14 +5,17 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from collections import UserDict
 from contextlib import closing
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 
+import wqb_cli.agent.store as store_module
 from wqb_cli.agent.store import (
     AgentStore,
     InvalidNodeAttempt,
     InvalidTransition,
+    NodeAttemptRecord,
     RunAlreadyExists,
     RunNotFound,
 )
@@ -110,6 +113,126 @@ class AgentStoreTests(unittest.TestCase):
                 (run_id,),
             ).fetchall()
 
+    def table_counts(self) -> tuple[int, int, int]:
+        with closing(self.store.connect()) as connection:
+            return tuple(
+                connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in ("runs", "state_transitions", "node_attempts")
+            )
+
+    def test_all_public_apis_validate_before_database_access(self) -> None:
+        class RunConfigSubclass(RunConfig):
+            pass
+
+        class AttemptSubclass(NodeAttemptRecord):
+            pass
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "absent" / "store.sqlite3"
+            unopened = AgentStore(path)
+            attempt = NodeAttemptRecord(1, "run", WorkflowNode.A, 1, "RUNNING")
+            invalid_calls = (
+                (TypeError, lambda: unopened.create_run(None, auto_config())),
+                (ValueError, lambda: unopened.create_run(" ", auto_config())),
+                (
+                    TypeError,
+                    lambda: unopened.create_run(
+                        "run", RunConfigSubclass(scope_mode=ScopeMode.AUTO)
+                    ),
+                ),
+                (TypeError, lambda: unopened.get_run(1)),
+                (ValueError, lambda: unopened.get_run("")),
+                (
+                    TypeError,
+                    lambda: unopened.transition("run", "RUNNING", "reason"),
+                ),
+                (
+                    TypeError,
+                    lambda: unopened.transition("run", RunState.RUNNING, None),
+                ),
+                (
+                    ValueError,
+                    lambda: unopened.transition("run", RunState.RUNNING, "  "),
+                ),
+                (TypeError, lambda: unopened.start_node_attempt("run", "A")),
+                (TypeError, lambda: unopened.start_node_attempt(None, WorkflowNode.A)),
+                (
+                    TypeError,
+                    lambda: unopened.finish_node_attempt(
+                        AttemptSubclass(**attempt.__dict__), "COMPLETED", {}
+                    ),
+                ),
+                (
+                    TypeError,
+                    lambda: unopened.finish_node_attempt(attempt, None, {}),
+                ),
+                (
+                    InvalidNodeAttempt,
+                    lambda: unopened.finish_node_attempt(attempt, "RUNNING", {}),
+                ),
+                (
+                    TypeError,
+                    lambda: unopened.finish_node_attempt(
+                        attempt, "COMPLETED", UserDict()
+                    ),
+                ),
+                (TypeError, lambda: unopened.latest_completed_node(None)),
+            )
+            for error_type, operation in invalid_calls:
+                with self.subTest(error_type=error_type, operation=operation):
+                    with self.assertRaises(error_type):
+                        operation()
+                    self.assertFalse(path.exists())
+
+    def test_invalid_inputs_do_not_mutate_existing_rows_or_history(self) -> None:
+        self.store.create_run("run", auto_config())
+        attempt = self.store.start_node_attempt("run", WorkflowNode.A)
+        circular: dict[str, object] = {}
+        circular["self"] = circular
+        malformed_attempts = (
+            replace(attempt, id=True),
+            replace(attempt, id=0),
+            replace(attempt, attempt_number=True),
+            replace(attempt, attempt_number=0),
+            replace(attempt, run_id=" "),
+            replace(attempt, node="A"),
+            replace(attempt, status=1),
+            replace(attempt, status="COMPLETED"),
+        )
+        invalid_calls = [
+            lambda: self.store.create_run("new", None),
+            lambda: self.store.create_run(" ", auto_config()),
+            lambda: self.store.get_run(None),
+            lambda: self.store.transition("run", "RUNNING", "reason"),
+            lambda: self.store.transition("run", RunState.RUNNING, ""),
+            lambda: self.store.start_node_attempt("run", "A"),
+            lambda: self.store.finish_node_attempt(attempt, 1, {}),
+            lambda: self.store.finish_node_attempt(attempt, "UNKNOWN", {}),
+            lambda: self.store.finish_node_attempt(attempt, "COMPLETED", []),
+            lambda: self.store.finish_node_attempt(attempt, "COMPLETED", circular),
+            lambda: self.store.latest_completed_node(" "),
+        ]
+        invalid_calls.extend(
+            lambda malformed=malformed: self.store.finish_node_attempt(
+                malformed, "COMPLETED", {}
+            )
+            for malformed in malformed_attempts
+        )
+        before = self.table_counts()
+        for operation in invalid_calls:
+            with self.subTest(operation=operation):
+                with self.assertRaises((TypeError, ValueError)):
+                    operation()
+                self.assertEqual(self.table_counts(), before)
+                self.assertEqual(self.store.get_run("run").state, RunState.CREATED)
+                self.assertEqual(self.history("run"), [])
+        with closing(self.store.connect()) as connection:
+            row = connection.execute(
+                "SELECT status, summary_json, finished_at FROM node_attempts WHERE id = ?",
+                (attempt.id,),
+            ).fetchone()
+        self.assertEqual(tuple(row), ("RUNNING", None, None))
+
     def test_create_persists_exact_immutable_auto_and_manual_configs(self) -> None:
         cases = (("auto", auto_config()), ("manual", manual_config()))
         for run_id, config in cases:
@@ -192,6 +315,65 @@ class AgentStoreTests(unittest.TestCase):
                 self.assertEqual(self.store.get_run(run_id).state, source)
                 self.assertEqual(self.history(run_id), before)
 
+    def test_transition_rejects_zero_row_update_before_writing_history(self) -> None:
+        self.store.create_run("guarded", auto_config())
+        with closing(self.store.connect()) as connection:
+            connection.execute(
+                "CREATE TRIGGER ignore_guarded_transition "
+                "BEFORE UPDATE ON runs WHEN OLD.run_id = 'guarded' "
+                "BEGIN SELECT RAISE(IGNORE); END"
+            )
+            connection.commit()
+
+        with self.assertRaises(InvalidTransition):
+            self.store.transition("guarded", RunState.RUNNING, "race guard")
+
+        self.assertEqual(self.store.get_run("guarded").state, RunState.CREATED)
+        self.assertEqual(self.history("guarded"), [])
+
+    def test_concurrent_terminal_transitions_allow_exactly_one_winner(self) -> None:
+        self.store.create_run("terminal-race", auto_config())
+        self.store.transition("terminal-race", RunState.RUNNING, "start")
+        barrier = threading.Barrier(3)
+        successes = []
+        errors = []
+        lock = threading.Lock()
+
+        def transition(target: RunState) -> None:
+            local_store = AgentStore(self.db_path)
+            barrier.wait(timeout=5)
+            try:
+                result = local_store.transition("terminal-race", target, target.value)
+                with lock:
+                    successes.append(result)
+            except BaseException as error:
+                with lock:
+                    errors.append(error)
+
+        threads = [
+            threading.Thread(target=transition, args=(target,))
+            for target in (RunState.FAILED, RunState.NO_PROGRESS)
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive())
+
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], InvalidTransition)
+        with closing(self.store.connect()) as connection:
+            rows = connection.execute(
+                "SELECT id, from_state, to_state FROM state_transitions "
+                "WHERE run_id = 'terminal-race' ORDER BY id"
+            ).fetchall()
+        self.assertEqual([row["id"] for row in rows], sorted(row["id"] for row in rows))
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[-1]["from_state"], RunState.RUNNING.value)
+        self.assertEqual(rows[-1]["to_state"], successes[0].state.value)
+
     def test_attempt_numbers_are_scoped_and_completed_summary_is_canonical(self) -> None:
         for run_id in ("run-a", "run-b"):
             self.store.create_run(run_id, auto_config())
@@ -233,6 +415,31 @@ class AgentStoreTests(unittest.TestCase):
         with self.assertRaises(RunNotFound):
             self.store.latest_completed_node("missing")
 
+    def test_latest_completed_node_uses_completion_sequence_not_timestamp_or_id(
+        self,
+    ) -> None:
+        self.store.create_run("ordered", auto_config())
+        lower_id = self.store.start_node_attempt("ordered", WorkflowNode.F)
+        higher_id = self.store.start_node_attempt("ordered", WorkflowNode.H)
+
+        self.store.finish_node_attempt(higher_id, "COMPLETED", {"finished": 1})
+        self.store.finish_node_attempt(lower_id, "COMPLETED", {"finished": 2})
+        with closing(self.store.connect()) as connection:
+            connection.execute(
+                "UPDATE node_attempts SET finished_at = 'same' WHERE run_id = 'ordered'"
+            )
+            rows = connection.execute(
+                "SELECT id, completion_sequence FROM node_attempts "
+                "WHERE run_id = 'ordered' ORDER BY id"
+            ).fetchall()
+            connection.commit()
+
+        self.assertEqual(
+            [(row["id"], row["completion_sequence"]) for row in rows],
+            [(lower_id.id, 2), (higher_id.id, 1)],
+        )
+        self.assertEqual(self.store.latest_completed_node("ordered"), WorkflowNode.F)
+
     def test_attempts_cannot_be_finished_twice_or_with_invalid_status(self) -> None:
         self.store.create_run("run", auto_config())
         attempt = self.store.start_node_attempt("run", WorkflowNode.A)
@@ -253,6 +460,47 @@ class AgentStoreTests(unittest.TestCase):
         )
         with self.assertRaises(InvalidNodeAttempt):
             self.store.finish_node_attempt(unknown, "COMPLETED", {})
+
+    def test_concurrent_double_finish_allows_exactly_one_winner(self) -> None:
+        self.store.create_run("finish-race", auto_config())
+        attempt = self.store.start_node_attempt("finish-race", WorkflowNode.A)
+        barrier = threading.Barrier(3)
+        successes = []
+        errors = []
+        lock = threading.Lock()
+
+        def finish(status: str) -> None:
+            local_store = AgentStore(self.db_path)
+            barrier.wait(timeout=5)
+            try:
+                local_store.finish_node_attempt(attempt, status, {"status": status})
+                with lock:
+                    successes.append(status)
+            except BaseException as error:
+                with lock:
+                    errors.append(error)
+
+        threads = [
+            threading.Thread(target=finish, args=(status,))
+            for status in ("COMPLETED", "FAILED")
+        ]
+        for thread in threads:
+            thread.start()
+        barrier.wait(timeout=5)
+        for thread in threads:
+            thread.join(timeout=5)
+            self.assertFalse(thread.is_alive())
+
+        self.assertEqual(len(successes), 1)
+        self.assertEqual(len(errors), 1)
+        self.assertIsInstance(errors[0], InvalidNodeAttempt)
+        with closing(self.store.connect()) as connection:
+            row = connection.execute(
+                "SELECT status, completion_sequence FROM node_attempts WHERE id = ?",
+                (attempt.id,),
+            ).fetchone()
+        self.assertEqual(row["status"], successes[0])
+        self.assertEqual(row["completion_sequence"], 1)
 
     def test_initialize_is_idempotent_reopen_preserves_data_and_pragmas(self) -> None:
         self.assertTrue(self.db_path.parent.is_dir())
@@ -281,6 +529,59 @@ class AgentStoreTests(unittest.TestCase):
                     "(run_id, node, attempt_number, status) VALUES (?, ?, ?, ?)",
                     ("missing", WorkflowNode.A.value, 1, "RUNNING"),
                 )
+
+    def test_unknown_future_schema_version_does_not_alter_tables(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "future.sqlite3"
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute(
+                    "CREATE TABLE schema_version (version INTEGER PRIMARY KEY)"
+                )
+                connection.execute("INSERT INTO schema_version(version) VALUES (2)")
+                connection.execute("CREATE TABLE sentinel (value TEXT)")
+                connection.commit()
+                before = connection.execute(
+                    "SELECT type, name, sql FROM sqlite_master "
+                    "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name"
+                ).fetchall()
+
+            with self.assertRaisesRegex(RuntimeError, "future schema version"):
+                AgentStore(path).initialize()
+
+            with closing(sqlite3.connect(path)) as connection:
+                after = connection.execute(
+                    "SELECT type, name, sql FROM sqlite_master "
+                    "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name"
+                ).fetchall()
+            self.assertEqual(after, before)
+
+    def test_only_unapplied_ordered_migrations_execute(self) -> None:
+        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 1)
+        second = store_module._Migration(
+            version=2,
+            statements=(
+                "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
+                "INSERT INTO migration_probe(value) VALUES (1)",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "migrations.sqlite3"
+            store = AgentStore(
+                path,
+                _migrations=(*store_module._MIGRATIONS, second),
+            )
+            store.initialize()
+            store.initialize()
+
+            with closing(store.connect()) as connection:
+                versions = connection.execute(
+                    "SELECT version FROM schema_version ORDER BY version"
+                ).fetchall()
+                probe = connection.execute(
+                    "SELECT value FROM migration_probe"
+                ).fetchall()
+        self.assertEqual([row["version"] for row in versions], [1, 2])
+        self.assertEqual([row["value"] for row in probe], [1])
 
     def test_separate_store_instances_allocate_unique_attempt_numbers(self) -> None:
         self.store.create_run("concurrent", auto_config())

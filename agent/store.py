@@ -219,6 +219,24 @@ _ALLOWED_TRANSITIONS: dict[RunState, frozenset[RunState]] = {
 
 _FINISHED_ATTEMPT_STATUSES = frozenset({"COMPLETED", "FAILED", "INTERRUPTED"})
 _TERMINAL_TASK_STATUSES = frozenset({"COMPLETED", "FAILED"})
+_TERMINAL_SIMULATION_STATUSES = frozenset(
+    {"COMPLETE", "WARNING", "ERROR", "FAIL", "FAILED", "TIMED_OUT"}
+)
+_SIMULATION_STATUSES = frozenset(
+    {"CREATED", "PENDING", "QUEUED", "RUNNING"}
+) | _TERMINAL_SIMULATION_STATUSES
+_SIMULATION_TRANSITIONS: dict[str, frozenset[str]] = {
+    "CREATED": frozenset(
+        {"PENDING", "QUEUED", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+    ),
+    "PENDING": frozenset(
+        {"QUEUED", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+    ),
+    "QUEUED": frozenset(
+        {"PENDING", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+    ),
+    "RUNNING": _TERMINAL_SIMULATION_STATUSES,
+}
 _NOW_SQL = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"
 _SCHEMA_VERSION_BOOTSTRAP = f"""
     CREATE TABLE IF NOT EXISTS schema_version (
@@ -606,10 +624,35 @@ def _validate_nonblank_string(value: object, name: str) -> None:
 def _validated_json_object(value: object, name: str) -> str:
     if type(value) is not dict:
         raise TypeError(f"{name} must be a dictionary")
+    _validate_json_native(value, name, set())
+    return _canonical_json(value)
+
+
+def _validate_json_native(value: object, name: str, active: set[int]) -> None:
+    if value is None or type(value) in {bool, int, str}:
+        return
+    if type(value) is float:
+        if not isfinite(value):
+            raise ValueError(f"{name} must be finite")
+        return
+    if type(value) not in {list, dict}:
+        raise TypeError(f"{name} must contain only JSON-native values")
+
+    identity = id(value)
+    if identity in active:
+        raise ValueError(f"{name} must not contain circular references")
+    active.add(identity)
     try:
-        return _canonical_json(value)
-    except (TypeError, ValueError, RecursionError) as error:
-        raise ValueError(f"{name} must contain valid JSON values") from error
+        if type(value) is list:
+            for index, item in enumerate(value):
+                _validate_json_native(item, f"{name}[{index}]", active)
+            return
+        for key, item in value.items():
+            if type(key) is not str:
+                raise TypeError(f"{name} keys must be strings")
+            _validate_json_native(item, f"{name}.{key}", active)
+    finally:
+        active.remove(identity)
 
 
 def _validate_optional_nonnegative_integer(value: object, name: str) -> None:
@@ -1170,11 +1213,13 @@ class AgentStore:
         run_id: str,
         node: WorkflowNode,
         name: str,
-        path: str,
+        path: str | Path,
         sha256: str,
         kind: str = "json",
     ) -> ArtifactRecord:
-        self._validate_artifact_values(run_id, node, name, path, sha256, kind)
+        path = self._validate_artifact_values(
+            run_id, node, name, path, sha256, kind
+        )
         with self._transaction() as connection:
             try:
                 cursor = connection.execute(
@@ -1205,11 +1250,13 @@ class AgentStore:
         run_id: str,
         node: WorkflowNode,
         name: str,
-        path: str,
+        path: str | Path,
         sha256: str,
         kind: str = "json",
     ) -> ArtifactRecord:
-        self._validate_artifact_values(run_id, node, name, path, sha256, kind)
+        path = self._validate_artifact_values(
+            run_id, node, name, path, sha256, kind
+        )
         with self._transaction() as connection:
             try:
                 connection.execute(
@@ -1261,9 +1308,9 @@ class AgentStore:
             ).fetchone()
             if existing is not None:
                 projection = (
-                    existing["status"]
-                    if existing["status"] == "COMPLETED"
-                    else "RECOVERY_REQUIRED"
+                    "RECOVERY_REQUIRED"
+                    if existing["status"] == "STARTED"
+                    else existing["status"]
                 )
                 return _command_from_row(existing, status=projection)
             try:
@@ -1394,6 +1441,8 @@ class AgentStore:
         candidate_json = _validated_json_object(candidate, "candidate")
         _validate_nonblank_string(status, "status")
         _validate_optional_string(reason, "reason")
+        status = status.strip()
+        reason = None if reason is None else reason.strip()
         with self._transaction() as connection:
             existing = connection.execute(
                 "SELECT * FROM candidates "
@@ -1401,9 +1450,13 @@ class AgentStore:
                 (run_id, fingerprint),
             ).fetchone()
             if existing is not None:
-                if existing["candidate_json"] != candidate_json:
+                if (
+                    existing["candidate_json"] != candidate_json
+                    or existing["status"] != status
+                    or existing["reason"] != reason
+                ):
                     raise StoreConflict(
-                        f"candidate fingerprint has different payload: {run_id}.{fingerprint}"
+                        f"candidate fingerprint has conflicting record: {run_id}.{fingerprint}"
                     )
                 return _candidate_from_row(existing)
             try:
@@ -1492,10 +1545,49 @@ class AgentStore:
         )
         with self._transaction() as connection:
             self._validate_run_scoped_links(connection, run_id, None, result_artifact_id)
+            existing = connection.execute(
+                "SELECT * FROM simulations WHERE run_id = ? AND simulation_id = ?",
+                (run_id, simulation_id),
+            ).fetchone()
+            if existing is None:
+                raise StoreRecordNotFound(
+                    f"simulation not found: {run_id}.{simulation_id}"
+                )
+            source_status = existing["status"]
+            if source_status in _TERMINAL_SIMULATION_STATUSES:
+                if status != source_status:
+                    raise StoreConflict(
+                        f"simulation is terminal: {run_id}.{simulation_id}.{source_status}"
+                    )
+            elif status not in _SIMULATION_TRANSITIONS[source_status]:
+                raise StoreConflict(
+                    f"invalid simulation transition: {source_status} to {status}"
+                )
+            if alpha_id is not None and existing["alpha_id"] not in {None, alpha_id}:
+                raise StoreConflict(
+                    f"simulation alpha_id is already assigned: {run_id}.{simulation_id}"
+                )
+            if (
+                result_artifact_id is not None
+                and existing["result_artifact_id"] not in {None, result_artifact_id}
+            ):
+                raise StoreConflict(
+                    "simulation result_artifact_id is already assigned: "
+                    f"{run_id}.{simulation_id}"
+                )
+            if (
+                source_status in _TERMINAL_SIMULATION_STATUSES
+                and (alpha_id is None or alpha_id == existing["alpha_id"])
+                and (
+                    result_artifact_id is None
+                    or result_artifact_id == existing["result_artifact_id"]
+                )
+            ):
+                return _simulation_from_row(existing)
             cursor = connection.execute(
                 f"UPDATE simulations SET status = ?, "
-                f"alpha_id = COALESCE(?, alpha_id), "
-                f"result_artifact_id = COALESCE(?, result_artifact_id), "
+                f"alpha_id = COALESCE(alpha_id, ?), "
+                f"result_artifact_id = COALESCE(result_artifact_id, ?), "
                 f"updated_at = ({_NOW_SQL}) "
                 "WHERE run_id = ? AND simulation_id = ?",
                 (status, alpha_id, result_artifact_id, run_id, simulation_id),
@@ -1678,12 +1770,20 @@ class AgentStore:
         _validate_nonblank_string(region, "region")
         if type(delay) is not int:
             raise TypeError("delay must be an integer")
+        if delay not in {0, 1}:
+            raise ValueError("delay must be 0 or 1")
         _validate_nonblank_string(category, "category")
         if field_id is not None:
             _validate_nonblank_string(field_id, "field_id")
         if failure_class is not None:
             _validate_nonblank_string(failure_class, "failure_class")
         _validate_positive_integer(limit, "limit")
+        region = region.strip()
+        category = category.strip()
+        field_id = None if field_id is None else field_id.strip()
+        failure_class = (
+            None if failure_class is None else failure_class.strip()
+        )
         join = (
             " JOIN experience_fields AS filtered_fields "
             "ON filtered_fields.experience_id = e.id "
@@ -1753,6 +1853,8 @@ class AgentStore:
         _validate_nonblank_string(payload["region"], "payload.region")
         if type(payload["delay"]) is not int:
             raise TypeError("payload.delay must be an integer")
+        if payload["delay"] not in {0, 1}:
+            raise ValueError("payload.delay must be 0 or 1")
         _validate_nonblank_string(payload["category"], "payload.category")
         _validate_nonblank_string(
             payload["expression_fingerprint"], "payload.expression_fingerprint"
@@ -1769,6 +1871,7 @@ class AgentStore:
         failure_class = payload.get("failure_class")
         if failure_class is not None:
             _validate_nonblank_string(failure_class, "payload.failure_class")
+            failure_class = failure_class.strip()
         final_decision = payload.get("final_decision")
         if final_decision is not None:
             _validate_nonblank_string(final_decision, "payload.final_decision")
@@ -1782,11 +1885,11 @@ class AgentStore:
                 else _validated_json_object(value, f"payload.{name}")
             )
         return {
-            "region": payload["region"],
+            "region": payload["region"].strip(),
             "delay": payload["delay"],
-            "category": payload["category"],
+            "category": payload["category"].strip(),
             "field_ids": tuple(sorted(normalized_fields)),
-            "expression_fingerprint": payload["expression_fingerprint"],
+            "expression_fingerprint": payload["expression_fingerprint"].strip(),
             "failure_class": failure_class,
             "final_decision": final_decision,
             **json_values,
@@ -1875,6 +1978,8 @@ class AgentStore:
         _validate_run_id(run_id)
         _validate_nonblank_string(simulation_id, "simulation_id")
         _validate_nonblank_string(status, "status")
+        if status not in _SIMULATION_STATUSES:
+            raise ValueError(f"invalid simulation status: {status}")
         if candidate_id is not None:
             _validate_positive_integer(candidate_id, "candidate_id")
         if alpha_id is not None:
@@ -1912,16 +2017,23 @@ class AgentStore:
         path: object,
         sha256: object,
         kind: object,
-    ) -> None:
+    ) -> str:
         _validate_run_id(run_id)
         _validate_workflow_node(node)
         for value, value_name in (
             (name, "name"),
-            (path, "path"),
             (sha256, "sha256"),
             (kind, "kind"),
         ):
             _validate_nonblank_string(value, value_name)
+        if type(path) is str:
+            _validate_nonblank_string(path, "path")
+            return path
+        if isinstance(path, Path):
+            normalized = str(path)
+            _validate_nonblank_string(normalized, "path")
+            return normalized
+        raise TypeError("path must be a string or Path")
 
     def transition(self, run_id: str, target: RunState, reason: str) -> RunRecord:
         _validate_run_id(run_id)

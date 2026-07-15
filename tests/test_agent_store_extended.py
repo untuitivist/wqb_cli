@@ -4,6 +4,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
+from collections import OrderedDict
 from contextlib import closing
 from pathlib import Path
 
@@ -151,6 +152,40 @@ class AgentStoreExtendedTests(unittest.TestCase):
         self.assertEqual(stored_plan, '{"a":{"task":true},"z":1}')
         self.assertEqual(tuple(stored_task), ('{"a":"first","z":"last"}', '{"answer":42}'))
 
+    def test_json_objects_reject_lossy_or_non_native_values(self) -> None:
+        self.create_run()
+        valid = {
+            "none": None,
+            "bool": True,
+            "int": 2,
+            "float": 1.5,
+            "str": "value",
+            "list": [{"nested": False}, 3],
+        }
+        recorded = self.store.record_research_plan("run", 1, "valid-json", valid)
+        self.assertEqual(recorded.plan, valid)
+
+        invalid_values = (
+            {"tuple": (1, 2)},
+            {1: "non-string-key"},
+            {"nested": {1: "non-string-key"}},
+            {"mapping": OrderedDict((("key", "value"),))},
+            {"set": {1, 2}},
+            {"nan": float("nan")},
+            {"infinity": float("inf")},
+        )
+        for version, value in enumerate(invalid_values, start=2):
+            with self.subTest(value=value):
+                with self.assertRaises((TypeError, ValueError)):
+                    self.store.record_research_plan(
+                        "run", version, f"invalid-json-{version}", value
+                    )
+        with closing(self.store.connect()) as connection:
+            count = connection.execute(
+                "SELECT COUNT(*) FROM research_plans WHERE run_id = 'run'"
+            ).fetchone()[0]
+        self.assertEqual(count, 1)
+
     def test_model_calls_validate_usage_and_summarize_by_exact_role(self) -> None:
         self.create_run()
         recorded = self.store.record_model_call(
@@ -237,11 +272,12 @@ class AgentStoreExtendedTests(unittest.TestCase):
 
     def test_artifacts_are_metadata_only_unique_and_upsertable(self) -> None:
         self.create_run()
-        missing_path = str(Path(self.tmp.name) / "does-not-exist" / "result.json")
+        missing_path = Path(self.tmp.name) / "does-not-exist" / "result.json"
         artifact = self.store.add_artifact(
             "run", WorkflowNode.G, "simulation-result", missing_path, "abc123"
         )
-        self.assertFalse(Path(missing_path).exists())
+        self.assertFalse(missing_path.exists())
+        self.assertEqual(artifact.path, str(missing_path))
         self.assertEqual(artifact.kind, "json")
         self.assertEqual(self.store.get_artifact(artifact.id), artifact)
         with self.assertRaises(store_module.StoreConflict):
@@ -253,12 +289,12 @@ class AgentStoreExtendedTests(unittest.TestCase):
             "run",
             WorkflowNode.G,
             "simulation-result",
-            "new/location.bin",
+            Path("new/location.bin"),
             "def456",
             kind="binary",
         )
         self.assertEqual(updated.id, artifact.id)
-        self.assertEqual(updated.path, "new/location.bin")
+        self.assertEqual(updated.path, str(Path("new/location.bin")))
         self.assertEqual(updated.sha256, "def456")
         self.assertEqual(updated.kind, "binary")
         self.assertEqual(self.store.get_artifact(artifact.id), updated)
@@ -351,14 +387,20 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 failed.id, "provider failed", resource_id="replacement"
             )
         failed = self.store.fail_command(
-            failed.id, "provider failed", exit_code=9, resource_id="sim-failed"
+            failed.id,
+            "provider failed",
+            exit_code=9,
+            resource_id="sim-failed",
+            artifact_id=artifact.id,
         )
         self.assertEqual(failed.status, "FAILED")
         projected = self.store.reserve_command(
             "run", WorkflowNode.F, "failed-fingerprint", ["ignored"]
         )
-        self.assertEqual(projected.status, "RECOVERY_REQUIRED")
+        self.assertEqual(projected.status, "FAILED")
         self.assertEqual(projected.error, "provider failed")
+        self.assertEqual(projected.resource_id, "sim-failed")
+        self.assertEqual(projected.artifact_id, artifact.id)
         with closing(self.store.connect()) as connection:
             stored = connection.execute(
                 "SELECT status, error FROM command_ledger WHERE id = ?", (failed.id,)
@@ -373,42 +415,114 @@ class AgentStoreExtendedTests(unittest.TestCase):
     def test_candidates_simulations_and_diagnoses_preserve_domain_identity(self) -> None:
         self.create_run()
         candidate = self.store.add_candidate(
-            "run", "expression-hash", {"expression": "rank(close)", "settings": {"z": 1}}
+            "run",
+            "expression-hash",
+            {"expression": "rank(close)", "settings": {"z": 1}},
+            status=" ACCEPTED ",
+            reason=" initial screen ",
         )
         same = self.store.add_candidate(
-            "run", "expression-hash", {"settings": {"z": 1}, "expression": "rank(close)"}
+            "run",
+            "expression-hash",
+            {"settings": {"z": 1}, "expression": "rank(close)"},
+            status="ACCEPTED",
+            reason="initial screen",
         )
         self.assertEqual(same, candidate)
+        self.assertEqual(candidate.status, "ACCEPTED")
+        self.assertEqual(candidate.reason, "initial screen")
         self.assertEqual(
             self.store.get_candidate_by_fingerprint("run", "expression-hash"),
             candidate,
         )
         with self.assertRaises(store_module.StoreConflict):
             self.store.add_candidate(
-                "run", "expression-hash", {"expression": "rank(volume)"}
+                "run",
+                "expression-hash",
+                {"expression": "rank(volume)"},
+                status="ACCEPTED",
+                reason="initial screen",
+            )
+        with self.assertRaises(store_module.StoreConflict):
+            self.store.add_candidate(
+                "run",
+                "expression-hash",
+                {"settings": {"z": 1}, "expression": "rank(close)"},
+                status="REJECTED",
+                reason="initial screen",
+            )
+        with self.assertRaises(store_module.StoreConflict):
+            self.store.add_candidate(
+                "run",
+                "expression-hash",
+                {"settings": {"z": 1}, "expression": "rank(close)"},
+                status="ACCEPTED",
+                reason="different reason",
             )
 
         artifact = self.store.add_artifact(
             "run", WorkflowNode.G, "sim-result", "sim.json", "sha"
         )
+        other_artifact = self.store.add_artifact(
+            "run", WorkflowNode.G, "other-result", "other.json", "other-sha"
+        )
         simulation = self.store.record_simulation(
-            "run", "simulation-1", "QUEUED", candidate_id=candidate.id
+            "run", "simulation-1", "CREATED", candidate_id=candidate.id
         )
         self.assertEqual(simulation.candidate_id, candidate.id)
-        updated = self.store.update_simulation(
+        pending = self.store.update_simulation("run", "simulation-1", "PENDING")
+        self.assertEqual(pending.status, "PENDING")
+        queued = self.store.update_simulation("run", "simulation-1", "QUEUED")
+        self.assertEqual(queued.status, "QUEUED")
+        running = self.store.update_simulation("run", "simulation-1", "RUNNING")
+        self.assertEqual(running.status, "RUNNING")
+        completed = self.store.update_simulation(
             "run",
             "simulation-1",
-            "COMPLETED",
+            "COMPLETE",
             alpha_id="alpha-1",
             result_artifact_id=artifact.id,
         )
-        self.assertEqual(updated.id, simulation.id)
-        self.assertEqual(updated.status, "COMPLETED")
-        self.assertEqual(updated.alpha_id, "alpha-1")
-        self.assertEqual(updated.result_artifact_id, artifact.id)
-        self.assertEqual(self.store.get_simulation("run", "simulation-1"), updated)
+        self.assertEqual(completed.id, simulation.id)
+        self.assertEqual(completed.status, "COMPLETE")
+        self.assertEqual(completed.alpha_id, "alpha-1")
+        self.assertEqual(completed.result_artifact_id, artifact.id)
+        repeated = self.store.update_simulation(
+            "run",
+            "simulation-1",
+            "COMPLETE",
+            alpha_id="alpha-1",
+            result_artifact_id=artifact.id,
+        )
+        self.assertEqual(repeated, completed)
+        for operation in (
+            lambda: self.store.update_simulation("run", "simulation-1", "RUNNING"),
+            lambda: self.store.update_simulation("run", "simulation-1", "FAILED"),
+            lambda: self.store.update_simulation(
+                "run", "simulation-1", "COMPLETE", alpha_id="alpha-2"
+            ),
+            lambda: self.store.update_simulation(
+                "run",
+                "simulation-1",
+                "COMPLETE",
+                result_artifact_id=other_artifact.id,
+            ),
+        ):
+            with self.assertRaises(store_module.StoreConflict):
+                operation()
+        self.assertEqual(self.store.get_simulation("run", "simulation-1"), completed)
         with self.assertRaises(store_module.StoreConflict):
-            self.store.record_simulation("run", "simulation-1", "QUEUED")
+            self.store.record_simulation("run", "simulation-1", "CREATED")
+        for invalid_status in ("COMPLETED", "complete", "UNKNOWN", " COMPLETE "):
+            with self.assertRaises(ValueError):
+                self.store.record_simulation(
+                    "run", f"invalid-{invalid_status}", invalid_status
+                )
+        for terminal_status in ("WARNING", "ERROR", "FAIL", "FAILED", "TIMED_OUT"):
+            terminal = self.store.record_simulation(
+                "run", f"terminal-{terminal_status}", terminal_status
+            )
+            self.assertEqual(terminal.status, terminal_status)
 
         attempt = self.store.start_node_attempt("run", WorkflowNode.F)
         diagnosis = self.store.record_diagnosis(
@@ -475,12 +589,12 @@ class AgentStoreExtendedTests(unittest.TestCase):
     def test_experience_search_uses_exact_scope_fields_failures_and_limits(self) -> None:
         self.create_run()
         base = {
-            "region": "CHN",
+            "region": " CHN ",
             "delay": 1,
-            "category": "price-volume",
-            "expression_fingerprint": "expr-1",
+            "category": " price-volume ",
+            "expression_fingerprint": " expr-1 ",
             "field_ids": [" volume ", "close", "volume"],
-            "failure_class": "LOW_SHARPE",
+            "failure_class": " LOW_SHARPE ",
             "hypothesis": {"z": 1, "a": "idea"},
             "record": {"round": 1},
             "metrics": {"sharpe": 0.4},
@@ -488,6 +602,10 @@ class AgentStoreExtendedTests(unittest.TestCase):
         }
         first = self.store.add_experience("run", base)
         self.assertEqual(first.field_ids, ("close", "volume"))
+        self.assertEqual(first.region, "CHN")
+        self.assertEqual(first.category, "price-volume")
+        self.assertEqual(first.expression_fingerprint, "expr-1")
+        self.assertEqual(first.failure_class, "LOW_SHARPE")
         self.assertEqual(first.hypothesis, {"a": "idea", "z": 1})
         second = self.store.add_experience(
             "run",
@@ -514,7 +632,19 @@ class AgentStoreExtendedTests(unittest.TestCase):
         )
         self.assertEqual(
             [record.id for record in self.store.search_experience(
+                " CHN ", 1, " price-volume "
+            )],
+            [third.id, second.id, first.id],
+        )
+        self.assertEqual(
+            [record.id for record in self.store.search_experience(
                 "CHN", 1, "price-volume", field_id="volume"
+            )],
+            [third.id, first.id],
+        )
+        self.assertEqual(
+            [record.id for record in self.store.search_experience(
+                "CHN", 1, "price-volume", field_id=" volume "
             )],
             [third.id, first.id],
         )
@@ -529,7 +659,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 "CHN",
                 1,
                 "price-volume",
-                failure_class="LOW_SHARPE",
+                failure_class=" LOW_SHARPE ",
                 limit=1,
             )],
             [third.id],
@@ -558,6 +688,20 @@ class AgentStoreExtendedTests(unittest.TestCase):
             self.store.search_experience("CHN", 1, "price-volume", limit=True)
         with self.assertRaises((TypeError, ValueError)):
             self.store.search_experience("CHN", 1, "price-volume", limit=0)
+        for invalid_delay in (True, -1, 2):
+            with self.assertRaises((TypeError, ValueError)):
+                self.store.add_experience(
+                    "run",
+                    {
+                        **base,
+                        "delay": invalid_delay,
+                        "expression_fingerprint": f"invalid-{invalid_delay}",
+                    },
+                )
+            with self.assertRaises((TypeError, ValueError)):
+                self.store.search_experience(
+                    "CHN", invalid_delay, "price-volume"
+                )
 
     def test_add_experience_rolls_back_parent_when_field_insert_aborts(self) -> None:
         self.create_run()
@@ -622,6 +766,9 @@ class AgentStoreExtendedTests(unittest.TestCase):
                     provider_request_id=" ",
                 ),
                 lambda: unopened.add_artifact("run", "A", "n", "p", "s"),
+                lambda: unopened.add_artifact(
+                    "run", WorkflowNode.A, "n", 1, "s"
+                ),
                 lambda: unopened.add_or_update_artifact(
                     "run", WorkflowNode.A, "n", "", "s"
                 ),
@@ -636,7 +783,9 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 lambda: unopened.add_candidate("run", "hash", []),
                 lambda: unopened.add_candidate("run", "hash", {}, reason=" "),
                 lambda: unopened.get_candidate_by_fingerprint("run", " "),
-                lambda: unopened.record_simulation("run", "sim", "OK", candidate_id=True),
+                lambda: unopened.record_simulation(
+                    "run", "sim", "CREATED", candidate_id=True
+                ),
                 lambda: unopened.update_simulation("run", " ", "OK"),
                 lambda: unopened.get_simulation(None, "sim"),
                 lambda: unopened.record_diagnosis("run", "failure", "F", {}),
@@ -665,7 +814,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
             )
         with self.assertRaises(store_module.StoreRecordNotFound):
             self.store.record_simulation(
-                "run-b", "cross-artifact", "DONE", result_artifact_id=artifact.id
+                "run-b", "cross-artifact", "COMPLETE", result_artifact_id=artifact.id
             )
         command = self.store.reserve_command(
             "run-b", WorkflowNode.G, "cross-artifact-command", ["simulate"]
@@ -705,7 +854,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 connection.execute(
                     "INSERT INTO simulations"
                     "(run_id, simulation_id, status, result_artifact_id) "
-                    "VALUES ('run-b', 'cross-artifact-sql', 'DONE', ?)",
+                    "VALUES ('run-b', 'cross-artifact-sql', 'COMPLETE', ?)",
                     (artifact.id,),
                 )
             with self.assertRaises(sqlite3.IntegrityError):

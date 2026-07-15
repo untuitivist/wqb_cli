@@ -219,7 +219,7 @@ class DiscoveryNodeTests(unittest.TestCase):
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}),
         ]
         options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
 

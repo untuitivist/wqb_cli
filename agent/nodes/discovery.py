@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from math import isfinite
 from typing import Any
@@ -221,7 +222,7 @@ class DiscoveryNodes:
             "pyramids": self._records(self._body(self._payload(pyramids))),
             "pyramid_multipliers": self._records(self._body(self._payload(multipliers))),
             "diversity": self._body(self._payload(diversity)),
-            "data_categories": self._body(self._payload(categories)),
+            "data_categories": self._body_list(self._payload(categories), "data categories"),
             "quarter": {"start": start, "end": end},
         }
 
@@ -358,6 +359,17 @@ class DiscoveryNodes:
         if type(response) is not dict or type(response.get("body")) is not dict:
             raise DiscoveryError("command response body must be an object")
         return response["body"]
+
+    @staticmethod
+    def _body_list(payload: dict[str, Any], label: str) -> list[dict[str, Any]]:
+        response = payload.get("response")
+        body = response.get("body") if type(response) is dict else None
+        if type(body) is not list or any(type(item) is not dict for item in body):
+            raise DiscoveryError(f"{label} response body must be a list of objects")
+        try:
+            return deepcopy(body)
+        except (TypeError, RecursionError):
+            raise DiscoveryError(f"{label} response body cannot be snapshotted") from None
 
     @staticmethod
     def _status(payload: dict[str, Any]) -> int:

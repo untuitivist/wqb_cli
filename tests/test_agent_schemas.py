@@ -6,6 +6,7 @@ from wqb_cli.agent.schemas import (
     MAX_SCHEMA_REPAIR_RETRIES,
     ModelRefusal,
     SchemaViolation,
+    has_open_object_schema,
     parse_json_text,
     schema_for,
     validate_model_output,
@@ -100,6 +101,67 @@ class AgentSchemaTests(unittest.TestCase):
 
         self.assertEqual(second["properties"]["decision"]["minLength"], 1)
 
+    def test_open_object_detection_matches_supported_schema_matrix(self) -> None:
+        for node in (WorkflowNode.B, WorkflowNode.K):
+            with self.subTest(role=ModelRole.PLANNER, node=node):
+                self.assertFalse(
+                    has_open_object_schema(schema_for(ModelRole.PLANNER, node))
+                )
+
+        for node in (
+            WorkflowNode.D,
+            WorkflowNode.F,
+            WorkflowNode.G,
+            WorkflowNode.H,
+            WorkflowNode.I,
+            WorkflowNode.L,
+        ):
+            with self.subTest(role=ModelRole.PLANNER, node=node):
+                self.assertTrue(
+                    has_open_object_schema(schema_for(ModelRole.PLANNER, node))
+                )
+
+        for node in self.SUPPORTED_NODES[ModelRole.OPERATOR]:
+            with self.subTest(role=ModelRole.OPERATOR, node=node):
+                self.assertTrue(
+                    has_open_object_schema(schema_for(ModelRole.OPERATOR, node))
+                )
+
+    def test_open_object_detection_recurses_through_schema_containers(self) -> None:
+        open_schemas = (
+            {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {"nested": {"type": "object"}},
+            },
+            {"type": "array", "items": {"type": "object"}},
+            {"$defs": {"nullable": {"type": ["object", "null"]}}},
+            {"anyOf": [{"type": "string"}, {"type": "object"}]},
+        )
+        for schema in open_schemas:
+            with self.subTest(schema=schema):
+                self.assertTrue(has_open_object_schema(schema))
+
+        closed = {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": ["object", "null"],
+                        "additionalProperties": False,
+                    },
+                }
+            },
+            "anyOf": [{"type": "string"}, {"$ref": "#/$defs/closed"}],
+            "$defs": {
+                "closed": {"type": "object", "additionalProperties": False}
+            },
+        }
+        self.assertFalse(has_open_object_schema(closed))
+        self.assertFalse(has_open_object_schema(object()))
+
     def test_responses_reject_unknown_top_level_properties(self) -> None:
         for role in ModelRole:
             value = self.valid_value(role, WorkflowNode.K)
@@ -107,6 +169,40 @@ class AgentSchemaTests(unittest.TestCase):
             with self.subTest(role=role):
                 with self.assertRaisesRegex(SchemaViolation, "budget"):
                     validate_model_output(role, WorkflowNode.K, value)
+
+    def test_schema_errors_do_not_echo_invalid_instance_values(self) -> None:
+        fake_secret = "sk-fake-secret-value-should-never-be-echoed"
+        invalid_cases = (
+            ("confidence", fake_secret),
+            (
+                "diagnosis",
+                {"failure_class": fake_secret, "next_node": "L"},
+            ),
+        )
+        for field, invalid in invalid_cases:
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)
+            value[field] = invalid
+            with self.subTest(field=field):
+                with self.assertRaises(SchemaViolation) as caught:
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.K, value)
+                message = str(caught.exception)
+                self.assertIn(field, message)
+                self.assertNotIn(fake_secret, message)
+
+    def test_schema_errors_are_bounded_and_keep_safe_field_names(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)
+        fake_secret = "secret-instance-value"
+        for index in range(200):
+            value[f"unexpected_{index:03d}"] = fake_secret
+
+        with self.assertRaises(SchemaViolation) as caught:
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.K, value)
+
+        message = str(caught.exception)
+        self.assertLessEqual(len(message), 1024)
+        self.assertIn("unexpected properties", message)
+        self.assertIn("unexpected_000", message)
+        self.assertNotIn(fake_secret, message)
 
     def test_base_properties_are_required_and_bounded(self) -> None:
         invalid_values = {
@@ -222,8 +318,72 @@ class AgentSchemaTests(unittest.TestCase):
             pass
 
         value = DictSubclass(self.valid_value(ModelRole.PLANNER, WorkflowNode.K))
-        with self.assertRaisesRegex(TypeError, "value"):
+        with self.assertRaisesRegex(SchemaViolation, "JSON object"):
             validate_model_output(ModelRole.PLANNER, WorkflowNode.K, value)
+
+    def test_validate_model_output_rejects_non_json_native_nested_values(self) -> None:
+        class DictSubclass(dict[str, object]):
+            pass
+
+        class ListSubclass(list[object]):
+            pass
+
+        invalid_values = (
+            object(),
+            ("tuple",),
+            {"set"},
+            1 + 2j,
+            float("nan"),
+            float("inf"),
+            float("-inf"),
+            DictSubclass(),
+            ListSubclass(),
+        )
+        for invalid in invalid_values:
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+            value["candidate_plan"] = {"nested": invalid}
+            with self.subTest(invalid_type=type(invalid).__name__):
+                with self.assertRaisesRegex(SchemaViolation, "candidate_plan"):
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+    def test_validate_model_output_rejects_non_string_object_keys(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+        value["candidate_plan"] = {1: "not-json"}
+
+        with self.assertRaisesRegex(SchemaViolation, "candidate_plan"):
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+    def test_validate_model_output_rejects_circular_containers(self) -> None:
+        circular_dict: dict[str, object] = {}
+        circular_dict["self"] = circular_dict
+        circular_list: list[object] = []
+        circular_list.append(circular_list)
+
+        for circular in (circular_dict, circular_list):
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+            value["candidate_plan"] = {"nested": circular}
+            with self.subTest(container_type=type(circular).__name__):
+                with self.assertRaisesRegex(SchemaViolation, "circular"):
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+    def test_validate_model_output_returns_a_deep_snapshot(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+        value["candidate_plan"] = {
+            "candidates": [{"expression": "rank(close)"}]
+        }
+
+        validated = validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+        value["decision"] = "changed"
+        value["evidence_refs"].append("artifact:later")  # type: ignore[union-attr]
+        value["candidate_plan"]["candidates"][0]["expression"] = "changed"  # type: ignore[index]
+
+        self.assertIsNot(validated, value)
+        self.assertEqual(validated["decision"], "decide")
+        self.assertEqual(validated["evidence_refs"], ["artifact:a"])
+        self.assertEqual(
+            validated["candidate_plan"],
+            {"candidates": [{"expression": "rank(close)"}]},
+        )
 
     def test_planner_k_accepts_only_bounded_route(self) -> None:
         value = {

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from math import isfinite
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from jsonschema.exceptions import ValidationError
 
 from .types import ModelRole, WorkflowNode
 
@@ -19,6 +21,11 @@ class SchemaViolation(ValueError):
 
 
 MAX_SCHEMA_REPAIR_RETRIES = 2
+
+_MAX_VALIDATION_ERRORS = 8
+_MAX_VALIDATION_ERROR_LENGTH = 1024
+_MAX_ERROR_FIELD_NAMES = 8
+_MAX_ERROR_FIELD_NAME_LENGTH = 64
 
 
 BASE_PROPERTIES: dict[str, dict[str, Any]] = {
@@ -102,6 +109,38 @@ _SUPPORTED_NODES = {
 }
 
 
+def has_open_object_schema(schema: object) -> bool:
+    """Return whether any object node permits unspecified properties.
+
+    This is a narrow routing signal, not a complete provider compatibility check.
+    """
+
+    visited: set[int] = set()
+
+    def visit(value: object) -> bool:
+        if type(value) is dict:
+            identity = id(value)
+            if identity in visited:
+                return False
+            visited.add(identity)
+            schema_type = value.get("type")
+            declares_object = schema_type == "object" or (
+                type(schema_type) is list and "object" in schema_type
+            )
+            if declares_object and value.get("additionalProperties") is not False:
+                return True
+            return any(visit(child) for child in value.values())
+        if type(value) is list:
+            identity = id(value)
+            if identity in visited:
+                return False
+            visited.add(identity)
+            return any(visit(child) for child in value)
+        return False
+
+    return visit(schema)
+
+
 def parse_json_text(text: str, *, refusal: str | None = None) -> dict[str, Any]:
     if type(text) is not str:
         raise TypeError("text must be a string")
@@ -152,27 +191,121 @@ def schema_for(role: ModelRole, node: WorkflowNode) -> dict[str, Any]:
     }
 
 
+def _validate_json_native(value: object, path: str, active: set[int]) -> None:
+    value_type = type(value)
+    if value is None or value_type in {str, bool, int}:
+        return
+    if value_type is float:
+        if not isfinite(value):
+            raise SchemaViolation(f"{path}: number must be finite")
+        return
+    if value_type is dict:
+        identity = id(value)
+        if identity in active:
+            raise SchemaViolation(f"{path}: circular JSON container")
+        active.add(identity)
+        try:
+            for key, child in value.items():
+                if type(key) is not str:
+                    raise SchemaViolation(f"{path}: object keys must be strings")
+                _validate_json_native(child, f"{path}.{key}", active)
+        finally:
+            active.remove(identity)
+        return
+    if value_type is list:
+        identity = id(value)
+        if identity in active:
+            raise SchemaViolation(f"{path}: circular JSON container")
+        active.add(identity)
+        try:
+            for index, child in enumerate(value):
+                _validate_json_native(child, f"{path}[{index}]", active)
+        finally:
+            active.remove(identity)
+        return
+    raise SchemaViolation(f"{path}: value is not JSON-native")
+
+
+def _safe_field_name(value: str) -> str:
+    sanitized = "".join(
+        character if character.isalnum() or character in "_.-" else "?"
+        for character in value
+    )
+    if len(sanitized) > _MAX_ERROR_FIELD_NAME_LENGTH:
+        return sanitized[: _MAX_ERROR_FIELD_NAME_LENGTH - 3] + "..."
+    return sanitized
+
+
+def _validation_path(error: ValidationError) -> str:
+    path = "$"
+    for part in error.absolute_path:
+        if type(part) is int:
+            path += f"[{part}]"
+        else:
+            path += "." + _safe_field_name(part)
+    return path
+
+
+def _unexpected_property_names(error: ValidationError) -> list[str]:
+    properties = set(error.schema.get("properties", {}))
+    patterns = tuple(error.schema.get("patternProperties", {}))
+    return sorted(
+        key
+        for key in error.instance
+        if key not in properties
+        and not any(re.search(pattern, key) for pattern in patterns)
+    )
+
+
+def _limited_field_list(names: list[str]) -> str:
+    shown = [_safe_field_name(name) for name in names[:_MAX_ERROR_FIELD_NAMES]]
+    if len(names) > len(shown):
+        shown.append("...")
+    return ", ".join(shown)
+
+
+def _format_validation_error(error: ValidationError) -> str:
+    path = _validation_path(error)
+    if error.validator == "required":
+        missing = [
+            name for name in error.validator_value if name not in error.instance
+        ]
+        return f"{path}: missing required properties: {_limited_field_list(missing)}"
+    if error.validator == "additionalProperties":
+        unexpected = _unexpected_property_names(error)
+        return f"{path}: unexpected properties: {_limited_field_list(unexpected)}"
+    validator = _safe_field_name(str(error.validator))
+    return f"{path}: failed {validator} validation"
+
+
 def validate_model_output(
     role: ModelRole, node: WorkflowNode, value: object
 ) -> dict[str, Any]:
     schema = schema_for(role, node)
     if type(value) is not dict:
-        raise TypeError("value must be a dict")
+        raise SchemaViolation("$: model output must be an exact JSON object")
+    _validate_json_native(value, "$", set())
+    snapshot: dict[str, Any] = deepcopy(value)
     errors = sorted(
-        Draft202012Validator(schema).iter_errors(value),
-        key=lambda error: (list(error.absolute_path), error.message),
+        Draft202012Validator(schema).iter_errors(snapshot),
+        key=lambda error: (
+            tuple(str(part) for part in error.absolute_path),
+            str(error.validator),
+        ),
     )
     if errors:
-        details = []
-        for error in errors:
-            path = ".".join(str(part) for part in error.absolute_path) or "$"
-            details.append(f"{path}: {error.message}")
-        raise SchemaViolation("; ".join(details))
+        details = [
+            _format_validation_error(error)
+            for error in errors[:_MAX_VALIDATION_ERRORS]
+        ]
+        if len(errors) > len(details):
+            details.append("additional validation errors omitted")
+        raise SchemaViolation("; ".join(details)[:_MAX_VALIDATION_ERROR_LENGTH])
 
-    if not isfinite(value["confidence"]):
+    if not isfinite(snapshot["confidence"]):
         raise SchemaViolation("confidence: must be a finite number")
 
-    result = value
+    result = snapshot
     if role is ModelRole.PLANNER and node is WorkflowNode.K:
         diagnosis = result["diagnosis"]
         expected = DIAGNOSIS_ROUTES[diagnosis["failure_class"]]

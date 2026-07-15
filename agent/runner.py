@@ -450,7 +450,7 @@ class AgentRunner:
             recovery = ("alpha", "get", resource_id)
             self.policy.require_command(node, recovery)
             return recovery
-        return argv
+        raise RunnerError("command recovery is not explicitly supported")
 
     @staticmethod
     def _parse_stdout(stdout: str) -> dict[str, Any]:

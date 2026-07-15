@@ -15,6 +15,8 @@ from wqb_cli.agent.artifacts import (
     ArtifactError,
     ArtifactWriter,
     NODE_DIRECTORIES,
+    _validate_name,
+    _validate_run_id,
     redact_argv,
     redact_text,
 )
@@ -356,6 +358,95 @@ class ArtifactWriterTests(unittest.TestCase):
             ),
         )
 
+    def test_markdown_redacts_quoted_json_and_code_key_values(self) -> None:
+        secrets = (
+            "markdown-json-secret",
+            "markdown-single-secret",
+            "markdown-code-secret",
+            "markdown-auth-secret",
+        )
+        text = (
+            '{"api_key":"markdown-json-secret","ordinary":"visible"}\n'
+            "{'password': 'markdown-single-secret'}\n"
+            "`\"client_secret\" = \"markdown-code-secret\"`\n"
+            '"Authorization": "Bearer markdown-auth-secret"\n'
+        )
+        artifact = self.writer.write_markdown(
+            "run", WorkflowNode.A, "quoted.md", text
+        )
+        rendered = Path(artifact.path).read_text(encoding="utf-8")
+        for secret in secrets:
+            self.assertNotIn(secret, rendered)
+        self.assertIn("visible", rendered)
+
+    def test_append_jsonl_rewrites_existing_lines_through_strict_redaction(self) -> None:
+        target = self.root / "run" / "01_A" / "commands.jsonl"
+        target.parent.mkdir(parents=True)
+        target.write_text(
+            '{"z":1,"api_key":"old-jsonl-secret"}\n'
+            '{"stderr":"{\\"api_key\\":\\"old-nested-secret\\"}"}\n\n',
+            encoding="utf-8",
+        )
+        store = Mock()
+
+        def register(
+            run_id: str,
+            node: WorkflowNode,
+            name: str,
+            path: Path,
+            sha256: str,
+            kind: str,
+        ) -> SimpleNamespace:
+            return SimpleNamespace(
+                id=1,
+                run_id=run_id,
+                node=node,
+                name=name,
+                path=str(path),
+                sha256=sha256,
+                kind=kind,
+            )
+
+        store.add_or_update_artifact.side_effect = register
+        writer = self.writer.with_store(store)
+        writer.append_jsonl(
+            "run", WorkflowNode.A, "commands.jsonl", {"b": 2, "a": 1}
+        )
+        rendered = target.read_text(encoding="utf-8")
+        self.assertNotIn("old-jsonl-secret", rendered)
+        self.assertNotIn("old-nested-secret", rendered)
+        self.assertEqual(
+            rendered.splitlines(),
+            [
+                '{"api_key":"[REDACTED]","z":1}',
+                '{"stderr":"{\\"api_key\\":\\"[REDACTED]\\"}"}',
+                '{"a":1,"b":2}',
+            ],
+        )
+        store.add_or_update_artifact.assert_called_once()
+
+    def test_append_jsonl_rejects_invalid_existing_lines_without_writing_or_registering(self) -> None:
+        invalid_values = (
+            "not-json\n",
+            "[]\n",
+            '{"value":NaN}\n',
+            '{"a":1,"a":2}\n',
+        )
+        for index, existing in enumerate(invalid_values):
+            with self.subTest(existing=existing):
+                name = f"invalid-{index}.jsonl"
+                target = self.root / "run" / "01_A" / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(existing, encoding="utf-8")
+                store = Mock()
+                writer = self.writer.with_store(store)
+                with self.assertRaises(ArtifactError):
+                    writer.append_jsonl(
+                        "run", WorkflowNode.A, name, {"ok": True}
+                    )
+                self.assertEqual(target.read_text(encoding="utf-8"), existing)
+                store.add_or_update_artifact.assert_not_called()
+
     def test_registered_hash_detects_tampering_and_forged_in_root_path(self) -> None:
         artifact = self.writer.write_json("run", WorkflowNode.A, "result.json", {"ok": True})
         self.assertEqual(self.writer.read_json(artifact), {"ok": True})
@@ -479,6 +570,52 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
             )
         self.store.reserve_command.assert_not_called()
         run.assert_not_called()
+
+    def test_portable_windows_segments_fail_before_reservation(self) -> None:
+        invalid_segments = (
+            "CON",
+            "con.txt",
+            "PrN.JSON",
+            "AUX",
+            "NUL.data",
+            "CLOCK$",
+            "COM1",
+            "com9.log",
+            "LPT1",
+            "Lpt9.txt",
+            "bad.",
+            "bad ",
+            "bad:name",
+            "bad<name",
+            "bad>name",
+            'bad"name',
+            "bad|name",
+            "bad?name",
+            "bad*name",
+            "bad\x01name",
+            "bad\x1fname",
+            "bad\x7fname",
+        )
+        for segment in invalid_segments:
+            with self.subTest(run_id=segment), self.assertRaises(ArtifactError):
+                _validate_run_id(segment)
+            with self.subTest(name=segment), self.assertRaises(ArtifactError):
+                _validate_name(f"nested/{segment}/result.json")
+        with patch("wqb_cli.agent.runner.subprocess.run") as process:
+            for run_id, name in (
+                ("CON", "result.json"),
+                ("run", "nested/CON/result.json"),
+            ):
+                with self.subTest(run_id=run_id, name=name):
+                    with self.assertRaises(ArtifactError):
+                        self.runner.run(
+                            run_id,
+                            WorkflowNode.J,
+                            ("sim", "get", "SIM1"),
+                            name,
+                        )
+            process.assert_not_called()
+        self.store.reserve_command.assert_not_called()
 
     def test_file_fingerprint_uses_content_not_location(self) -> None:
         first = self.root / "first.json"
@@ -645,6 +782,42 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
         with patch("wqb_cli.agent.runner.subprocess.run") as run, self.assertRaises(RunnerError):
             self.runner.run("run", WorkflowNode.M, ("alpha", "submit", "A1"), "x.json")
         run.assert_not_called()
+
+    def test_unknown_recovery_command_is_never_replayed(self) -> None:
+        policy = AgentPolicy(
+            Budget(), {WorkflowNode.J: (("custom", "write"),)}
+        )
+        runner = AgentRunner(self.store, policy, ArtifactWriter(self.root / "recovery"))
+        self.store.reserve_command.return_value = command_record(
+            status="RECOVERY_REQUIRED", resource_id="RESOURCE1"
+        )
+        with patch("wqb_cli.agent.runner.subprocess.run") as process:
+            with self.assertRaises(RunnerError):
+                runner.run(
+                    "run",
+                    WorkflowNode.J,
+                    ("custom", "write", "RESOURCE1"),
+                    "result.json",
+                )
+        process.assert_not_called()
+
+    def test_quoted_secret_stderr_is_redacted_from_command_log(self) -> None:
+        self.store.reserve_command.return_value = command_record(id=88)
+        completed = subprocess.CompletedProcess(
+            [], 3, "{}", '{"api_key":"stderr-json-secret"}'
+        )
+        with patch("wqb_cli.agent.runner.subprocess.run", return_value=completed):
+            with self.assertRaises(RunnerError):
+                self.runner.run(
+                    "stderr-run",
+                    WorkflowNode.J,
+                    ("sim", "get", "SIM1"),
+                    "result.json",
+                )
+        log = self.root / "stderr-run" / "10_J" / "commands.jsonl"
+        self.assertNotIn(
+            "stderr-json-secret", log.read_text(encoding="utf-8")
+        )
 
     def test_external_allowlist_and_configured_entrypoint(self) -> None:
         executable = self.root / "arxiv-tool.exe"

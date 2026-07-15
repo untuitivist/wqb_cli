@@ -52,9 +52,35 @@ class WrittenArtifact:
     kind: str
 
 
+_WINDOWS_INVALID_CHARACTERS = frozenset('<>:"|?*')
+_WINDOWS_RESERVED_BASES = frozenset(
+    {"CON", "PRN", "AUX", "NUL", "CLOCK$"}
+    | {f"COM{number}" for number in range(1, 10)}
+    | {f"LPT{number}" for number in range(1, 10)}
+)
+
+
 def _is_link(path: Path) -> bool:
     is_junction = getattr(path, "is_junction", None)
     return path.is_symlink() or (callable(is_junction) and is_junction())
+
+
+def _validate_portable_segment(segment: str) -> None:
+    invalid_character = any(
+        ord(character) <= 31
+        or ord(character) == 127
+        or character in _WINDOWS_INVALID_CHARACTERS
+        for character in segment
+    )
+    base = segment.split(".", 1)[0].rstrip(" .").upper()
+    if (
+        not segment
+        or segment in {".", ".."}
+        or segment.endswith((".", " "))
+        or invalid_character
+        or base in _WINDOWS_RESERVED_BASES
+    ):
+        raise ArtifactError("path contains a non-portable segment")
 
 
 def _validate_run_id(run_id: str) -> None:
@@ -71,6 +97,7 @@ def _validate_run_id(run_id: str) -> None:
         or PurePosixPath(run_id).is_absolute()
     ):
         raise ArtifactError("run_id must be one safe path segment")
+    _validate_portable_segment(run_id)
 
 
 def _validate_name(name: str) -> None:
@@ -94,6 +121,8 @@ def _validate_name(name: str) -> None:
         or any(part in {"", ".", ".."} for part in posix.parts)
     ):
         raise ArtifactError("artifact name must remain below its node directory")
+    for segment in re.split(r"[\\/]", name):
+        _validate_portable_segment(segment)
 
 
 def _redacted_json(value: Any) -> Any:
@@ -155,7 +184,7 @@ def _redacted_json(value: Any) -> Any:
             characters += len(item)
             if characters > MAX_JSON_CHARS:
                 raise ArtifactError("artifact JSON exceeds its character limit")
-            return item
+            return redact_text(item)
         raise ArtifactError("artifact data must contain only JSON-native values")
 
     return visit(value, 0)
@@ -171,6 +200,11 @@ _TEXT_SECRET = re.compile(
     r"(?im)(?P<prefix>(?:authorization|cookie|api[_-]?key|password|secret|token)"
     r"\s*(?::|=)\s*)(?P<value>[^\r\n]+)"
 )
+_QUOTED_OR_UNQUOTED_PAIR = re.compile(
+    r"(?i)(?P<prefix>(?P<key_quote>[\"']?)(?P<key>[a-z0-9_.-]+)"
+    r"(?P=key_quote)\s*(?::|=)\s*)"
+    r"(?P<value>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s,;}`]+)"
+)
 _CLI_PAIR = re.compile(
     r"(?i)(?P<flag>--[a-z0-9][a-z0-9_-]*)"
     r"(?:(?P<equals>=)(?P<inline>[^\s]+)|\s+(?P<next>[^\s]+))"
@@ -180,7 +214,39 @@ _CLI_PAIR = re.compile(
 def redact_text(value: str) -> str:
     if type(value) is not str:
         raise TypeError("text must be a string")
-    result = _TEXT_SECRET.sub(lambda match: match.group("prefix") + "[REDACTED]", value)
+
+    lines: list[str] = []
+    for line in value.splitlines(keepends=True):
+        ending = ""
+        content = line
+        if content.endswith("\r\n"):
+            content, ending = content[:-2], "\r\n"
+        elif content.endswith(("\n", "\r")):
+            content, ending = content[:-1], content[-1]
+        stripped = content.strip()
+        if stripped.startswith("{") and stripped.endswith("}"):
+            try:
+                parsed = _strict_json_object(stripped)
+            except ArtifactError:
+                pass
+            else:
+                prefix = content[: len(content) - len(content.lstrip())]
+                content = prefix + _canonical_json_object(_redacted_json(parsed))
+        lines.append(content + ending)
+    result = "".join(lines)
+    result = _TEXT_SECRET.sub(
+        lambda match: match.group("prefix") + "[REDACTED]", result
+    )
+
+    def pair(match: re.Match[str]) -> str:
+        if not _is_secret_key(match.group("key")):
+            return match.group(0)
+        raw_value = match.group("value")
+        quote = raw_value[0] if raw_value[:1] in {"\"", "'"} else ""
+        replacement = f"{quote}[REDACTED]{quote}" if quote else "[REDACTED]"
+        return match.group("prefix") + replacement
+
+    result = _QUOTED_OR_UNQUOTED_PAIR.sub(pair, result)
 
     def cli(match: re.Match[str]) -> str:
         if not _is_secret_key(match.group("flag").lstrip("-")):
@@ -189,6 +255,40 @@ def redact_text(value: str) -> str:
         return match.group("flag") + separator + "[REDACTED]"
 
     return _CLI_PAIR.sub(cli, result)
+
+
+def _strict_json_object(text: str) -> dict[str, Any]:
+    def object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, child in pairs:
+            if key in result:
+                raise ValueError("duplicate object key")
+            result[key] = child
+        return result
+
+    try:
+        value = json.loads(
+            text,
+            object_pairs_hook=object_pairs,
+            parse_constant=lambda constant: (_ for _ in ()).throw(
+                ValueError("non-finite number")
+            ),
+        )
+    except (json.JSONDecodeError, ValueError):
+        raise ArtifactError("text is not a strict JSON object") from None
+    if type(value) is not dict:
+        raise ArtifactError("text is not a strict JSON object")
+    return value
+
+
+def _canonical_json_object(value: dict[str, Any]) -> str:
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
 
 
 def redact_argv(argv: tuple[str, ...]) -> tuple[str, ...]:
@@ -531,22 +631,23 @@ class ArtifactWriter:
     ) -> Any:
         if type(value) is not dict:
             raise ArtifactError("JSONL records must be objects")
-        rendered = json.dumps(
-            _redacted_json(value),
-            ensure_ascii=False,
-            allow_nan=False,
-            sort_keys=True,
-            separators=(",", ":"),
-        )
+        rendered = _canonical_json_object(_redacted_json(value))
         with self._lock:
             target = self._target(run_id, node, name)
             try:
                 existing = target.read_text(encoding="utf-8") if target.exists() else ""
             except (OSError, UnicodeError):
                 raise ArtifactError("existing JSONL artifact cannot be read") from None
-            if existing and not existing.endswith("\n"):
-                raise ArtifactError("existing JSONL artifact is malformed")
-            return self._write(run_id, node, name, existing + rendered + "\n", "jsonl")
+            records: list[str] = []
+            for line in existing.splitlines():
+                if not line.strip():
+                    continue
+                parsed = _strict_json_object(line)
+                records.append(_canonical_json_object(_redacted_json(parsed)))
+            records.append(rendered)
+            return self._write(
+                run_id, node, name, "\n".join(records) + "\n", "jsonl"
+            )
 
     def write_markdown(
         self, run_id: str, node: WorkflowNode, name: str, value: str

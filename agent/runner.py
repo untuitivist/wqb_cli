@@ -503,7 +503,22 @@ class AgentRunner:
                 )
             raise
 
-        resource_id = self._resource_id(argv, payload)
+        try:
+            resource_id = self._resource_id(argv, payload)
+        except RunnerError:
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "RESOURCE_CONFLICT",
+                    completed.returncode,
+                    completed.stderr,
+                    bound_resource_id,
+                )
+            raise
         if resource_id is not None and bound_resource_id is None:
             try:
                 self.store.mark_command_resource(command.id, resource_id)
@@ -686,16 +701,24 @@ class AgentRunner:
 
     @staticmethod
     def _resource_id(argv: tuple[str, ...], payload: dict[str, Any]) -> str | None:
+        if argv[:2] not in {("sim", "create"), ("alpha", "submit")}:
+            return None
+        for field in ("alpha_id", "simulation_id", "id"):
+            if field not in payload:
+                continue
+            value = payload[field]
+            if type(value) is not str or RESOURCE_ID.fullmatch(value) is None:
+                raise RunnerError(
+                    "command resource conflicts with its ledger binding: invalid field"
+                )
         value: Any = None
         if argv[:2] == ("sim", "create"):
-            value = payload.get("simulation_id")
+            value = payload.get("simulation_id", payload.get("id"))
         elif argv[:2] == ("alpha", "submit"):
             if "alpha_id" in payload:
                 value = payload["alpha_id"]
-                if type(value) is not str or RESOURCE_ID.fullmatch(value) is None:
-                    raise RunnerError(
-                        "command resource conflicts with its ledger binding"
-                    )
+            elif "id" in payload:
+                value = payload["id"]
             else:
                 value = argv[2] if len(argv) > 2 else None
         return value if type(value) is str and RESOURCE_ID.fullmatch(value) else None

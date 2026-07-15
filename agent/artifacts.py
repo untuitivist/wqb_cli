@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import io
 import json
 import os
 import re
 import secrets
 import stat
 import threading
+import tokenize
 from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
@@ -225,8 +227,7 @@ def redact_text(value: str) -> str:
     if type(value) is not str:
         raise TypeError("text must be a string")
 
-    result = _redact_embedded_json_objects(value)
-    result = _redact_embedded_literal_objects(result)
+    result = _redact_embedded_objects(value)
     result = _TEXT_SECRET.sub(
         lambda match: match.group("prefix") + "[REDACTED]", result
     )
@@ -267,30 +268,6 @@ def _strict_json_decoder() -> json.JSONDecoder:
     )
 
 
-def _redact_embedded_json_objects(value: str) -> str:
-    decoder = _strict_json_decoder()
-    output: list[str] = []
-    cursor = 0
-    while True:
-        start = value.find("{", cursor)
-        if start < 0:
-            output.append(value[cursor:])
-            return "".join(output)
-        output.append(value[cursor:start])
-        try:
-            parsed, end = decoder.raw_decode(value, start)
-        except (json.JSONDecodeError, ValueError):
-            output.append("{")
-            cursor = start + 1
-            continue
-        if type(parsed) is not dict:
-            output.append("{")
-            cursor = start + 1
-            continue
-        output.append(_canonical_json_object(_redacted_json(parsed)))
-        cursor = end
-
-
 def _literal_object_end(value: str, start: int) -> int | None:
     depth = 0
     quote: str | None = None
@@ -318,7 +295,71 @@ def _literal_object_end(value: str, start: int) -> int | None:
     return None
 
 
-def _redact_embedded_literal_objects(value: str) -> str:
+def _pair_string_value(raw: str) -> str | None:
+    if raw[:1] in {"'", '"'} and raw[-1:] == raw[:1]:
+        try:
+            value = ast.literal_eval(raw)
+        except Exception:
+            return None
+        return value if type(value) is str else None
+    return raw
+
+
+def _has_dynamic_secret_shape(candidate: str) -> bool:
+    descriptors: list[str] = []
+    has_value = False
+    for match in _QUOTED_OR_UNQUOTED_PAIR.finditer(candidate):
+        value = _pair_string_value(match.group("value"))
+        if value is None:
+            continue
+        key = match.group("key").strip().casefold()
+        if key in {"name", "type", "key"}:
+            descriptors.append(value)
+        elif key == "value":
+            has_value = True
+    if has_value and any(_is_secret_key(value) for value in descriptors):
+        return True
+
+    literal_strings: list[str] = []
+    try:
+        tokens = tokenize.generate_tokens(io.StringIO(candidate).readline)
+        for token in tokens:
+            if token.type != tokenize.STRING:
+                continue
+            try:
+                value = ast.literal_eval(token.string)
+            except Exception:
+                continue
+            if type(value) is str:
+                literal_strings.append(value)
+    except (IndentationError, SyntaxError, tokenize.TokenError):
+        pass
+    normalized = {value.strip().casefold() for value in literal_strings}
+    return (
+        bool(normalized & {"name", "type", "key"})
+        and "value" in normalized
+        and any(_is_secret_key(value) for value in literal_strings)
+    )
+
+
+def _literal_eval_without_duplicate_keys(candidate: str) -> Any:
+    tree = ast.parse(candidate, mode="eval")
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Dict):
+            continue
+        keys: set[str] = set()
+        for key_node in node.keys:
+            if not isinstance(key_node, ast.Constant) or type(key_node.value) is not str:
+                continue
+            if key_node.value in keys:
+                raise ValueError("duplicate literal object key")
+            keys.add(key_node.value)
+    return ast.literal_eval(tree)
+
+
+def _redact_embedded_objects(value: str) -> str:
+    if len(value) > MAX_JSON_CHARS:
+        return "[REDACTED]"
     output: list[str] = []
     cursor = 0
     while True:
@@ -329,22 +370,28 @@ def _redact_embedded_literal_objects(value: str) -> str:
         output.append(value[cursor:start])
         end = _literal_object_end(value, start)
         if end is None:
-            output.append("[REDACTED]")
-            cursor = len(value)
-            continue
-        if end - start > MAX_JSON_CHARS:
-            output.append("[REDACTED]")
-            cursor = end
-            continue
+            candidate = value[start:]
+            output.append(
+                "[REDACTED]" if _has_dynamic_secret_shape(candidate) else candidate
+            )
+            return "".join(output)
+        candidate = value[start:end]
         try:
-            parsed = ast.literal_eval(value[start:end])
-        except Exception:
-            output.append("[REDACTED]")
-            cursor = end
-            continue
+            parsed = _strict_json_object(candidate)
+        except ArtifactError:
+            try:
+                parsed = _literal_eval_without_duplicate_keys(candidate)
+            except Exception:
+                output.append(
+                    "[REDACTED]"
+                    if _has_dynamic_secret_shape(candidate)
+                    else candidate
+                )
+                cursor = end
+                continue
         if type(parsed) is not dict:
-            output.append("{")
-            cursor = start + 1
+            output.append(candidate)
+            cursor = end
             continue
         try:
             redacted = _redacted_json(parsed)

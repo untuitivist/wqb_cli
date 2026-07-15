@@ -533,16 +533,63 @@ class ArtifactWriterTests(unittest.TestCase):
 
     def test_malformed_or_unclosed_literal_objects_fail_closed(self) -> None:
         malformed = "{'name':'api_key','value':'PARSE-LEAK', broken}"
+        duplicate = (
+            "{'name':'api_key','name':'ordinary','value':'DUPLICATE-LEAK'}"
+        )
+        nested_duplicate = (
+            "{'child': {'name':'api_key','name':'ordinary',"
+            "'value':'NESTED-LEAK'}}"
+        )
+        spaced = "{' name ':'api_key',' value ':'SPACE-LEAK', broken}"
+        escaped = "{'na\\x6de':'api_key','value':'ESCAPE-LEAK', broken}"
         unclosed = "{" * 500 + "'name':'api_key','value':'UNCLOSED-LEAK'"
 
         malformed_redacted = redact_text(malformed)
+        duplicate_redacted = redact_text(duplicate)
+        nested_redacted = redact_text(nested_duplicate)
+        spaced_redacted = redact_text(spaced)
+        escaped_redacted = redact_text(escaped)
         with patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 64):
             unclosed_redacted = redact_text(unclosed)
 
         self.assertNotIn("PARSE-LEAK", malformed_redacted)
+        self.assertNotIn("DUPLICATE-LEAK", duplicate_redacted)
+        self.assertNotIn("NESTED-LEAK", nested_redacted)
+        self.assertNotIn("SPACE-LEAK", spaced_redacted)
+        self.assertNotIn("ESCAPE-LEAK", escaped_redacted)
         self.assertNotIn("UNCLOSED-LEAK", unclosed_redacted)
         self.assertEqual(malformed_redacted, "[REDACTED]")
+        self.assertEqual(duplicate_redacted, "[REDACTED]")
+        self.assertEqual(nested_redacted, "[REDACTED]")
+        self.assertEqual(spaced_redacted, "[REDACTED]")
+        self.assertEqual(escaped_redacted, "[REDACTED]")
         self.assertEqual(unclosed_redacted, "[REDACTED]")
+
+    def test_embedded_object_scan_is_globally_bounded_and_single_pass(self) -> None:
+        oversized = "{" * 1_000 + "UNCLOSED-LEAK"
+        with (
+            patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 64),
+            patch("wqb_cli.agent.artifacts._strict_json_decoder") as decoder,
+            patch("wqb_cli.agent.artifacts._literal_object_end") as span_end,
+        ):
+            oversized_redacted = redact_text(oversized)
+
+        self.assertEqual(oversized_redacted, "[REDACTED]")
+        decoder.assert_not_called()
+        span_end.assert_not_called()
+
+        unclosed = "{" * 100 + "'name':'api_key','value':'LINEAR-LEAK'"
+        decode_error = json.JSONDecodeError("invalid", "", 0)
+        with patch("wqb_cli.agent.artifacts._strict_json_decoder") as decoder:
+            decoder.return_value.raw_decode.side_effect = decode_error
+            unclosed_redacted = redact_text(unclosed)
+
+        self.assertNotIn("LINEAR-LEAK", unclosed_redacted)
+        self.assertLessEqual(decoder.return_value.raw_decode.call_count, 1)
+
+    def test_malformed_safe_code_block_is_not_rewritten(self) -> None:
+        code = "function example() { return call('ordinary'); }"
+        self.assertEqual(redact_text(code), code)
 
     def test_append_jsonl_rewrites_existing_lines_through_strict_redaction(self) -> None:
         target = self.root / "run" / "01_A" / "commands.jsonl"
@@ -1331,6 +1378,42 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
                 self.store.mark_command_resource.assert_called_once_with(
                     110 + index, "ALPHA-BOUND"
                 )
+                self.store.fail_command.assert_not_called()
+                self.store.complete_command.assert_not_called()
+
+    def test_mutations_reject_any_explicit_invalid_stdout_resource_field(self) -> None:
+        candidate = self.root / "invalid-resource-candidate.json"
+        candidate.write_text('{"expression":"rank(close)"}', encoding="utf-8")
+        cases = (
+            ("simulation_id", "", 0),
+            ("simulation_id", "SIM BAD", 1),
+            ("id", None, 0),
+            ("alpha_id", ["ALPHA"], 1),
+        )
+        for index, (field, value, returncode) in enumerate(cases):
+            with self.subTest(field=field, value=value, returncode=returncode):
+                self.store.reset_mock()
+                self.store.reserve_command.return_value = command_record(id=120 + index)
+                completed = subprocess.CompletedProcess(
+                    [],
+                    returncode,
+                    json.dumps({field: value, "simulation_id": "SIM-VALID"})
+                    if field != "simulation_id"
+                    else json.dumps({field: value}),
+                    "temporary" if returncode else "",
+                )
+
+                with patch(
+                    "wqb_cli.agent.runner.subprocess.run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(RunnerError, "resource"):
+                        self.runner.run(
+                            f"invalid-resource-{index}",
+                            WorkflowNode.J,
+                            ("sim", "create", "--input", str(candidate)),
+                            "result.json",
+                        )
+
                 self.store.fail_command.assert_not_called()
                 self.store.complete_command.assert_not_called()
 

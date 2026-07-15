@@ -5,12 +5,18 @@ import tempfile
 import unittest
 from collections import deque
 from dataclasses import replace
+from math import isfinite
 from unittest.mock import patch
 
 import requests
 
 from wqb_cli.agent.config import ModelConfig
-from wqb_cli.agent.models.base import ModelRequest, ModelResult, ModelTransportError
+from wqb_cli.agent.models.base import (
+    ModelRequest,
+    ModelResponseError,
+    ModelResult,
+    ModelTransportError,
+)
 from wqb_cli.agent.models.compatible import CompatibleAdapter
 from wqb_cli.agent.models.openai import OpenAIResponsesAdapter
 from wqb_cli.agent.models.router import (
@@ -42,13 +48,14 @@ def model_config(
     role: ModelRole,
     structured_outputs: bool = True,
     fallback_model: str = "",
+    reasoning: str = "",
 ) -> ModelConfig:
     return ModelConfig(
         provider="openai" if role is ModelRole.PLANNER else "openai-compatible",
         api_style="responses" if role is ModelRole.PLANNER else "chat_completions",
         model=f"{role.value}-model",
         base_url="https://models.example.test/v1/",
-        reasoning="",
+        reasoning=reasoning,
         secret_name=f"{role.value}-secret",
         structured_outputs=structured_outputs,
         fallback_model=fallback_model,
@@ -220,6 +227,26 @@ class ModelValueTests(unittest.TestCase):
 
 
 class AdapterTests(unittest.TestCase):
+    def test_openai_includes_configured_reasoning_effort_only_when_nonblank(self) -> None:
+        for reasoning, expected in (("high", {"effort": "high"}), ("", None)):
+            with self.subTest(reasoning=reasoning):
+                session = FakeSession(
+                    [openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.B))]
+                )
+                adapter = OpenAIResponsesAdapter(
+                    model_config(role=ModelRole.PLANNER, reasoning=reasoning),
+                    FAKE_SECRET,
+                    session=session,
+                )
+                adapter.invoke(
+                    ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                )
+                body = session.calls[0]["json"]
+                if expected is None:
+                    self.assertNotIn("reasoning", body)
+                else:
+                    self.assertEqual(body["reasoning"], expected)
+
     def test_adapters_reject_mismatched_api_style_before_http(self) -> None:
         cases = (
             (
@@ -378,6 +405,120 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(len(session.calls), 1)
         self.assertNotIn(FAKE_SECRET, str(raised.exception))
 
+    def test_openai_provider_status_prevents_valid_content_from_succeeding(self) -> None:
+        cases = (
+            ("incomplete", "content_filter", ModelRefusal),
+            ("incomplete", "max_output_tokens", ModelResponseError),
+            ("failed", None, ModelResponseError),
+        )
+        for status, reason, expected_error in cases:
+            with self.subTest(status=status, reason=reason):
+                response = openai_response(
+                    valid_output(ModelRole.OPERATOR, WorkflowNode.B)
+                )
+                assert isinstance(response._payload, dict)
+                response._payload["status"] = status
+                if reason is not None:
+                    response._payload["incomplete_details"] = {"reason": reason}
+                session = FakeSession([response])
+                operator_config = replace(
+                    model_config(
+                        role=ModelRole.OPERATOR,
+                        fallback_model="operator-fallback",
+                    ),
+                    provider="openai",
+                    api_style="responses",
+                )
+                operator = OpenAIResponsesAdapter(
+                    operator_config, FAKE_SECRET, session=session
+                )
+                planner = RecordingAdapter(
+                    model_config(role=ModelRole.PLANNER),
+                    [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                with self.assertRaises(expected_error):
+                    router.invoke(
+                        ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {})
+                    )
+                self.assertEqual(len(session.calls), 1)
+                self.assertEqual(len(store.calls), 1)
+                self.assertEqual(store.calls[0]["status"], "FAILED")
+                self.assertEqual(store.calls[0]["input_tokens"], 11)
+                self.assertEqual(store.calls[0]["output_tokens"], 7)
+                self.assertEqual(store.calls[0]["provider_request_id"], "resp_123")
+                self.assertGreaterEqual(store.calls[0]["latency_ms"], 0)
+                self.assertIs(store.calls[0]["fallback_used"], False)
+
+        completed = openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.B))
+        assert isinstance(completed._payload, dict)
+        completed._payload["status"] = "completed"
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER),
+            FAKE_SECRET,
+            session=FakeSession([completed]),
+        )
+        result = adapter.invoke(
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+        )
+        self.assertEqual(result.value, valid_output(ModelRole.PLANNER, WorkflowNode.B))
+
+    def test_compatible_finish_reason_prevents_valid_content_from_succeeding(self) -> None:
+        cases = (
+            ("content_filter", ModelRefusal),
+            ("length", ModelResponseError),
+            ("tool_calls", ModelResponseError),
+            ({"malformed": True}, ModelResponseError),
+        )
+        for finish_reason, expected_error in cases:
+            with self.subTest(finish_reason=finish_reason):
+                response = compatible_response(
+                    valid_output(ModelRole.OPERATOR, WorkflowNode.B)
+                )
+                assert isinstance(response._payload, dict)
+                response._payload["choices"][0]["finish_reason"] = finish_reason
+                session = FakeSession([response])
+                operator = CompatibleAdapter(
+                    model_config(
+                        role=ModelRole.OPERATOR,
+                        fallback_model="operator-fallback",
+                    ),
+                    FAKE_SECRET,
+                    session=session,
+                )
+                planner = RecordingAdapter(
+                    model_config(role=ModelRole.PLANNER),
+                    [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                with self.assertRaises(expected_error):
+                    router.invoke(
+                        ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {})
+                    )
+                self.assertEqual(len(session.calls), 1)
+                self.assertEqual(len(store.calls), 1)
+                self.assertEqual(store.calls[0]["status"], "FAILED")
+                self.assertEqual(store.calls[0]["input_tokens"], 5)
+                self.assertEqual(store.calls[0]["output_tokens"], 3)
+                self.assertEqual(store.calls[0]["provider_request_id"], "chatcmpl_123")
+                self.assertGreaterEqual(store.calls[0]["latency_ms"], 0)
+                self.assertIs(store.calls[0]["fallback_used"], False)
+
+        stopped = compatible_response(valid_output(ModelRole.OPERATOR, WorkflowNode.B))
+        assert isinstance(stopped._payload, dict)
+        stopped._payload["choices"][0]["finish_reason"] = "stop"
+        adapter = CompatibleAdapter(
+            model_config(role=ModelRole.OPERATOR),
+            FAKE_SECRET,
+            session=FakeSession([stopped]),
+        )
+        result = adapter.invoke(
+            ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {})
+        )
+        self.assertEqual(result.value, valid_output(ModelRole.OPERATOR, WorkflowNode.B))
+
     def test_openai_ignores_non_content_output_items(self) -> None:
         payload = openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.B))._payload
         assert isinstance(payload, dict)
@@ -472,10 +613,14 @@ class RecordingAdapter:
         config: ModelConfig,
         outcomes: list[object],
         invocations: list[tuple[str, ModelRequest]] | None = None,
+        transport_identity: object | None = None,
     ) -> None:
         self.config = config
         self.outcomes = deque(outcomes)
         self.invocations = invocations if invocations is not None else []
+        self.transport_identity = (
+            transport_identity if transport_identity is not None else object()
+        )
 
     def invoke(self, request: ModelRequest) -> ModelResult:
         self.invocations.append((self.config.model, request))
@@ -490,6 +635,7 @@ class RecordingAdapter:
             replace(self.config, model=model),
             list(self.outcomes),
             self.invocations,
+            self.transport_identity,
         )
 
 
@@ -516,6 +662,44 @@ class InvalidResultAdapter:
     def invoke(self, request: ModelRequest) -> object:
         self.invocations.append(request)
         return {"not": "a ModelResult"}
+
+
+class ExplosiveMetadataTransportError(ModelTransportError):
+    def __init__(self, explosive_name: str) -> None:
+        super().__init__("provider unavailable")
+        self.explosive_name = explosive_name
+        self.model_input_tokens = 3
+        self.model_output_tokens = 2
+        self.model_latency_ms = 7
+        self.model_provider_request_id = "metadata-id"
+
+    def __getattribute__(self, name: str) -> object:
+        if name == object.__getattribute__(self, "explosive_name"):
+            raise RuntimeError(FAKE_SECRET)
+        return super().__getattribute__(name)
+
+
+class OneShotConfigAdapter(RecordingAdapter):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self._config_reads = 0
+
+    def __getattribute__(self, name: str) -> object:
+        if name == "config":
+            reads = object.__getattribute__(self, "_config_reads")
+            if reads:
+                raise RuntimeError(FAKE_SECRET)
+            object.__setattr__(self, "_config_reads", reads + 1)
+        return super().__getattribute__(name)
+
+    def invoke(self, request: ModelRequest) -> ModelResult:
+        config = object.__getattribute__(self, "config")
+        self.invocations.append((config.model, request))
+        outcome = self.outcomes.popleft()
+        if isinstance(outcome, BaseException):
+            raise outcome
+        assert isinstance(outcome, ModelResult)
+        return outcome
 
 
 class RouterTests(unittest.TestCase):
@@ -560,6 +744,24 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(operator_result.provider_request_id, "o")
         self.assertEqual([request.role for _, request in planner.invocations], [ModelRole.PLANNER])
         self.assertEqual([request.role for _, request in operator.invocations], [ModelRole.OPERATOR])
+
+    def test_router_caches_adapter_config_after_single_guarded_read(self) -> None:
+        planner = OneShotConfigAdapter(
+            model_config(role=ModelRole.PLANNER),
+            [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 2, "cached")],
+        )
+        operator = RecordingAdapter(
+            model_config(role=ModelRole.OPERATOR),
+            [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        result = router.invoke(
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+        )
+        self.assertEqual(result.provider_request_id, "cached")
+        self.assertEqual(planner._config_reads, 1)
+        self.assertEqual(store.calls[0]["status"], "COMPLETED")
 
     def test_operator_d_and_non_model_nodes_are_rejected_before_invocation(self) -> None:
         router, planner, operator, store = self.make_router()
@@ -625,6 +827,29 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(call["provider_request_id"], "p")
         self.assertEqual(call["purpose"], "diagnose")
 
+    def test_cost_calculation_scales_terms_before_summing(self) -> None:
+        result = ModelResult(
+            valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 4, "cost"
+        )
+        planner = RecordingAdapter(
+            replace(
+                model_config(role=ModelRole.PLANNER),
+                input_cost_per_million=1e308,
+                output_cost_per_million=1e308,
+            ),
+            [result],
+        )
+        operator = RecordingAdapter(
+            model_config(role=ModelRole.OPERATOR),
+            [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+        self.assertEqual(store.calls[0]["status"], "COMPLETED")
+        self.assertTrue(isfinite(store.calls[0]["cost_usd"]))
+        self.assertAlmostEqual(store.calls[0]["cost_usd"], 2e302)
+
     def test_missing_usage_or_rate_persists_none_cost(self) -> None:
         result = ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.K), None, 20, 1, None)
         router, _, _, store = self.make_router(planner_outcomes=[result])
@@ -646,6 +871,33 @@ class RouterTests(unittest.TestCase):
             router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.K, "Diagnose", {}))
         self.assertNotIn(FAKE_SECRET, str(persistence_error.exception))
 
+    def test_explosive_failure_metadata_getters_are_sanitized_and_recorded(self) -> None:
+        names = (
+            "model_input_tokens",
+            "model_output_tokens",
+            "model_latency_ms",
+            "model_provider_request_id",
+        )
+        for name in names:
+            with self.subTest(name=name):
+                planner = RecordingAdapter(
+                    model_config(role=ModelRole.PLANNER),
+                    [ExplosiveMetadataTransportError(name)],
+                )
+                operator = RecordingAdapter(
+                    model_config(role=ModelRole.OPERATOR),
+                    [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                with self.assertRaises(ModelTransportError) as raised:
+                    router.invoke(
+                        ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                    )
+                self.assertEqual(len(store.calls), 1)
+                self.assertEqual(store.calls[0]["status"], "FAILED")
+                self.assertNotIn(FAKE_SECRET, str(raised.exception))
+
     def test_invalid_adapter_result_is_controlled_and_recorded_as_failed(self) -> None:
         planner = InvalidResultAdapter(model_config(role=ModelRole.PLANNER))
         operator = RecordingAdapter(
@@ -660,6 +912,31 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(len(planner.invocations), 1)
         self.assertEqual(len(store.calls), 1)
         self.assertEqual(store.calls[0]["status"], "FAILED")
+
+    def test_router_revalidates_custom_model_result_for_requested_schema(self) -> None:
+        invalid_for_k = ModelResult(
+            valid_output(ModelRole.PLANNER, WorkflowNode.B),
+            3,
+            2,
+            7,
+            "custom-invalid",
+        )
+        planner = RecordingAdapter(
+            model_config(role=ModelRole.PLANNER), [invalid_for_k]
+        )
+        operator = RecordingAdapter(
+            model_config(role=ModelRole.OPERATOR),
+            [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        with self.assertRaisesRegex(ValueError, "diagnosis"):
+            router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.K, "Diagnose", {}))
+        self.assertEqual(store.calls[0]["status"], "FAILED")
+        self.assertEqual(store.calls[0]["input_tokens"], 3)
+        self.assertEqual(store.calls[0]["output_tokens"], 2)
+        self.assertEqual(store.calls[0]["latency_ms"], 7)
+        self.assertEqual(store.calls[0]["provider_request_id"], "custom-invalid")
 
     def test_schema_failure_persists_aggregate_usage_cost_and_request_id(self) -> None:
         incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.D)
@@ -920,6 +1197,30 @@ class RouterTests(unittest.TestCase):
         self.assertIsNone(store.calls[0]["cost_usd"])
         self.assertEqual(store.calls[0]["error"], "model usage exceeded persistence range")
 
+    def test_unpersistable_latency_records_controlled_accounting_failure(self) -> None:
+        result = ModelResult(
+            valid_output(ModelRole.PLANNER, WorkflowNode.B),
+            3,
+            2,
+            10**1000,
+            "latency-overflow",
+        )
+        planner = RecordingAdapter(model_config(role=ModelRole.PLANNER), [result])
+        operator = RecordingAdapter(
+            model_config(role=ModelRole.OPERATOR),
+            [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        with self.assertRaises(ModelPersistenceError):
+            router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+        self.assertEqual(store.calls[0]["status"], "FAILED")
+        self.assertEqual(store.calls[0]["input_tokens"], 3)
+        self.assertEqual(store.calls[0]["output_tokens"], 2)
+        self.assertAlmostEqual(store.calls[0]["cost_usd"], 0.000014)
+        self.assertIsNone(store.calls[0]["latency_ms"])
+        self.assertEqual(store.calls[0]["provider_request_id"], "latency-overflow")
+
     def test_compatible_refusal_persists_available_usage_without_repair(self) -> None:
         refusal = FakeResponse(
             200,
@@ -988,7 +1289,65 @@ class CrossTypeFallbackAdapter(RecordingAdapter):
         )
 
 
+class ChangedIdentityFallbackAdapter(RecordingAdapter):
+    def with_model(self, model: str) -> ChangedIdentityFallbackAdapter:
+        return type(self)(
+            replace(self.config, model=model),
+            list(self.outcomes),
+            self.invocations,
+        )
+
+
+class ExplosiveIdentityFallbackAdapter(RecordingAdapter):
+    def __getattribute__(self, name: str) -> object:
+        if name == "transport_identity":
+            raise RuntimeError(FAKE_SECRET)
+        return super().__getattribute__(name)
+
+
+class ExplosiveCloneConfigAdapter(RecordingAdapter):
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)  # type: ignore[arg-type]
+        self._explode_config = False
+
+    def __getattribute__(self, name: str) -> object:
+        if name == "config" and object.__getattribute__(self, "_explode_config"):
+            raise RuntimeError(FAKE_SECRET)
+        return super().__getattribute__(name)
+
+    def with_model(self, model: str) -> ExplosiveCloneConfigAdapter:
+        clone = type(self)(
+            replace(self.config, model=model),
+            list(self.outcomes),
+            self.invocations,
+            self.transport_identity,
+        )
+        clone._explode_config = True
+        return clone
+
+
 class FallbackInvariantTests(unittest.TestCase):
+    def test_builtin_model_clones_preserve_transport_identity_session_and_key(self) -> None:
+        cases = (
+            OpenAIResponsesAdapter(
+                model_config(role=ModelRole.PLANNER),
+                FAKE_SECRET,
+                session=FakeSession([]),
+            ),
+            CompatibleAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                FAKE_SECRET,
+                session=FakeSession([]),
+            ),
+        )
+        for adapter in cases:
+            with self.subTest(adapter=type(adapter).__name__):
+                clone = adapter.with_model("fallback-model")
+                self.assertIs(clone.transport_identity, adapter.transport_identity)
+                self.assertIs(clone._session, adapter._session)
+                self.assertEqual(clone._api_key, adapter._api_key)
+                self.assertEqual(clone.config, replace(adapter.config, model="fallback-model"))
+
     def test_fallback_clone_may_only_change_model(self) -> None:
         planner = RecordingAdapter(
             model_config(role=ModelRole.PLANNER),
@@ -1016,6 +1375,58 @@ class FallbackInvariantTests(unittest.TestCase):
         with self.assertRaises(ModelError):
             router.invoke(ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {}))
         self.assertEqual([model for model, _ in operator.invocations], ["operator-model"])
+
+    def test_fallback_clone_must_preserve_opaque_transport_identity(self) -> None:
+        planner = RecordingAdapter(
+            model_config(role=ModelRole.PLANNER),
+            [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        operator = ChangedIdentityFallbackAdapter(
+            model_config(role=ModelRole.OPERATOR, fallback_model="operator-fallback"),
+            [ModelTransportError("down"), ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        with self.assertRaises(ModelError) as raised:
+            router.invoke(ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {}))
+        self.assertEqual([model for model, _ in operator.invocations], ["operator-model"])
+        self.assertEqual(len(store.calls), 1)
+        self.assertNotIn(FAKE_SECRET, str(raised.exception))
+        self.assertNotIn("models.example.test", str(raised.exception))
+
+    def test_fallback_identity_getter_failure_is_controlled_and_does_not_invoke_clone(self) -> None:
+        planner = RecordingAdapter(
+            model_config(role=ModelRole.PLANNER),
+            [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        operator = ExplosiveIdentityFallbackAdapter(
+            model_config(role=ModelRole.OPERATOR, fallback_model="operator-fallback"),
+            [ModelTransportError("down"), ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        with self.assertRaises(ModelError) as raised:
+            router.invoke(ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {}))
+        self.assertEqual([model for model, _ in operator.invocations], ["operator-model"])
+        self.assertEqual(len(store.calls), 1)
+        self.assertNotIn(FAKE_SECRET, str(raised.exception))
+
+    def test_fallback_clone_config_getter_failure_is_controlled(self) -> None:
+        planner = RecordingAdapter(
+            model_config(role=ModelRole.PLANNER),
+            [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        operator = ExplosiveCloneConfigAdapter(
+            model_config(role=ModelRole.OPERATOR, fallback_model="operator-fallback"),
+            [ModelTransportError("down"), ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+        )
+        store = RecordingStore()
+        router = ModelRouter(planner, operator, store=store, run_id="run-1")
+        with self.assertRaises(ModelError) as raised:
+            router.invoke(ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {}))
+        self.assertEqual([model for model, _ in operator.invocations], ["operator-model"])
+        self.assertEqual(len(store.calls), 1)
+        self.assertNotIn(FAKE_SECRET, str(raised.exception))
 
 
 class RouterStoreIntegrationTests(unittest.TestCase):
@@ -1083,6 +1494,153 @@ class RouterStoreIntegrationTests(unittest.TestCase):
             self.assertEqual(summary["failures"], 1)
             self.assertEqual(summary["input_tokens"], 0)
             self.assertEqual(summary["output_tokens"], 0)
+
+    def test_extreme_finite_cost_persists_to_agent_store(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            planner = RecordingAdapter(
+                replace(
+                    model_config(role=ModelRole.PLANNER),
+                    input_cost_per_million=1e308,
+                    output_cost_per_million=1e308,
+                ),
+                [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 4, "cost")],
+            )
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 0)
+            self.assertTrue(isfinite(summary["cost_usd"]))
+            self.assertAlmostEqual(summary["cost_usd"], 2e302)
+
+    def test_unrepresentable_cost_creates_real_failure_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            tokens = 1_000_000
+            planner = RecordingAdapter(
+                replace(
+                    model_config(role=ModelRole.PLANNER),
+                    input_cost_per_million=1e308,
+                    output_cost_per_million=1e308,
+                ),
+                [
+                    ModelResult(
+                        valid_output(ModelRole.PLANNER, WorkflowNode.B),
+                        tokens,
+                        tokens,
+                        4,
+                        "cost-overflow",
+                    )
+                ],
+            )
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            with self.assertRaises(ModelPersistenceError):
+                router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 1)
+            self.assertEqual(summary["input_tokens"], tokens)
+            self.assertEqual(summary["output_tokens"], tokens)
+            self.assertEqual(summary["cost_usd"], 0.0)
+            self.assertEqual(summary["latency_ms"], 4.0)
+
+    def test_positive_cost_underflow_creates_real_failure_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            planner = RecordingAdapter(
+                replace(
+                    model_config(role=ModelRole.PLANNER),
+                    input_cost_per_million=5e-324,
+                    output_cost_per_million=5e-324,
+                ),
+                [ModelResult(valid_output(ModelRole.PLANNER, WorkflowNode.B), 1, 1, 4, "cost-underflow")],
+            )
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            with self.assertRaises(ModelPersistenceError):
+                router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 1)
+            self.assertEqual(summary["input_tokens"], 1)
+            self.assertEqual(summary["output_tokens"], 1)
+            self.assertEqual(summary["cost_usd"], 0.0)
+
+    def test_unpersistable_latency_creates_real_failure_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            planner = RecordingAdapter(
+                model_config(role=ModelRole.PLANNER),
+                [
+                    ModelResult(
+                        valid_output(ModelRole.PLANNER, WorkflowNode.B),
+                        3,
+                        2,
+                        10**1000,
+                        "latency-overflow",
+                    )
+                ],
+            )
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            with self.assertRaises(ModelPersistenceError):
+                router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 1)
+            self.assertEqual(summary["input_tokens"], 3)
+            self.assertEqual(summary["output_tokens"], 2)
+            self.assertAlmostEqual(summary["cost_usd"], 0.000014)
+            self.assertEqual(summary["latency_ms"], 0.0)
+
+    def test_failure_metadata_unpersistable_latency_still_records_real_call(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            error = ModelTransportError("down")
+            error.model_input_tokens = 3
+            error.model_output_tokens = 2
+            error.model_latency_ms = 10**1000
+            error.model_provider_request_id = "latency-failure"
+            planner = RecordingAdapter(model_config(role=ModelRole.PLANNER), [error])
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            with self.assertRaises(ModelTransportError):
+                router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 1)
+            self.assertEqual(summary["input_tokens"], 3)
+            self.assertEqual(summary["output_tokens"], 2)
+            self.assertAlmostEqual(summary["cost_usd"], 0.000014)
+            self.assertEqual(summary["latency_ms"], 0.0)
 
 
 if __name__ == "__main__":

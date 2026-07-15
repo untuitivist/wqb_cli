@@ -1,4 +1,5 @@
 from .base import (
+    FallbackCapableAdapter,
     ModelAdapter,
     ModelError,
     ModelRequest,
@@ -12,6 +13,7 @@ from .router import ModelPersistenceError, ModelRouter, RoleRoutingError
 
 __all__ = [
     "CompatibleAdapter",
+    "FallbackCapableAdapter",
     "ModelAdapter",
     "ModelError",
     "ModelRequest",

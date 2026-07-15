@@ -10,6 +10,7 @@ from typing import Any, Protocol, runtime_checkable
 
 import requests
 
+from ..config import ModelConfig
 from ..types import ModelRole, WorkflowNode
 
 
@@ -195,7 +196,17 @@ class ModelResult:
 
 @runtime_checkable
 class ModelAdapter(Protocol):
+    config: ModelConfig
+
     def invoke(self, request: ModelRequest) -> ModelResult: ...
+
+
+@runtime_checkable
+class FallbackCapableAdapter(Protocol):
+    @property
+    def transport_identity(self) -> object: ...
+
+    def with_model(self, model: str) -> FallbackCapableAdapter: ...
 
 
 def elapsed_ms(started_at: float) -> int:

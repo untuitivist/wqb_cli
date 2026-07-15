@@ -39,6 +39,7 @@ class OpenAIResponsesAdapter:
         api_key: str,
         *,
         session: requests.Session | None = None,
+        _transport_identity: object | None = None,
     ) -> None:
         if type(config) is not ModelConfig:
             raise TypeError("config must be a ModelConfig")
@@ -51,6 +52,13 @@ class OpenAIResponsesAdapter:
         self.config = config
         self._api_key = api_key
         self._session = session or requests.Session()
+        self._transport_identity = (
+            _transport_identity if _transport_identity is not None else object()
+        )
+
+    @property
+    def transport_identity(self) -> object:
+        return self._transport_identity
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(model={self.config.model!r})"
@@ -58,7 +66,12 @@ class OpenAIResponsesAdapter:
     def with_model(self, model: str) -> OpenAIResponsesAdapter:
         if type(model) is not str or not model.strip():
             raise ValueError("model override must be a nonblank string")
-        return type(self)(replace(self.config, model=model), self._api_key, session=self._session)
+        return type(self)(
+            replace(self.config, model=model),
+            self._api_key,
+            session=self._session,
+            _transport_identity=self._transport_identity,
+        )
 
     def invoke(self, request: ModelRequest) -> ModelResult:
         if type(request) is not ModelRequest:
@@ -118,6 +131,7 @@ class OpenAIResponsesAdapter:
                     provider_request_id=provider_request_id,
                 )
             try:
+                self._check_status(payload)
                 text = self._output_text(payload)
                 value = validate_model_output(
                     current.role,
@@ -158,6 +172,19 @@ class OpenAIResponsesAdapter:
             )
         raise ModelResponseError("model schema repair retries exhausted")
 
+    @staticmethod
+    def _check_status(payload: dict[str, Any]) -> None:
+        status = payload.get("status")
+        if status is None or status == "completed":
+            return
+        if status == "incomplete":
+            details = payload.get("incomplete_details")
+            reason = details.get("reason") if type(details) is dict else None
+            if reason == "content_filter":
+                raise ModelRefusal("model response was blocked by content filtering")
+            raise ModelResponseError("model provider returned an incomplete response")
+        raise ModelResponseError("model provider returned a non-completed response")
+
     def _body(self, request: ModelRequest) -> dict[str, object]:
         schema = schema_for(request.role, request.node)
         instructions = _json_only_instructions(request)
@@ -170,12 +197,15 @@ class OpenAIResponsesAdapter:
             }
         else:
             response_format = {"type": "json_object"}
-        return {
+        body: dict[str, object] = {
             "model": self.config.model,
             "instructions": instructions,
             "input": json.dumps(request.context, ensure_ascii=False, allow_nan=False),
             "text": {"format": response_format},
         }
+        if self.config.reasoning.strip():
+            body["reasoning"] = {"effort": self.config.reasoning}
+        return body
 
     @staticmethod
     def _output_text(payload: dict[str, Any]) -> str:

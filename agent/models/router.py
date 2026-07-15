@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from decimal import Decimal, InvalidOperation
 from math import isfinite
 from time import perf_counter
 from typing import Protocol
 
 from ..config import ModelConfig
-from ..schemas import ModelRefusal, SchemaViolation
+from ..schemas import ModelRefusal, SchemaViolation, validate_model_output
 from ..types import ModelRole, WorkflowNode
 from .base import (
+    FallbackCapableAdapter,
     ModelAdapter,
     ModelError,
     ModelRequest,
@@ -25,6 +27,10 @@ class RoleRoutingError(ModelError):
 
 
 class ModelPersistenceError(ModelError):
+    pass
+
+
+class _UnpersistableCost(ValueError):
     pass
 
 
@@ -72,12 +78,22 @@ class ModelRouter:
             raise TypeError("run_id must be a string")
         if not run_id.strip():
             raise ValueError("run_id must be nonblank")
+        planner, planner_config = self._validate_adapter(
+            planner_adapter, "planner_adapter"
+        )
+        operator, operator_config = self._validate_adapter(
+            operator_adapter, "operator_adapter"
+        )
         self._adapters = {
-            ModelRole.PLANNER: self._validate_adapter(planner_adapter, "planner_adapter"),
-            ModelRole.OPERATOR: self._validate_adapter(operator_adapter, "operator_adapter"),
+            ModelRole.PLANNER: planner,
+            ModelRole.OPERATOR: operator,
         }
-        for adapter in self._adapters.values():
-            _validate_prices(adapter.config)  # type: ignore[attr-defined]
+        self._configs = {
+            ModelRole.PLANNER: planner_config,
+            ModelRole.OPERATOR: operator_config,
+        }
+        for config in self._configs.values():
+            _validate_prices(config)
         if not callable(getattr(store, "record_model_call", None)):
             raise TypeError("store must provide record_model_call")
         self._store = store
@@ -87,12 +103,19 @@ class ModelRouter:
         return f"{type(self).__name__}(run_id={self._run_id!r})"
 
     @staticmethod
-    def _validate_adapter(adapter: ModelAdapter, name: str) -> ModelAdapter:
-        if not callable(getattr(adapter, "invoke", None)):
+    def _validate_adapter(
+        adapter: ModelAdapter, name: str
+    ) -> tuple[ModelAdapter, ModelConfig]:
+        try:
+            invoke = getattr(adapter, "invoke", None)
+            config = getattr(adapter, "config", None)
+        except Exception:
+            raise TypeError(f"{name} has inaccessible protocol attributes") from None
+        if not callable(invoke):
             raise TypeError(f"{name} must provide invoke")
-        if type(getattr(adapter, "config", None)) is not ModelConfig:
+        if type(config) is not ModelConfig:
             raise TypeError(f"{name} must expose a ModelConfig")
-        return adapter
+        return adapter, config
 
     def invoke(self, request: ModelRequest, *, purpose: str | None = None) -> ModelResult:
         if type(request) is not ModelRequest:
@@ -109,7 +132,7 @@ class ModelRouter:
             raise ValueError("purpose must be nonblank")
 
         adapter = self._adapters[request.role]
-        config = adapter.config  # type: ignore[attr-defined]
+        config = self._configs[request.role]
         try:
             return self._invoke_and_record(
                 adapter,
@@ -122,18 +145,38 @@ class ModelRouter:
             fallback_model = config.fallback_model.strip()
             if request.role is not ModelRole.OPERATOR or not fallback_model:
                 raise ModelTransportError("model provider transport failed") from None
-            clone = getattr(adapter, "with_model", None)
-            if not callable(clone):
-                raise ModelError("operator adapter does not support model fallback") from None
             try:
-                fallback_adapter = clone(fallback_model)
+                fallback_capable = isinstance(adapter, FallbackCapableAdapter)
+                transport_identity = (
+                    adapter.transport_identity if fallback_capable else None
+                )
+            except Exception:
+                raise ModelError("operator adapter transport identity is unavailable") from None
+            if not fallback_capable:
+                raise ModelError("operator adapter does not support model fallback") from None
+            if transport_identity is None:
+                raise ModelError("operator adapter transport identity is unavailable")
+            try:
+                fallback_adapter = adapter.with_model(fallback_model)
             except Exception:
                 raise ModelError("operator fallback model could not be configured") from None
             if type(fallback_adapter) is not type(adapter):
                 raise ModelError("operator fallback must keep the same adapter type")
-            fallback_config = getattr(fallback_adapter, "config", None)
+            try:
+                fallback_config = fallback_adapter.config
+            except Exception:
+                raise ModelError("operator fallback configuration is unavailable") from None
             if fallback_config != replace(config, model=fallback_model):
                 raise ModelError("operator fallback must only change the model")
+            try:
+                preserves_identity = (
+                    isinstance(fallback_adapter, FallbackCapableAdapter)
+                    and fallback_adapter.transport_identity is transport_identity
+                )
+            except Exception:
+                preserves_identity = False
+            if not preserves_identity:
+                raise ModelError("operator fallback must preserve transport identity")
             try:
                 return self._invoke_and_record(
                     fallback_adapter,
@@ -159,6 +202,21 @@ class ModelRouter:
             result = adapter.invoke(request)
             if type(result) is not ModelResult:
                 raise ModelResponseError("model adapter returned an invalid result")
+            try:
+                value = validate_model_output(request.role, request.node, result.value)
+            except SchemaViolation as error:
+                error.model_input_tokens = result.input_tokens
+                error.model_output_tokens = result.output_tokens
+                error.model_latency_ms = result.latency_ms
+                error.model_provider_request_id = result.provider_request_id
+                raise
+            result = ModelResult(
+                value,
+                result.input_tokens,
+                result.output_tokens,
+                result.latency_ms,
+                result.provider_request_id,
+            )
         except Exception as error:
             safe_error = _safe_error(error)
             input_tokens = _failure_integer(error, "model_input_tokens")
@@ -170,7 +228,17 @@ class ModelRouter:
             latency_ms = _failure_integer(error, "model_latency_ms")
             if latency_ms is None:
                 latency_ms = elapsed_ms(started_at)
+            persisted_latency = _persistable_latency_ms(latency_ms)
+            if persisted_latency != latency_ms:
+                safe_error = "model failure latency exceeded persistence range"
             provider_request_id = _failure_request_id(error)
+            try:
+                failure_cost = _cost_from_counts(
+                    config, persisted_input, persisted_output
+                )
+            except _UnpersistableCost:
+                failure_cost = None
+                safe_error = "model failure cost exceeded persistence range"
             self._record(
                 config,
                 request,
@@ -178,8 +246,8 @@ class ModelRouter:
                 status="FAILED",
                 input_tokens=persisted_input,
                 output_tokens=persisted_output,
-                cost_usd=_cost_from_counts(config, persisted_input, persisted_output),
-                latency_ms=latency_ms,
+                cost_usd=failure_cost,
+                latency_ms=persisted_latency,
                 fallback_used=fallback_used,
                 provider_request_id=sanitize_provider_request_id(provider_request_id),
                 error=safe_error,
@@ -206,6 +274,44 @@ class ModelRouter:
             )
             raise ModelPersistenceError("model usage could not be persisted")
 
+        persisted_latency = _persistable_latency_ms(result.latency_ms)
+        if persisted_latency != result.latency_ms:
+            try:
+                failure_cost = _cost_usd(config, result)
+            except _UnpersistableCost:
+                failure_cost = None
+            self._record(
+                config,
+                request,
+                purpose,
+                status="FAILED",
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                cost_usd=failure_cost,
+                latency_ms=persisted_latency,
+                fallback_used=fallback_used,
+                provider_request_id=result.provider_request_id,
+                error="model latency exceeded persistence range",
+            )
+            raise ModelPersistenceError("model latency could not be persisted")
+
+        try:
+            cost_usd = _cost_usd(config, result)
+        except _UnpersistableCost:
+            self._record(
+                config,
+                request,
+                purpose,
+                status="FAILED",
+                input_tokens=result.input_tokens,
+                output_tokens=result.output_tokens,
+                latency_ms=result.latency_ms,
+                fallback_used=fallback_used,
+                provider_request_id=result.provider_request_id,
+                error="model cost exceeded persistence range",
+            )
+            raise ModelPersistenceError("model cost could not be persisted")
+
         self._record(
             config,
             request,
@@ -213,7 +319,7 @@ class ModelRouter:
             status="COMPLETED",
             input_tokens=result.input_tokens,
             output_tokens=result.output_tokens,
-            cost_usd=_cost_usd(config, result),
+            cost_usd=cost_usd,
             latency_ms=result.latency_ms,
             fallback_used=fallback_used,
             provider_request_id=result.provider_request_id,
@@ -276,10 +382,16 @@ def _cost_from_counts(
         raise ValueError("model token prices must be finite non-negative numbers")
     assert input_tokens is not None and output_tokens is not None
     try:
-        cost = (input_tokens * input_rate + output_tokens * output_rate) / 1_000_000
-    except OverflowError:
-        return None
-    return cost if isfinite(cost) else None
+        cost_decimal = (
+            Decimal(input_tokens) * Decimal(str(input_rate))
+            + Decimal(output_tokens) * Decimal(str(output_rate))
+        ) / Decimal(1_000_000)
+        cost = float(cost_decimal)
+    except (ArithmeticError, InvalidOperation, ValueError):
+        raise _UnpersistableCost from None
+    if not isfinite(cost) or cost < 0 or cost == 0 and cost_decimal != 0:
+        raise _UnpersistableCost
+    return cost
 
 
 def _validate_prices(config: ModelConfig) -> None:
@@ -298,7 +410,7 @@ def _valid_price(value: object) -> bool:
 
 
 def _failure_integer(error: Exception, name: str) -> int | None:
-    value = getattr(error, name, None)
+    value = _safe_exception_metadata(error, name)
     if type(value) is int and value >= 0:
         return value
     return None
@@ -310,10 +422,23 @@ def _persistable_token_count(value: int | None) -> int | None:
     return value
 
 
+def _persistable_latency_ms(value: int) -> int | None:
+    if value > 2**63 - 1:
+        return None
+    return value
+
+
 def _failure_request_id(error: Exception) -> str | None:
     return sanitize_provider_request_id(
-        getattr(error, "model_provider_request_id", None)
+        _safe_exception_metadata(error, "model_provider_request_id")
     )
+
+
+def _safe_exception_metadata(error: Exception, name: str) -> object:
+    try:
+        return getattr(error, name, None)
+    except Exception:
+        return None
 
 
 def _safe_error(error: Exception) -> str:

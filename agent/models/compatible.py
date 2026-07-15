@@ -40,6 +40,7 @@ class CompatibleAdapter:
         api_key: str,
         *,
         session: requests.Session | None = None,
+        _transport_identity: object | None = None,
     ) -> None:
         if type(config) is not ModelConfig:
             raise TypeError("config must be a ModelConfig")
@@ -52,6 +53,13 @@ class CompatibleAdapter:
         self.config = config
         self._api_key = api_key
         self._session = session or requests.Session()
+        self._transport_identity = (
+            _transport_identity if _transport_identity is not None else object()
+        )
+
+    @property
+    def transport_identity(self) -> object:
+        return self._transport_identity
 
     def __repr__(self) -> str:
         return f"{type(self).__name__}(model={self.config.model!r})"
@@ -59,7 +67,12 @@ class CompatibleAdapter:
     def with_model(self, model: str) -> CompatibleAdapter:
         if type(model) is not str or not model.strip():
             raise ValueError("model override must be a nonblank string")
-        return type(self)(replace(self.config, model=model), self._api_key, session=self._session)
+        return type(self)(
+            replace(self.config, model=model),
+            self._api_key,
+            session=self._session,
+            _transport_identity=self._transport_identity,
+        )
 
     def invoke(self, request: ModelRequest) -> ModelResult:
         if type(request) is not ModelRequest:
@@ -193,7 +206,13 @@ class CompatibleAdapter:
         choices = payload.get("choices")
         if type(choices) is not list or not choices or type(choices[0]) is not dict:
             raise ModelResponseError("model provider returned malformed choices")
-        message = choices[0].get("message")
+        choice = choices[0]
+        finish_reason = choice.get("finish_reason")
+        if finish_reason == "content_filter":
+            raise ModelRefusal("model response was blocked by content filtering")
+        if finish_reason is not None and finish_reason != "stop":
+            raise ModelResponseError("model provider returned a non-stop finish reason")
+        message = choice.get("message")
         if type(message) is not dict:
             raise ModelResponseError("model provider returned malformed message")
         if message.get("refusal") is not None:

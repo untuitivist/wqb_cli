@@ -241,6 +241,101 @@ class AgentPolicyTests(unittest.TestCase):
         with self.assertRaises(PolicyViolation):
             self.policy.require_command(WorkflowNode.D, ("user", "diversity", "user-id"))
 
+    def test_default_node_command_contract_is_complete_and_exact(self) -> None:
+        from wqb_cli.agent.policy import NODE_COMMANDS, PolicyViolation
+        from wqb_cli.agent.types import WorkflowNode
+
+        expected = {
+            WorkflowNode.A: (("auth", "status"),),
+            WorkflowNode.B: (
+                ("user", "consultant-summary"),
+                ("user", "messages-summary"),
+                ("user", "messages"),
+                ("event", "list"),
+            ),
+            WorkflowNode.C: (
+                ("alpha", "list"),
+                ("user", "alphas-summary"),
+                ("user", "pyramid-alphas"),
+                ("user", "pyramid-multipliers"),
+            ),
+            WorkflowNode.D: (
+                ("user", "consultant-summary"),
+                ("user", "pyramid-alphas"),
+                ("user", "pyramid-multipliers"),
+                ("user", "user-diversity"),
+                ("data", "categories"),
+            ),
+            WorkflowNode.F: (
+                ("scope", "files"),
+                ("scope", "list"),
+                ("scope", "show"),
+                ("scope", "top"),
+                ("scope", "alpha-rows"),
+                ("data", "fields"),
+                ("data", "datasets"),
+                ("alpha", "list"),
+            ),
+            WorkflowNode.G: (
+                ("community", "search"),
+                ("docs", "list"),
+                ("docs", "show"),
+                ("search",),
+            ),
+            WorkflowNode.H: (("data", "field"),),
+            WorkflowNode.I: (
+                ("data", "operators"),
+                ("data", "field"),
+                ("docs", "show"),
+            ),
+            WorkflowNode.J: (
+                ("sim", "options"),
+                ("sim", "create"),
+                ("sim", "get"),
+                ("alpha", "get"),
+                ("alpha", "check"),
+                ("alpha", "recordsets"),
+            ),
+            WorkflowNode.K: (
+                ("alpha", "get"),
+                ("alpha", "check"),
+                ("alpha", "pnl"),
+                ("alpha", "yearly-stats"),
+                ("alpha", "correlation", "self"),
+                ("alpha", "correlation", "prod"),
+            ),
+            WorkflowNode.L: (
+                ("alpha", "get"),
+                ("alpha", "check"),
+                ("alpha", "correlation", "self"),
+                ("alpha", "correlation", "prod"),
+                ("alpha", "performance-comparison"),
+            ),
+            WorkflowNode.M: (("alpha", "submit"), ("alpha", "get")),
+        }
+        self.assertEqual(dict(NODE_COMMANDS), expected)
+
+        for node, prefixes in expected.items():
+            for prefix in prefixes:
+                with self.subTest(node=node, prefix=prefix):
+                    self.policy.require_command(node, prefix + ("argument",))
+
+        for node in WorkflowNode:
+            if node is WorkflowNode.M:
+                continue
+            with self.subTest(reject_submit=node):
+                with self.assertRaises(PolicyViolation):
+                    self.policy.require_command(node, ("alpha", "submit", "alpha-id"))
+
+        for argv in (
+            ("alpha", "submitter", "alpha-id"),
+            ("alpha-submit", "alpha-id"),
+            ("alph", "submit", "alpha-id"),
+        ):
+            with self.subTest(similar_prefix=argv):
+                with self.assertRaises(PolicyViolation):
+                    self.policy.require_command(WorkflowNode.M, argv)
+
     def test_custom_command_allowlist_is_snapshotted_and_fails_closed(self) -> None:
         from wqb_cli.agent.policy import AgentPolicy, PolicyViolation
         from wqb_cli.agent.types import Budget, WorkflowNode
@@ -295,7 +390,7 @@ class ContextBuilderSmokeTests(unittest.TestCase):
             evidence_refs=["artifact:a"],
         )
 
-        self.assertEqual(context["task"]["id"], "task-1")
+        self.assertEqual(context["task"]["task_id"], "task-1")
         self.assertNotIn("task-2", repr(context))
         self.assertNotIn("do-not-leak", repr(context))
         self.assertEqual(context["evidence"]["artifacts"][0]["id"], "artifact:a")
@@ -418,7 +513,7 @@ class ContextBuilderTests(unittest.TestCase):
             evidence_refs=["artifact:a"],
         )
 
-        self.assertEqual(context["task"]["id"], "task-1")
+        self.assertEqual(context["task"]["task_id"], "task-1")
         self.assertEqual(context["plan_lock"], {"version": 8, "hash": "locked-hash"})
         self.assertEqual(context["required_fields"], ["close"])
         self.assertEqual(context["required_operators"], ["rank"])
@@ -440,11 +535,70 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertNotIn("'budget'", rendered)
         self.assertNotIn("'scope'", rendered)
 
+    def test_operator_task_is_a_strict_minimal_projection(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        builder = ContextBuilder(lambda ref: {"id": ref})
+        selected = {
+            "id": "task-1",
+            "instruction": "inspect fields",
+            "parameters": {"arbitrary": "must-not-project"},
+            "tasks": [{"id": "embedded-task", "instruction": "embedded-secret"}],
+            "current_plan": {"notes": "current-plan-secret"},
+            "plan": {"notes": "plan-secret"},
+            "other_task": {"id": "task-2", "instruction": "other-task-secret"},
+            "budget": 100,
+            "api_key": "task-api-secret",
+        }
+        plan = {
+            "version": 2,
+            "hash": "locked-plan",
+            "tasks": [selected, {"id": "task-2", "instruction": "submit"}],
+        }
+
+        context = builder.for_operator(task="task-1", plan=plan, evidence_refs=[])
+
+        self.assertEqual(
+            context["task"],
+            {"task_id": "task-1", "instruction": "inspect fields"},
+        )
+        rendered = repr(context)
+        for forbidden in (
+            "must-not-project",
+            "embedded-task",
+            "embedded-secret",
+            "current-plan-secret",
+            "plan-secret",
+            "other-task-secret",
+            "task-api-secret",
+        ):
+            self.assertNotIn(forbidden, rendered)
+
+        for instruction in (None, "", "   ", 1):
+            with self.subTest(instruction=instruction):
+                invalid_plan = {
+                    "version": 2,
+                    "hash": "locked-plan",
+                    "tasks": [{"id": "task-1", "instruction": instruction}],
+                }
+                with self.assertRaises(ContextError):
+                    builder.for_operator(
+                        task="task-1",
+                        plan=invalid_plan,
+                        evidence_refs=[],
+                    )
+
     def test_operator_explicit_contract_arguments_override_task_defaults(self) -> None:
         from wqb_cli.agent.context import ContextBuilder
 
         builder = ContextBuilder(lambda ref: {"id": ref})
-        plan = {"tasks": [{"id": "task-1", "required_fields": ["old"]}]}
+        plan = {
+            "version": 1,
+            "hash": "override-plan",
+            "tasks": [
+                {"id": "task-1", "instruction": "inspect", "required_fields": ["old"]}
+            ],
+        }
         context = builder.for_operator(
             task={"id": "task-1"},
             plan=plan,
@@ -458,29 +612,127 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertEqual(context["required_operators"], ["ts_mean"])
         self.assertEqual(context["output_schema"], {"description": "result only"})
 
+    def test_operator_requires_exact_locked_plan_version_and_hash(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        calls: list[str] = []
+
+        def resolve(ref: str) -> dict[str, str]:
+            calls.append(ref)
+            return {"id": ref}
+
+        builder = ContextBuilder(resolve)
+        valid = {
+            "version": 1,
+            "hash": "plan-hash",
+            "tasks": [{"id": "task-1", "instruction": "inspect"}],
+        }
+        context = builder.for_operator(task="task-1", plan=valid, evidence_refs=[])
+        self.assertEqual(context["plan_lock"], {"version": 1, "hash": "plan-hash"})
+
+        invalid_plans = (
+            {"hash": "plan-hash", "tasks": valid["tasks"]},
+            {"version": 1, "tasks": valid["tasks"]},
+            {**valid, "version": True},
+            {**valid, "version": 0},
+            {**valid, "version": -1},
+            {**valid, "version": 1.0},
+            {**valid, "hash": ""},
+            {**valid, "hash": "   "},
+        )
+        for plan in invalid_plans:
+            with self.subTest(plan=plan):
+                with self.assertRaises(ContextError):
+                    builder.for_operator(task="task-1", plan=plan, evidence_refs=[])
+
+        with self.assertRaises(ContextError):
+            builder.for_operator(
+                task="task-1",
+                plan={"version": 0, "hash": "invalid", "tasks": valid["tasks"]},
+                evidence_refs=["artifact:a"],
+            )
+        self.assertEqual(calls, [])
+
+    def test_operator_normalizes_task_id_selectors_and_rejects_conflicts(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        builder = ContextBuilder(lambda ref: {"id": ref})
+        plan = {
+            "version": 3,
+            "hash": "task-id-plan",
+            "tasks": [{"task_id": "task-1", "instruction": "inspect"}],
+        }
+        selectors: tuple[object, ...] = (
+            "task-1",
+            {"task_id": "task-1"},
+            {"id": "task-1", "task_id": "task-1"},
+        )
+        for selector in selectors:
+            with self.subTest(selector=selector):
+                context = builder.for_operator(
+                    task=selector,
+                    plan=plan,
+                    evidence_refs=[],
+                )
+                self.assertEqual(
+                    context["task"],
+                    {"task_id": "task-1", "instruction": "inspect"},
+                )
+                self.assertEqual(context["context_manifest"]["task_id"], "task-1")
+
+        conflicting_selectors = (
+            {"id": "task-1", "task_id": "task-2"},
+            "task-1",
+        )
+        conflicting_plans = (
+            plan,
+            {
+                **plan,
+                "tasks": [
+                    {"id": "task-1", "task_id": "task-2", "instruction": "inspect"}
+                ],
+            },
+        )
+        for selector, conflicting_plan in zip(
+            conflicting_selectors,
+            conflicting_plans,
+            strict=True,
+        ):
+            with self.subTest(selector=selector, plan=conflicting_plan):
+                with self.assertRaises(ContextError):
+                    builder.for_operator(
+                        task=selector,
+                        plan=conflicting_plan,
+                        evidence_refs=[],
+                    )
+
     def test_contexts_are_deep_snapshots_without_cross_call_aliases(self) -> None:
         from wqb_cli.agent.context import ContextBuilder
 
         resolved = {"id": "artifact:a", "nested": {"values": [1]}}
         builder = ContextBuilder(lambda ref: resolved)
-        plan = {"version": 1, "tasks": [{"id": "task-1", "values": [1]}]}
+        plan = {
+            "version": 1,
+            "hash": "snapshot-plan",
+            "tasks": [{"id": "task-1", "instruction": "inspect"}],
+        }
         refs = ["artifact:a"]
 
         first = builder.for_operator(task="task-1", plan=plan, evidence_refs=refs)
-        plan["tasks"][0]["values"].append(2)
+        plan["tasks"][0]["instruction"] = "mutated"
         refs.append("artifact:b")
         resolved["nested"]["values"].append(2)
 
-        self.assertEqual(first["task"]["values"], [1])
+        self.assertEqual(first["task"]["instruction"], "inspect")
         self.assertEqual(first["evidence"]["artifacts"][0]["nested"]["values"], [1])
         self.assertEqual(first["context_manifest"]["artifact_ids"], ["artifact:a"])
 
-        plan["tasks"][0]["values"] = [1]
+        plan["tasks"][0]["instruction"] = "inspect"
         resolved["nested"]["values"] = [1]
         second = builder.for_operator(task="task-1", plan=plan, evidence_refs=["artifact:a"])
-        first["task"]["values"].append(3)
+        first["task"]["instruction"] = "changed"
         first["evidence"]["artifacts"][0]["nested"]["values"].append(3)
-        self.assertEqual(second["task"]["values"], [1])
+        self.assertEqual(second["task"]["instruction"], "inspect")
         self.assertEqual(second["evidence"]["artifacts"][0]["nested"]["values"], [1])
 
     def test_secret_key_variants_are_redacted_but_tokenization_is_not(self) -> None:
@@ -496,7 +748,12 @@ class ContextBuilderTests(unittest.TestCase):
             "clientSecret": "value-7",
             "accessToken": "value-8",
             "refresh-token": "value-9",
+            "ACCESSTOKEN": "value-10",
+            "accesstoken": "value-11",
+            "access_token": "value-12",
+            "token_value": "value-13",
             "tokenization": "ordinary-word",
+            "token_bucket": "rate-limit-state",
         }
         builder = ContextBuilder(lambda ref: {"id": ref})
         context = builder.for_planner(
@@ -509,7 +766,11 @@ class ContextBuilderTests(unittest.TestCase):
         )
 
         for key in variants:
-            expected = "ordinary-word" if key == "tokenization" else "[REDACTED]"
+            expected = (
+                variants[key]
+                if key in {"tokenization", "token_bucket"}
+                else "[REDACTED]"
+            )
             self.assertEqual(context["run_config"][key], expected)
 
     def test_malformed_inputs_and_resolver_fail_without_leaking_values(self) -> None:

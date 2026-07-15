@@ -4,9 +4,6 @@ import re
 from math import isfinite
 from typing import Any, Callable
 
-from .policy import OPERATOR_CONTROL_KEYS
-
-
 _MAX_JSON_DEPTH = 64
 _MAX_JSON_NODES = 10_000
 _MAX_JSON_STRING_LENGTH = 1_000_000
@@ -87,31 +84,37 @@ class ContextBuilder:
         task_snapshot = _safe_snapshot(task)
         if type(plan_snapshot) is not dict:
             raise ContextError("plan must be a JSON object")
+        plan_version, plan_hash = _required_plan_lock(plan_snapshot)
 
-        task_id = task_snapshot if type(task_snapshot) is str else None
-        if type(task_snapshot) is dict:
-            task_id = task_snapshot.get("id")
-        task_id = _required_identifier(task_id, "task id")
+        task_id = _task_identifier(task_snapshot, "task selector")
 
         tasks = plan_snapshot.get("tasks")
         if type(tasks) is not list:
             raise ContextError("plan tasks must be a JSON array")
-        matches = [
-            item
-            for item in tasks
-            if type(item) is dict and item.get("id") == task_id
-        ]
+        normalized_tasks: list[tuple[str, dict[str, Any]]] = []
+        for item in tasks:
+            if type(item) is not dict:
+                raise ContextError("plan tasks must be JSON objects")
+            normalized_tasks.append((_task_identifier(item, "plan task"), item))
+        matches = [item for identifier, item in normalized_tasks if identifier == task_id]
         if len(matches) != 1:
             raise ContextError("task id must identify exactly one plan task")
         selected = matches[0]
+        instruction = _required_identifier(selected.get("instruction"), "task instruction")
 
-        fields_value = selected.get("required_fields", []) if required_fields is None else required_fields
+        fields_value = (
+            selected.get("required_fields", [])
+            if required_fields is None
+            else required_fields
+        )
         operators_value = (
             selected.get("required_operators", [])
             if required_operators is None
             else required_operators
         )
-        schema_value = selected.get("output_schema", {}) if output_schema is None else output_schema
+        schema_value = (
+            selected.get("output_schema", {}) if output_schema is None else output_schema
+        )
         fields_snapshot = _safe_snapshot(fields_value)
         operators_snapshot = _safe_snapshot(operators_value)
         schema_snapshot = _safe_snapshot(schema_value)
@@ -124,13 +127,9 @@ class ContextBuilder:
             [] if evidence_refs is None else evidence_refs
         )
         plan_id = _optional_identifier(plan_snapshot.get("id"), "plan id")
-        plan_version = plan_snapshot.get("version", plan_snapshot.get("plan_version"))
-        plan_hash = plan_snapshot.get("hash", plan_snapshot.get("plan_hash"))
-        if plan_hash is not None and (type(plan_hash) is not str or not plan_hash.strip()):
-            raise ContextError("plan hash must be a nonblank string or null")
 
         return {
-            "task": _drop_operator_controls(selected),
+            "task": {"task_id": task_id, "instruction": instruction},
             "plan_lock": {"version": plan_version, "hash": plan_hash},
             "required_fields": fields_snapshot,
             "required_operators": operators_snapshot,
@@ -227,23 +226,36 @@ def _safe_snapshot(value: Any) -> Any:
 def _is_secret_key(key: str) -> bool:
     folded = key.casefold()
     compact = re.sub(r"[^a-z0-9]", "", folded)
-    if any(marker in compact for marker in ("password", "apikey", "authorization", "cookie", "secret")):
+    secret_markers = ("password", "apikey", "authorization", "cookie", "secret")
+    if any(marker in compact for marker in secret_markers):
+        return True
+    token_prefixes = {
+        "access",
+        "api",
+        "auth",
+        "bearer",
+        "csrf",
+        "id",
+        "oauth",
+        "oauth2",
+        "refresh",
+        "session",
+    }
+    if compact == "token" or any(
+        compact == f"{prefix}token" for prefix in token_prefixes
+    ):
         return True
     camel_split = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key)
     segments = [part.casefold() for part in re.split(r"[^A-Za-z0-9]+", camel_split) if part]
-    return "token" in segments
-
-
-def _drop_operator_controls(value: Any) -> Any:
-    if type(value) is dict:
-        return {
-            key: _drop_operator_controls(child)
-            for key, child in value.items()
-            if key.strip().casefold() not in OPERATOR_CONTROL_KEYS
-        }
-    if type(value) is list:
-        return [_drop_operator_controls(child) for child in value]
-    return value
+    if segments and segments[-1] == "token" and any(
+        segment in token_prefixes for segment in segments[:-1]
+    ):
+        return True
+    return (
+        len(segments) >= 2
+        and segments[0] == "token"
+        and segments[1] in {"credential", "credentials", "key", "secret", "value"}
+    )
 
 
 def _required_identifier(value: Any, label: str) -> str:
@@ -252,10 +264,45 @@ def _required_identifier(value: Any, label: str) -> str:
     return value
 
 
+def _task_identifier(value: Any, label: str) -> str:
+    if type(value) is str:
+        return _required_identifier(value, f"{label} id")
+    if type(value) is not dict:
+        raise ContextError(f"{label} must be a task id or JSON object")
+
+    legacy_present = "id" in value
+    canonical_present = "task_id" in value
+    if not legacy_present and not canonical_present:
+        raise ContextError(f"{label} must contain task_id")
+    legacy = _required_identifier(value.get("id"), f"{label} id") if legacy_present else None
+    canonical = (
+        _required_identifier(value.get("task_id"), f"{label} task_id")
+        if canonical_present
+        else None
+    )
+    if legacy is not None and canonical is not None and legacy != canonical:
+        raise ContextError(f"{label} id and task_id must match")
+    if canonical is not None:
+        return canonical
+    if legacy is not None:
+        return legacy
+    raise ContextError(f"{label} must contain task_id")
+
+
 def _optional_identifier(value: Any, label: str) -> str | None:
     if value is None:
         return None
     return _required_identifier(value, label)
+
+
+def _required_plan_lock(plan: dict[str, Any]) -> tuple[int, str]:
+    version = plan.get("version", plan.get("plan_version"))
+    plan_hash = plan.get("hash", plan.get("plan_hash"))
+    if type(version) is not int or version <= 0:
+        raise ContextError("plan version must be a positive integer")
+    if type(plan_hash) is not str or not plan_hash.strip():
+        raise ContextError("plan hash must be a nonblank string")
+    return version, plan_hash
 
 
 def _validate_experiences(value: Any) -> list[str]:

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import unittest
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import Mock
 
-from wqb_cli.agent.nodes.discovery import DiscoveryNodes
+from wqb_cli.agent.nodes.discovery import CoordinatorPlatformBinding, DiscoveryNodes
 from wqb_cli.agent.types import RunConfig, RunState, WorkflowNode
 
 
@@ -18,13 +19,17 @@ def planner_choice(candidate_id: str) -> dict[str, object]:
     }
 
 
-def runner_with_authoritative_platform() -> Mock:
-    runner = Mock()
-    runner.run.side_effect = [
-        Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}, artifact=Mock(id=1, sha256="a" * 64)),
-        Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}, artifact=Mock(id=2, sha256="b" * 64)),
-    ]
-    return runner
+def platform_binding() -> tuple[CoordinatorPlatformBinding, Mock]:
+    sim = {"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}
+    categories = {"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}
+    binding = CoordinatorPlatformBinding(1, sim, 2, categories)
+    store = Mock()
+    records = {
+        1: SimpleNamespace(id=1, run_id="run-1", node=WorkflowNode.J, name="sim_options.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(sim)),
+        2: SimpleNamespace(id=2, run_id="run-1", node=WorkflowNode.D, name="data_categories.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(categories)),
+    }
+    store.get_artifact.side_effect = records.__getitem__
+    return binding, store
 
 
 class DiscoveryNodeTests(unittest.TestCase):
@@ -78,6 +83,7 @@ class DiscoveryNodeTests(unittest.TestCase):
         )
         router = Mock()
         router.invoke.return_value.value = planner_choice("USA_D1_PV")
+        binding, store = platform_binding()
         candidates = {
             "quarter_towers": [
                 {
@@ -99,8 +105,8 @@ class DiscoveryNodeTests(unittest.TestCase):
             },
         }
 
-        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
-            "run-1", config, candidates
+        result = DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+            "run-1", config, candidates, platform_binding=binding
         )
 
         self.assertEqual(
@@ -118,6 +124,7 @@ class DiscoveryNodeTests(unittest.TestCase):
     def test_auto_d_uses_planner_only_after_validating_candidates(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("USA_D1_PV")
+        binding, store = platform_binding()
         candidates = {
             "quarter_towers": [
                 {
@@ -139,8 +146,8 @@ class DiscoveryNodeTests(unittest.TestCase):
             },
         }
 
-        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
+        result = DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, platform_binding=binding
         )
 
         self.assertEqual(result.summary["scope"]["category"], "PV")
@@ -149,6 +156,7 @@ class DiscoveryNodeTests(unittest.TestCase):
     def test_d_rejects_planner_candidate_outside_validated_list(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("not-supplied")
+        binding, store = platform_binding()
         candidates = {
             "quarter_towers": [
                 {
@@ -166,8 +174,8 @@ class DiscoveryNodeTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(ValueError, "supplied candidates"):
-            DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
+            DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, platform_binding=binding
             )
 
     def test_d_fails_closed_without_prevalidated_platform_scope_options(self) -> None:
@@ -180,7 +188,7 @@ class DiscoveryNodeTests(unittest.TestCase):
             ]
         }
 
-        with self.assertRaisesRegex(ValueError, "malformed payload"):
+        with self.assertRaisesRegex(ValueError, "coordinator platform binding"):
             DiscoveryNodes(runner=Mock(), router=Mock(), store=Mock()).run_d(
                 "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
             )
@@ -188,14 +196,15 @@ class DiscoveryNodeTests(unittest.TestCase):
     def test_d_normalizes_real_pyramids_and_expands_validated_scope_options(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("USA_D1_PV_TOP3000_SUBINDUSTRY")
+        binding, store = platform_binding()
         source = {
             "pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv", "name": "Price Volume"}, "alphaCount": 1}],
             "pyramid_multipliers": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}],
         }
         sim_options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
 
-        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source
+        result = DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, platform_binding=binding
         )
 
         self.assertEqual(result.summary["scope"]["category"], "PV")
@@ -204,6 +213,7 @@ class DiscoveryNodeTests(unittest.TestCase):
     def test_d1_unlit_candidates_exclude_d0_from_planner_and_reject_it(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("USA_D0_PV")
+        binding, store = platform_binding()
         source = {
             "quarter_towers": [
                 {"candidate_id": "USA_D1_PV", "region": "USA", "delay": 1, "universe": "TOP3000", "neutralization": "SUBINDUSTRY", "category": "PV", "alphaCount": 1, "multiplier": 1.2},
@@ -213,8 +223,8 @@ class DiscoveryNodeTests(unittest.TestCase):
         sim_options = {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
 
         with self.assertRaisesRegex(ValueError, "supplied candidates"):
-            DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source
+            DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, platform_binding=binding
             )
         offered = router.invoke.call_args.args[0].context["candidates"]
         self.assertEqual([candidate["candidate_id"] for candidate in offered], ["USA_D1_PV"])
@@ -222,17 +232,16 @@ class DiscoveryNodeTests(unittest.TestCase):
     def test_d_default_collection_uses_dated_tower_sources_and_explicit_user_id(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("USA_D1_PV_TOP3000_SUBINDUSTRY")
+        binding, store = platform_binding()
         runner = Mock()
         runner.run.side_effect = [
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}, artifact=Mock(id=1, sha256="a" * 64)),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}, artifact=Mock(id=2, sha256="b" * 64)),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
         ]
-        result = DiscoveryNodes(runner=runner, router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), user_id="fixture-user"
+        result = DiscoveryNodes(runner=runner, router=router, store=store).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), user_id="fixture-user", platform_binding=binding
         )
 
         self.assertEqual(result.summary["multiplier"], 1.4)

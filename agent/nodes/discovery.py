@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
@@ -19,6 +20,16 @@ REGULAR_DAILY_QUOTA = 3
 
 class DiscoveryError(ValueError):
     """Raised when discovery data cannot establish a safe workflow decision."""
+
+
+@dataclass(frozen=True)
+class CoordinatorPlatformBinding:
+    """Coordinator-supplied platform metadata bound to registered artifacts."""
+
+    sim_options_artifact_id: int
+    sim_options_envelope: dict[str, Any]
+    categories_artifact_id: int
+    categories_envelope: dict[str, Any]
 
 
 class DiscoveryNodes:
@@ -146,16 +157,16 @@ class DiscoveryNodes:
         config: RunConfig,
         candidates: Mapping[str, Any] | None = None,
         *,
-        sim_options: Mapping[str, Any] | None = None,
+        platform_binding: CoordinatorPlatformBinding | None = None,
         user_id: str | None = None,
     ) -> NodeResult:
         if not isinstance(config, RunConfig):
             raise TypeError("config must be a RunConfig")
-        if sim_options is not None:
-            raise DiscoveryError("caller-provided sim_options are not permitted")
         if candidates is None and (type(user_id) is not str or not user_id.strip()):
             raise DiscoveryError("user_id is required to collect user diversity")
-        platform = self._collect_platform_options(run_id)
+        if type(platform_binding) is not CoordinatorPlatformBinding:
+            raise DiscoveryError("a coordinator platform binding is required")
+        platform = self._verified_platform_binding(run_id, platform_binding)
         source = (
             self._collect_d_source(run_id, user_id=user_id)
             if candidates is None
@@ -210,10 +221,18 @@ class DiscoveryNodes:
             payload={"scope": deepcopy(scope), "scope_hash": scope_hash},
         )
 
-    def _collect_platform_options(self, run_id: str) -> dict[str, Any]:
-        sim_options = self._run(run_id, WorkflowNode.D, ("sim", "options"), "sim_options.json")
-        categories = self._run(run_id, WorkflowNode.D, ("data", "categories"), "data_categories.json")
-        category_rows = self._successful_body_list(self._payload(categories), "data categories")
+    def _verified_platform_binding(
+        self, run_id: str, binding: CoordinatorPlatformBinding
+    ) -> dict[str, Any]:
+        sim_payload = self._verify_bound_artifact(
+            run_id, binding.sim_options_artifact_id, binding.sim_options_envelope,
+            WorkflowNode.J, "sim_options.json",
+        )
+        category_payload = self._verify_bound_artifact(
+            run_id, binding.categories_artifact_id, binding.categories_envelope,
+            WorkflowNode.D, "data_categories.json",
+        )
+        category_rows = self._successful_body_list(category_payload, "data categories")
         category_ids = set()
         for item in category_rows:
             identifier = item.get("id")
@@ -223,11 +242,11 @@ class DiscoveryNodes:
         if not category_ids:
             raise DiscoveryError("data categories response is empty")
         return {
-            "sim_options": self._successful_body(self._payload(sim_options)),
+            "sim_options": self._successful_body(sim_payload),
             "category_ids": frozenset(category_ids),
-            "sim_options_source": self._artifact_reference(sim_options),
-            "categories_source": self._artifact_reference(categories),
-            "artifact_ids": self._artifact_ids(sim_options, categories),
+            "sim_options_source": self._artifact_record_reference(run_id, binding.sim_options_artifact_id),
+            "categories_source": self._artifact_record_reference(run_id, binding.categories_artifact_id),
+            "artifact_ids": (str(binding.sim_options_artifact_id), str(binding.categories_artifact_id)),
         }
 
     def _collect_d_source(self, run_id: str, *, user_id: str | None) -> dict[str, Any]:
@@ -531,6 +550,44 @@ class DiscoveryNodes:
         if type(identifier) is not int or identifier <= 0 or type(digest) is not str or len(digest) != 64:
             raise DiscoveryError("sim options command has no verifiable artifact reference")
         return {"artifact_id": str(identifier), "sha256": digest.casefold()}
+
+    def _verify_bound_artifact(
+        self, run_id: str, artifact_id: int, payload: dict[str, Any], node: WorkflowNode, name: str
+    ) -> dict[str, Any]:
+        if type(artifact_id) is not int or artifact_id <= 0 or type(payload) is not dict:
+            raise DiscoveryError("platform binding is malformed")
+        getter = getattr(self._store, "get_artifact", None)
+        if not callable(getter):
+            raise DiscoveryError("store cannot verify platform binding")
+        try:
+            record = getter(artifact_id)
+        except Exception:
+            raise DiscoveryError("platform binding artifact is unavailable") from None
+        if (
+            getattr(record, "run_id", None) != run_id
+            or getattr(record, "node", None) is not node
+            or getattr(record, "name", None) != name
+            or getattr(record, "kind", None) != "json"
+        ):
+            raise DiscoveryError("platform binding artifact identity is invalid")
+        digest = self._canonical_payload_hash(payload)
+        if getattr(record, "sha256", None) != digest:
+            raise DiscoveryError("platform binding payload hash does not match artifact")
+        return deepcopy(payload)
+
+    def _artifact_record_reference(self, run_id: str, artifact_id: int) -> dict[str, str]:
+        record = self._store.get_artifact(artifact_id)
+        if getattr(record, "run_id", None) != run_id:
+            raise DiscoveryError("platform binding artifact belongs to another run")
+        return {"artifact_id": str(artifact_id), "sha256": record.sha256}
+
+    @staticmethod
+    def _canonical_payload_hash(payload: dict[str, Any]) -> str:
+        try:
+            rendered = json.dumps(payload, ensure_ascii=False, allow_nan=False, sort_keys=True, separators=(",", ":"))
+        except (TypeError, ValueError, RecursionError):
+            raise DiscoveryError("platform binding payload cannot be canonicalized") from None
+        return hashlib.sha256(rendered.encode("utf-8")).hexdigest()
 
     def _write_json(self, run_id: str, node: WorkflowNode, name: str, value: dict[str, Any]) -> tuple[str, ...]:
         writer = self._artifacts

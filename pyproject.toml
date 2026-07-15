@@ -13,6 +13,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 dependencies = [
+    "jsonschema>=4.23",
     "keyring>=24",
     "msgpack>=1.0",
     "pandas>=2.0",

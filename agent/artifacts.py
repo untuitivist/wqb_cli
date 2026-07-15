@@ -7,10 +7,11 @@ import re
 import secrets
 import stat
 import threading
+from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
 from pathlib import Path, PurePosixPath, PureWindowsPath
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 from .context import _is_secret_key
 from .types import WorkflowNode
@@ -50,6 +51,13 @@ class WrittenArtifact:
     path: str
     sha256: str
     kind: str
+
+
+@dataclass(frozen=True)
+class _ArtifactSnapshot:
+    existed: bool
+    content: bytes = b""
+    mode: int = 0o600
 
 
 _WINDOWS_INVALID_CHARACTERS = frozenset('<>:"|?*')
@@ -207,7 +215,8 @@ _QUOTED_OR_UNQUOTED_PAIR = re.compile(
 )
 _CLI_PAIR = re.compile(
     r"(?i)(?P<flag>--[a-z0-9][a-z0-9_-]*)"
-    r"(?:(?P<equals>=)(?P<inline>[^\s]+)|\s+(?P<next>[^\s]+))"
+    r"(?:(?P<equals>=)(?P<inline>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s]+)"
+    r"|\s+(?P<next>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s]+))"
 )
 
 
@@ -215,25 +224,7 @@ def redact_text(value: str) -> str:
     if type(value) is not str:
         raise TypeError("text must be a string")
 
-    lines: list[str] = []
-    for line in value.splitlines(keepends=True):
-        ending = ""
-        content = line
-        if content.endswith("\r\n"):
-            content, ending = content[:-2], "\r\n"
-        elif content.endswith(("\n", "\r")):
-            content, ending = content[:-1], content[-1]
-        stripped = content.strip()
-        if stripped.startswith("{") and stripped.endswith("}"):
-            try:
-                parsed = _strict_json_object(stripped)
-            except ArtifactError:
-                pass
-            else:
-                prefix = content[: len(content) - len(content.lstrip())]
-                content = prefix + _canonical_json_object(_redacted_json(parsed))
-        lines.append(content + ending)
-    result = "".join(lines)
+    result = _redact_embedded_json_objects(value)
     result = _TEXT_SECRET.sub(
         lambda match: match.group("prefix") + "[REDACTED]", result
     )
@@ -257,7 +248,7 @@ def redact_text(value: str) -> str:
     return _CLI_PAIR.sub(cli, result)
 
 
-def _strict_json_object(text: str) -> dict[str, Any]:
+def _strict_json_decoder() -> json.JSONDecoder:
     def object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for key, child in pairs:
@@ -266,17 +257,44 @@ def _strict_json_object(text: str) -> dict[str, Any]:
             result[key] = child
         return result
 
+    return json.JSONDecoder(
+        object_pairs_hook=object_pairs,
+        parse_constant=lambda constant: (_ for _ in ()).throw(
+            ValueError("non-finite number")
+        ),
+    )
+
+
+def _redact_embedded_json_objects(value: str) -> str:
+    decoder = _strict_json_decoder()
+    output: list[str] = []
+    cursor = 0
+    while True:
+        start = value.find("{", cursor)
+        if start < 0:
+            output.append(value[cursor:])
+            return "".join(output)
+        output.append(value[cursor:start])
+        try:
+            parsed, end = decoder.raw_decode(value, start)
+        except (json.JSONDecodeError, ValueError):
+            output.append("{")
+            cursor = start + 1
+            continue
+        if type(parsed) is not dict:
+            output.append("{")
+            cursor = start + 1
+            continue
+        output.append(_canonical_json_object(_redacted_json(parsed)))
+        cursor = end
+
+
+def _strict_json_object(text: str) -> dict[str, Any]:
     try:
-        value = json.loads(
-            text,
-            object_pairs_hook=object_pairs,
-            parse_constant=lambda constant: (_ for _ in ()).throw(
-                ValueError("non-finite number")
-            ),
-        )
+        value, end = _strict_json_decoder().raw_decode(text)
     except (json.JSONDecodeError, ValueError):
         raise ArtifactError("text is not a strict JSON object") from None
-    if type(value) is not dict:
+    if text[end:].strip() or type(value) is not dict:
         raise ArtifactError("text is not a strict JSON object")
     return value
 
@@ -333,6 +351,115 @@ class ArtifactWriter:
 
     def validate(self, run_id: str, node: WorkflowNode, name: str) -> None:
         self._target(run_id, node, name, create=False)
+
+    def stage_input(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        content: bytes,
+        sha256: str,
+    ) -> Path:
+        if type(content) is not bytes:
+            raise TypeError("input snapshot content must be bytes")
+        if (
+            type(sha256) is not str
+            or re.fullmatch(r"[0-9a-f]{64}", sha256) is None
+            or hashlib.sha256(content).hexdigest() != sha256
+        ):
+            raise ArtifactError("input snapshot hash is invalid")
+        name = f".inputs/{sha256}-{len(content)}.bin"
+        with self._lock:
+            target = self._target(run_id, node, name)
+            if target.exists():
+                self._verify_input_snapshot(target, sha256, len(content))
+                return target.resolve(strict=True)
+            temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
+            descriptor: int | None = None
+            try:
+                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                flags |= getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
+                descriptor = os.open(temporary, flags, 0o600)
+                if os.name == "nt":
+                    actual = self._final_path_for_fd(descriptor)
+                    if actual != temporary.resolve(strict=True):
+                        raise ArtifactError("input snapshot temporary path changed")
+                with os.fdopen(descriptor, "wb") as stream:
+                    descriptor = None
+                    stream.write(content)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(temporary, target, follow_symlinks=False)
+                except FileExistsError:
+                    pass
+                temporary.unlink()
+                self._verify_input_snapshot(target, sha256, len(content))
+                try:
+                    target.chmod(stat.S_IREAD)
+                except OSError:
+                    raise ArtifactError("input snapshot could not be made read-only") from None
+                return target.resolve(strict=True)
+            except ArtifactError:
+                raise
+            except OSError:
+                raise ArtifactError("input snapshot could not be staged securely") from None
+            finally:
+                if descriptor is not None:
+                    os.close(descriptor)
+                if temporary.exists():
+                    try:
+                        temporary.chmod(stat.S_IWRITE | stat.S_IREAD)
+                        temporary.unlink()
+                    except OSError:
+                        pass
+
+    def verify_input_snapshot(self, path: Path, sha256: str, size: int) -> None:
+        with self._lock:
+            self._verify_input_snapshot(path, sha256, size)
+
+    def _verify_input_snapshot(self, path: Path, sha256: str, size: int) -> None:
+        descriptor: int | None = None
+        try:
+            resolved = path.resolve(strict=True)
+            if not resolved.is_relative_to(self.root) or _is_link(path):
+                raise ArtifactError("input snapshot path is unsafe")
+            flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(path, flags)
+            if os.name == "nt" and self._final_path_for_fd(descriptor) != resolved:
+                raise ArtifactError("input snapshot handle path changed")
+            digest = hashlib.sha256()
+            consumed = 0
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = None
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode):
+                    raise ArtifactError("input snapshot must be a regular file")
+                while chunk := stream.read(1024 * 1024):
+                    consumed += len(chunk)
+                    if consumed > size:
+                        raise ArtifactError("input snapshot size changed")
+                    digest.update(chunk)
+                after = os.fstat(stream.fileno())
+            identity_before = (
+                before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns
+            )
+            identity_after = (
+                after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
+            )
+            if (
+                identity_before != identity_after
+                or consumed != size
+                or digest.hexdigest() != sha256
+            ):
+                raise ArtifactError("input snapshot content does not match its identity")
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("input snapshot could not be verified") from None
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
 
     def _ensure_directory(self, directory: Path, *, create: bool) -> Path:
         try:
@@ -394,7 +521,8 @@ class ArtifactWriter:
         text: str,
         kind: str,
     ) -> Any:
-        with self._lock:
+        with self._lock, self._artifact_lock(run_id, node, name):
+            snapshot = self._capture_target(run_id, node, name)
             if os.name == "posix":
                 if not self._supports_secure_dir_fd():
                     raise ArtifactError("secure dir_fd artifact writes are unavailable")
@@ -416,7 +544,148 @@ class ArtifactWriter:
                     run_id, node, name, target, digest, kind
                 )
             except Exception:
+                try:
+                    self._restore_target(run_id, node, name, snapshot, digest)
+                except Exception:
+                    pass
                 raise ArtifactError("artifact registry update failed") from None
+
+    @contextmanager
+    def _artifact_lock(
+        self, run_id: str, node: WorkflowNode, name: str
+    ) -> Iterator[None]:
+        _validate_run_id(run_id)
+        if type(node) is not WorkflowNode:
+            raise ArtifactError("node must be a WorkflowNode")
+        _validate_name(name)
+        relative = Path(run_id) / NODE_DIRECTORIES[node] / Path(name)
+        identity = os.path.normcase(os.path.normpath(str(relative))).encode("utf-8")
+        lock_name = f"{hashlib.sha256(identity).hexdigest()}.lock"
+        if os.name == "posix":
+            with self._artifact_lock_with_dir_fd(lock_name):
+                yield
+            return
+        if os.name == "nt":
+            with self._artifact_lock_with_windows_handle(lock_name):
+                yield
+            return
+        raise ArtifactError("secure artifact locking is unavailable")
+
+    @contextmanager
+    def _artifact_lock_with_dir_fd(self, lock_name: str) -> Iterator[None]:
+        import fcntl
+
+        parent_fd = self._open_parent_dir_fd((".artifact-locks",))
+        descriptor: int | None = None
+        locked = False
+        try:
+            flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW
+            flags |= getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(lock_name, flags, 0o600, dir_fd=parent_fd)
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise ArtifactError("artifact lock must be a regular file")
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            locked = True
+            yield
+        except ArtifactError:
+            raise
+        except OSError:
+            if locked:
+                raise
+            raise ArtifactError("artifact lock could not be acquired securely") from None
+        finally:
+            if descriptor is not None:
+                if locked:
+                    try:
+                        fcntl.flock(descriptor, fcntl.LOCK_UN)
+                    except OSError:
+                        pass
+                os.close(descriptor)
+            os.close(parent_fd)
+
+    @contextmanager
+    def _artifact_lock_with_windows_handle(self, lock_name: str) -> Iterator[None]:
+        import msvcrt
+
+        directory = self._ensure_directory(self.root / ".artifact-locks", create=True)
+        expected_directory = directory.resolve(strict=True)
+        lock_path = directory / lock_name
+        descriptor: int | None = None
+        locked = False
+        try:
+            if _is_link(lock_path):
+                raise ArtifactError("artifact lock must not be a symbolic link")
+            flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_BINARY", 0)
+            descriptor = os.open(lock_path, flags, 0o600)
+            if self._final_path_for_fd(descriptor) != expected_directory / lock_name:
+                raise ArtifactError("artifact lock handle escaped its directory")
+            details = os.fstat(descriptor)
+            if not stat.S_ISREG(details.st_mode):
+                raise ArtifactError("artifact lock must be a regular file")
+            if details.st_size == 0:
+                os.write(descriptor, b"\0")
+                os.fsync(descriptor)
+            os.lseek(descriptor, 0, os.SEEK_SET)
+            msvcrt.locking(descriptor, msvcrt.LK_LOCK, 1)
+            locked = True
+            yield
+        except ArtifactError:
+            raise
+        except OSError:
+            if locked:
+                raise
+            raise ArtifactError("artifact lock could not be acquired securely") from None
+        finally:
+            if descriptor is not None:
+                if locked:
+                    try:
+                        os.lseek(descriptor, 0, os.SEEK_SET)
+                        msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+                    except OSError:
+                        pass
+                os.close(descriptor)
+
+    def _capture_target(
+        self, run_id: str, node: WorkflowNode, name: str
+    ) -> _ArtifactSnapshot:
+        if os.name == "posix":
+            if not self._supports_secure_dir_fd():
+                raise ArtifactError("secure dir_fd artifact writes are unavailable")
+            return self._capture_with_dir_fd(run_id, node, name)
+        if os.name == "nt":
+            return self._capture_with_windows_handle(run_id, node, name)
+        raise ArtifactError("secure artifact writes are unavailable")
+
+    def _restore_target(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        snapshot: _ArtifactSnapshot,
+        expected_digest: str,
+    ) -> None:
+        current = self._capture_target(run_id, node, name)
+        if (
+            not current.existed
+            or hashlib.sha256(current.content).hexdigest() != expected_digest
+        ):
+            raise ArtifactError("artifact changed before rollback")
+        if os.name == "posix":
+            self._restore_with_dir_fd(run_id, node, name, snapshot)
+        elif os.name == "nt":
+            self._restore_with_windows_handles(run_id, node, name, snapshot)
+        else:
+            raise ArtifactError("secure artifact rollback is unavailable")
+        restored = self._capture_target(run_id, node, name)
+        if snapshot.existed:
+            if (
+                not restored.existed
+                or restored.content != snapshot.content
+                or restored.mode != snapshot.mode
+            ):
+                raise ArtifactError("artifact rollback verification failed")
+        elif restored.existed:
+            raise ArtifactError("artifact rollback verification failed")
 
     @staticmethod
     def _supports_secure_dir_fd() -> bool:
@@ -473,6 +742,113 @@ class ArtifactWriter:
                 while chunk := stream.read(1024 * 1024):
                     digest.update(chunk)
             return target, digest.hexdigest()
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            temporary.unlink(missing_ok=True)
+
+    def _capture_with_windows_handle(
+        self, run_id: str, node: WorkflowNode, name: str
+    ) -> _ArtifactSnapshot:
+        target = self._target(run_id, node, name)
+        expected_parent = target.parent.resolve(strict=True)
+        expected_target = expected_parent / target.name
+        descriptor: int | None = None
+        try:
+            read_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+            descriptor = os.open(target, read_flags)
+            if self._final_path_for_fd(descriptor) != expected_target:
+                raise ArtifactError("artifact target handle escaped its directory")
+            chunks: list[bytes] = []
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = None
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode):
+                    raise ArtifactError("artifact target must be a regular file")
+                while chunk := stream.read(1024 * 1024):
+                    chunks.append(chunk)
+                after = os.fstat(stream.fileno())
+            before_identity = (
+                before.st_dev,
+                before.st_ino,
+                before.st_size,
+                before.st_mtime_ns,
+            )
+            after_identity = (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            )
+            if before_identity != after_identity:
+                raise ArtifactError("artifact target changed while it was read")
+            return _ArtifactSnapshot(
+                True, b"".join(chunks), stat.S_IMODE(before.st_mode)
+            )
+        except FileNotFoundError:
+            return _ArtifactSnapshot(False)
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("artifact target could not be captured securely") from None
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+
+    def _restore_with_windows_handles(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        snapshot: _ArtifactSnapshot,
+    ) -> None:
+        target = self._target(run_id, node, name, create=False)
+        expected_parent = target.parent.resolve(strict=True)
+        expected_target = expected_parent / target.name
+        if not snapshot.existed:
+            descriptor: int | None = None
+            try:
+                read_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+                descriptor = os.open(target, read_flags)
+                if self._final_path_for_fd(descriptor) != expected_target:
+                    raise ArtifactError("artifact rollback target escaped its directory")
+                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                    raise ArtifactError("artifact rollback target must be a regular file")
+                os.close(descriptor)
+                descriptor = None
+                target.unlink()
+                return
+            except FileNotFoundError:
+                return
+            finally:
+                if descriptor is not None:
+                    os.close(descriptor)
+
+        temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
+        descriptor = None
+        try:
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            flags |= getattr(os, "O_BINARY", 0)
+            descriptor = os.open(temporary, flags, 0o600)
+            if self._final_path_for_fd(descriptor).parent != expected_parent:
+                raise ArtifactError("artifact rollback temporary escaped its directory")
+            with os.fdopen(descriptor, "wb") as stream:
+                descriptor = None
+                stream.write(snapshot.content)
+                stream.flush()
+                os.fchmod(stream.fileno(), snapshot.mode)
+                os.fsync(stream.fileno())
+            if target.parent.resolve(strict=True) != expected_parent:
+                raise ArtifactError("artifact directory identity changed")
+            os.replace(temporary, target)
+            descriptor = os.open(
+                target, os.O_RDONLY | getattr(os, "O_BINARY", 0)
+            )
+            if self._final_path_for_fd(descriptor) != expected_target:
+                raise ArtifactError("artifact rollback target escaped its directory")
+            restored = os.fstat(descriptor)
+            if stat.S_IMODE(restored.st_mode) != snapshot.mode:
+                raise ArtifactError("artifact rollback mode could not be restored")
         finally:
             if descriptor is not None:
                 os.close(descriptor)
@@ -561,6 +937,123 @@ class ArtifactWriter:
             raise
         except OSError:
             raise ArtifactError("artifact could not be written securely") from None
+        finally:
+            if temporary_exists:
+                try:
+                    os.unlink(temporary_name, dir_fd=parent_fd)
+                except OSError:
+                    pass
+            os.close(parent_fd)
+
+    def _capture_with_dir_fd(
+        self, run_id: str, node: WorkflowNode, name: str
+    ) -> _ArtifactSnapshot:
+        _validate_run_id(run_id)
+        if type(node) is not WorkflowNode:
+            raise ArtifactError("node must be a WorkflowNode")
+        _validate_name(name)
+        relative = Path(run_id) / NODE_DIRECTORIES[node] / Path(name)
+        parent_fd = self._open_parent_dir_fd(relative.parent.parts)
+        descriptor: int | None = None
+        try:
+            read_flags = os.O_RDONLY | os.O_NOFOLLOW
+            read_flags |= getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(relative.name, read_flags, dir_fd=parent_fd)
+            chunks: list[bytes] = []
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = None
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode):
+                    raise ArtifactError("artifact target must be a regular file")
+                while chunk := stream.read(1024 * 1024):
+                    chunks.append(chunk)
+                after = os.fstat(stream.fileno())
+            before_identity = (
+                before.st_dev,
+                before.st_ino,
+                before.st_size,
+                before.st_mtime_ns,
+            )
+            after_identity = (
+                after.st_dev,
+                after.st_ino,
+                after.st_size,
+                after.st_mtime_ns,
+            )
+            if before_identity != after_identity:
+                raise ArtifactError("artifact target changed while it was read")
+            return _ArtifactSnapshot(
+                True, b"".join(chunks), stat.S_IMODE(before.st_mode)
+            )
+        except FileNotFoundError:
+            return _ArtifactSnapshot(False)
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("artifact target could not be captured securely") from None
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            os.close(parent_fd)
+
+    def _restore_with_dir_fd(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        snapshot: _ArtifactSnapshot,
+    ) -> None:
+        _validate_run_id(run_id)
+        if type(node) is not WorkflowNode:
+            raise ArtifactError("node must be a WorkflowNode")
+        _validate_name(name)
+        relative = Path(run_id) / NODE_DIRECTORIES[node] / Path(name)
+        parent_fd = self._open_parent_dir_fd(relative.parent.parts)
+        temporary_name = f".{relative.name}.{secrets.token_hex(12)}.tmp"
+        temporary_exists = False
+        try:
+            if not snapshot.existed:
+                try:
+                    current = os.stat(
+                        relative.name, dir_fd=parent_fd, follow_symlinks=False
+                    )
+                except FileNotFoundError:
+                    return
+                if not stat.S_ISREG(current.st_mode):
+                    raise ArtifactError("artifact rollback target must be a regular file")
+                os.unlink(relative.name, dir_fd=parent_fd)
+                os.fsync(parent_fd)
+                return
+
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+            flags |= getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(temporary_name, flags, 0o600, dir_fd=parent_fd)
+            temporary_exists = True
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(snapshot.content)
+                stream.flush()
+                os.fchmod(stream.fileno(), snapshot.mode)
+                os.fsync(stream.fileno())
+            os.replace(
+                temporary_name,
+                relative.name,
+                src_dir_fd=parent_fd,
+                dst_dir_fd=parent_fd,
+            )
+            temporary_exists = False
+            restored = os.stat(
+                relative.name, dir_fd=parent_fd, follow_symlinks=False
+            )
+            if (
+                not stat.S_ISREG(restored.st_mode)
+                or stat.S_IMODE(restored.st_mode) != snapshot.mode
+            ):
+                raise ArtifactError("artifact rollback mode could not be restored")
+            os.fsync(parent_fd)
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("artifact could not be rolled back securely") from None
         finally:
             if temporary_exists:
                 try:

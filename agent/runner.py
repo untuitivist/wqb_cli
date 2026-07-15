@@ -3,6 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
+import stat
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -10,7 +12,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
-from .artifacts import ArtifactWriter, redact_argv, redact_json, redact_text
+from .artifacts import ArtifactError, ArtifactWriter, redact_argv, redact_json, redact_text
 from .context import _is_secret_key
 from .policy import AgentPolicy, PolicyViolation
 from .types import WorkflowNode
@@ -19,6 +21,7 @@ from .types import WorkflowNode
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 REPO_ROOT = PACKAGE_ROOT
 MAX_FINGERPRINT_FILE_BYTES = 32 * 1024 * 1024
+RESOURCE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,255}")
 FILE_INPUT_FLAGS = {
     ("sim", "create"): frozenset({"--input"}),
     ("scope", "files"): frozenset({"--info", "--pickle"}),
@@ -55,6 +58,21 @@ class _ExecutableIdentity:
     inode: int
 
 
+@dataclass(frozen=True)
+class _InputSnapshot:
+    path: Path
+    sha256: str
+    size: int
+
+
+@dataclass(frozen=True)
+class _PreparedInvocation:
+    argv: tuple[str, ...]
+    fingerprint: str
+    snapshots: tuple[_InputSnapshot, ...]
+    missing_input: bool
+
+
 def _is_link(path: Path) -> bool:
     is_junction = getattr(path, "is_junction", None)
     return path.is_symlink() or (callable(is_junction) and is_junction())
@@ -88,33 +106,69 @@ def sanitized_environment() -> dict[str, str]:
     return result
 
 
-def _file_identity(token: str, *, cwd: Path) -> Any:
+def _capture_file_argument(token: str, *, cwd: Path) -> tuple[dict[str, Any], bytes] | None:
     candidate = Path(token).expanduser()
     if not candidate.is_absolute():
         candidate = cwd / candidate
+    descriptor: int | None = None
     try:
         if _is_link(candidate):
             raise RunnerError("command file arguments must not be symbolic links")
         if not candidate.exists():
-            return token
-        if not candidate.is_file():
+            return None
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
+        flags |= getattr(os, "O_NOFOLLOW", 0)
+        descriptor = os.open(candidate, flags)
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
             raise RunnerError("command file arguments must be regular files")
-        size = candidate.stat().st_size
-        if size > MAX_FINGERPRINT_FILE_BYTES:
+        if before.st_size > MAX_FINGERPRINT_FILE_BYTES:
             raise RunnerError("command file argument exceeds the fingerprint size limit")
         digest = hashlib.sha256()
         consumed = 0
-        with candidate.open("rb") as stream:
+        chunks: list[bytes] = []
+        with os.fdopen(descriptor, "rb") as stream:
+            descriptor = None
             while chunk := stream.read(1024 * 1024):
                 consumed += len(chunk)
                 if consumed > MAX_FINGERPRINT_FILE_BYTES:
                     raise RunnerError(
                         "command file argument exceeds the fingerprint size limit"
                     )
+                chunks.append(chunk)
                 digest.update(chunk)
-        return {"file": {"sha256": digest.hexdigest(), "size": consumed}}
+            after = os.fstat(stream.fileno())
+        before_identity = (
+            before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns
+        )
+        after_identity = (
+            after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns
+        )
+        if before_identity != after_identity or consumed != before.st_size:
+            raise RunnerError("command file argument changed while it was read")
+        identity = {"file": {"sha256": digest.hexdigest(), "size": consumed}}
+        return identity, b"".join(chunks)
     except OSError:
         raise RunnerError("command file argument cannot be inspected") from None
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _file_identity(token: str, *, cwd: Path) -> Any:
+    captured = _capture_file_argument(token, cwd=cwd)
+    return token if captured is None else captured[0]
+
+
+def _fingerprint_from_normalized(node: WorkflowNode, normalized: list[Any]) -> str:
+    canonical = json.dumps(
+        {"node": node.value, "argv": normalized},
+        ensure_ascii=True,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def command_fingerprint(
@@ -139,14 +193,7 @@ def command_fingerprint(
         else:
             normalized.append(token)
         index += 1
-    canonical = json.dumps(
-        {"node": node.value, "argv": normalized},
-        ensure_ascii=True,
-        allow_nan=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-    return hashlib.sha256(canonical).hexdigest()
+    return _fingerprint_from_normalized(node, normalized)
 
 
 class AgentRunner:
@@ -327,7 +374,9 @@ class AgentRunner:
         *,
         external: bool,
     ) -> RunnerResult:
-        fingerprint = command_fingerprint(node, argv, cwd=self.command_cwd)
+        prebound_resource_id = self._prebound_resource_id(argv)
+        prepared = self._prepare_invocation(run_id, node, argv)
+        fingerprint = prepared.fingerprint
         command = self.store.reserve_command(
             run_id, node, fingerprint, redact_argv(argv)
         )
@@ -340,8 +389,11 @@ class AgentRunner:
                 payload, artifact, True, command.id, getattr(command, "exit_code", None) or 0
             )
 
-        effective_argv = argv
-        effective_line = command_line
+        effective_argv = prepared.argv
+        if external:
+            effective_line = [command_line[0], *effective_argv[1:]]
+        else:
+            effective_line = [sys.executable, "-m", "wqb_cli", *effective_argv]
         if command.status == "RECOVERY_REQUIRED":
             effective_argv = self._recovery_argv(node, argv, command.resource_id)
             if external:
@@ -350,6 +402,29 @@ class AgentRunner:
                 effective_line = [sys.executable, "-m", "wqb_cli", *effective_argv]
         elif command.status != "STARTED":
             raise RunnerError("command ledger status does not permit execution")
+        elif prepared.missing_input:
+            raise RunnerError("command file argument does not exist")
+
+        bound_resource_id = command.resource_id
+        if command.status == "STARTED" and prebound_resource_id is not None:
+            try:
+                self.store.mark_command_resource(command.id, prebound_resource_id)
+            except Exception:
+                raise RunnerError("command resource could not be persisted") from None
+            bound_resource_id = prebound_resource_id
+
+        if command.status == "STARTED":
+            try:
+                for snapshot in prepared.snapshots:
+                    self.artifacts.verify_input_snapshot(
+                        snapshot.path, snapshot.sha256, snapshot.size
+                    )
+            except ArtifactError:
+                raise RunnerError("command input snapshot identity changed") from None
+        environment = sanitized_environment()
+        if external:
+            executable = self._require_external_identity()
+            effective_line[0] = str(executable)
 
         try:
             completed = subprocess.run(
@@ -362,13 +437,39 @@ class AgentRunner:
                 stderr=subprocess.PIPE,
                 timeout=self.timeout_seconds,
                 check=False,
-                env=sanitized_environment(),
+                env=environment,
             )
         except subprocess.TimeoutExpired:
-            self._fail(command, run_id, node, argv, fingerprint, "TIMEOUT", None, "")
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "TIMEOUT",
+                    None,
+                    "",
+                    prebound_resource_id,
+                )
+            else:
+                self._fail(command, run_id, node, argv, fingerprint, "TIMEOUT", None, "")
             raise RunnerError("command timed out") from None
         except OSError:
-            self._fail(command, run_id, node, argv, fingerprint, "EXECUTION_ERROR", None, "")
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "EXECUTION_UNKNOWN",
+                    None,
+                    "",
+                    prebound_resource_id,
+                )
+            else:
+                self._fail(command, run_id, node, argv, fingerprint, "EXECUTION_ERROR", None, "")
             raise RunnerError("command execution failed") from None
 
         if completed.returncode != 0:
@@ -386,18 +487,40 @@ class AgentRunner:
         try:
             payload = self._parse_stdout(completed.stdout)
         except RunnerError:
-            self._fail(
-                command,
-                run_id,
-                node,
-                argv,
-                fingerprint,
-                "INVALID_OUTPUT",
-                completed.returncode,
-                completed.stderr,
-            )
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "INVALID_OUTPUT",
+                    completed.returncode,
+                    completed.stderr,
+                    prebound_resource_id,
+                )
+            else:
+                self._fail(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "INVALID_OUTPUT",
+                    completed.returncode,
+                    completed.stderr,
+                )
             raise
 
+        resource_id = self._resource_id(argv, payload)
+        if resource_id is not None and bound_resource_id is None:
+            try:
+                self.store.mark_command_resource(command.id, resource_id)
+            except Exception:
+                raise RunnerError("command resource could not be persisted") from None
+            bound_resource_id = resource_id
+        elif resource_id is not None and resource_id != bound_resource_id:
+            raise RunnerError("command resource conflicts with its ledger binding")
         safe_payload = redact_json(payload)
 
         artifact = None
@@ -405,9 +528,6 @@ class AgentRunner:
             artifact = self.artifacts.write_json(
                 run_id, node, artifact_name, safe_payload
             )
-            resource_id = self._resource_id(argv, payload)
-            if resource_id is not None and command.resource_id is None:
-                self.store.mark_command_resource(command.id, resource_id)
             self._write_log(
                 run_id,
                 node,
@@ -421,18 +541,85 @@ class AgentRunner:
             )
             self.store.complete_command(command.id, completed.returncode, artifact_id=artifact.id)
         except Exception:
-            try:
-                self.store.fail_command(
-                    command.id,
-                    "command result persistence failed",
-                    exit_code=completed.returncode,
-                    artifact_id=getattr(artifact, "id", None),
-                )
-            except Exception:
-                pass
+            if not self._is_mutation(argv):
+                try:
+                    self.store.fail_command(
+                        command.id,
+                        "command result persistence failed",
+                        exit_code=completed.returncode,
+                        artifact_id=getattr(artifact, "id", None),
+                    )
+                except Exception:
+                    pass
             raise RunnerError("command result could not be persisted") from None
         return RunnerResult(
             safe_payload, artifact, False, command.id, completed.returncode
+        )
+
+    def _prepare_invocation(
+        self, run_id: str, node: WorkflowNode, argv: tuple[str, ...]
+    ) -> _PreparedInvocation:
+        input_flags = FILE_INPUT_FLAGS.get(argv[:2], frozenset())
+        normalized: list[Any] = []
+        effective: list[str] = []
+        snapshots: list[_InputSnapshot] = []
+        captured_by_path: dict[str, tuple[dict[str, Any], bytes] | None] = {}
+        missing_input = False
+
+        def capture(token: str) -> tuple[Any, Path | None]:
+            nonlocal missing_input
+            candidate = Path(token).expanduser()
+            if not candidate.is_absolute():
+                candidate = self.command_cwd / candidate
+            key = os.path.normcase(str(candidate.absolute()))
+            if key not in captured_by_path:
+                captured_by_path[key] = _capture_file_argument(
+                    token, cwd=self.command_cwd
+                )
+            captured = captured_by_path[key]
+            if captured is None:
+                missing_input = True
+                return token, None
+            identity, content = captured
+            digest = identity["file"]["sha256"]
+            size = identity["file"]["size"]
+            try:
+                path = self.artifacts.stage_input(run_id, node, content, digest)
+            except ArtifactError:
+                raise RunnerError("command input snapshot could not be staged") from None
+            snapshot = _InputSnapshot(path, digest, size)
+            if snapshot not in snapshots:
+                snapshots.append(snapshot)
+            return identity, path
+
+        index = 0
+        while index < len(argv):
+            token = argv[index]
+            flag, separator, value = token.partition("=")
+            normalized_flag = flag.casefold()
+            if separator and value and normalized_flag in input_flags:
+                identity, snapshot_path = capture(value)
+                normalized.append({"flag": flag, "value": identity})
+                effective.append(
+                    token if snapshot_path is None else f"{flag}={snapshot_path}"
+                )
+            elif normalized_flag in input_flags and index + 1 < len(argv):
+                next_token = argv[index + 1]
+                identity, snapshot_path = capture(next_token)
+                normalized.append({"flag": token, "value": identity})
+                effective.extend(
+                    (token, next_token if snapshot_path is None else str(snapshot_path))
+                )
+                index += 1
+            else:
+                normalized.append(token)
+                effective.append(token)
+            index += 1
+        return _PreparedInvocation(
+            tuple(effective),
+            _fingerprint_from_normalized(node, normalized),
+            tuple(snapshots),
+            missing_input,
         )
 
     def _recovery_argv(
@@ -474,8 +661,47 @@ class AgentRunner:
         if argv[:2] == ("sim", "create"):
             value = payload.get("simulation_id")
         elif argv[:2] == ("alpha", "submit"):
-            value = payload.get("alpha_id", payload.get("id"))
-        return value if type(value) is str and value.strip() else None
+            value = argv[2] if len(argv) > 2 else None
+        return value if type(value) is str and RESOURCE_ID.fullmatch(value) else None
+
+    @staticmethod
+    def _prebound_resource_id(argv: tuple[str, ...]) -> str | None:
+        if argv[:2] != ("alpha", "submit"):
+            return None
+        if len(argv) < 3 or RESOURCE_ID.fullmatch(argv[2]) is None:
+            raise RunnerError("alpha submit requires a valid alpha id")
+        return argv[2]
+
+    @staticmethod
+    def _is_mutation(argv: tuple[str, ...]) -> bool:
+        return argv[:2] in {("sim", "create"), ("alpha", "submit")}
+
+    def _recoverable_log(
+        self,
+        command: Any,
+        run_id: str,
+        node: WorkflowNode,
+        argv: tuple[str, ...],
+        fingerprint: str,
+        status: str,
+        returncode: int | None,
+        stderr: str,
+        resource_id: str | None,
+    ) -> None:
+        try:
+            self._write_log(
+                run_id,
+                node,
+                argv,
+                fingerprint,
+                status,
+                returncode,
+                stderr,
+                None,
+                resource_id or command.resource_id,
+            )
+        except Exception:
+            pass
 
     def _fail(
         self,

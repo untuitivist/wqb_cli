@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+import wqb_cli.agent.schemas as agent_schemas
 from wqb_cli.agent.schemas import (
     MAX_SCHEMA_REPAIR_RETRIES,
     ModelRefusal,
@@ -162,12 +163,56 @@ class AgentSchemaTests(unittest.TestCase):
         self.assertFalse(has_open_object_schema(closed))
         self.assertFalse(has_open_object_schema(object()))
 
+    def test_open_object_detection_traverses_schema_bearing_keywords(self) -> None:
+        mapping_keywords = (
+            "properties",
+            "patternProperties",
+            "$defs",
+            "definitions",
+            "dependentSchemas",
+        )
+        single_keywords = (
+            "items",
+            "not",
+            "if",
+            "then",
+            "else",
+            "contains",
+            "additionalProperties",
+        )
+        list_keywords = ("prefixItems", "anyOf", "oneOf", "allOf")
+
+        schemas = [
+            {keyword: {"nested": {"type": "object"}}}
+            for keyword in mapping_keywords
+        ]
+        schemas.extend(
+            {keyword: {"type": "object"}} for keyword in single_keywords
+        )
+        schemas.extend(
+            {keyword: [{"type": "object"}]} for keyword in list_keywords
+        )
+        for schema in schemas:
+            with self.subTest(schema=schema):
+                self.assertTrue(has_open_object_schema(schema))
+
+    def test_open_object_detection_ignores_instance_data_keywords(self) -> None:
+        schema = {
+            "type": "string",
+            "const": {"type": "object"},
+            "default": {"nested": {"type": "object"}},
+            "enum": [{"type": "object"}],
+            "examples": [{"type": "object"}],
+        }
+
+        self.assertFalse(has_open_object_schema(schema))
+
     def test_responses_reject_unknown_top_level_properties(self) -> None:
         for role in ModelRole:
             value = self.valid_value(role, WorkflowNode.K)
             value["budget"] = {"planner_calls": 100}
             with self.subTest(role=role):
-                with self.assertRaisesRegex(SchemaViolation, "budget"):
+                with self.assertRaisesRegex(SchemaViolation, "unexpected property"):
                     validate_model_output(role, WorkflowNode.K, value)
 
     def test_schema_errors_do_not_echo_invalid_instance_values(self) -> None:
@@ -200,9 +245,52 @@ class AgentSchemaTests(unittest.TestCase):
 
         message = str(caught.exception)
         self.assertLessEqual(len(message), 1024)
-        self.assertIn("unexpected properties", message)
-        self.assertIn("unexpected_000", message)
+        self.assertIn("200 unexpected properties", message)
+        self.assertNotIn("unexpected_000", message)
         self.assertNotIn(fake_secret, message)
+
+    def test_unknown_and_opaque_secret_keys_are_not_echoed(self) -> None:
+        secret_key = "sk-secret-key-must-not-be-echoed"
+
+        top_level = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)
+        top_level[secret_key] = "ordinary-value"
+        with self.assertRaises(SchemaViolation) as top_level_error:
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.K, top_level)
+        self.assertNotIn(secret_key, str(top_level_error.exception))
+        self.assertIn("1 unexpected property", str(top_level_error.exception))
+
+        opaque = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+        opaque["candidate_plan"] = {secret_key: object()}
+        with self.assertRaises(SchemaViolation) as opaque_error:
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.I, opaque)
+        self.assertNotIn(secret_key, str(opaque_error.exception))
+
+    def test_all_schema_violations_are_normalized_and_bounded(self) -> None:
+        error = SchemaViolation("first line\nsecond line " + "x" * 2000)
+
+        message = str(error)
+        self.assertLessEqual(len(message), 1024)
+        self.assertNotIn("\n", message)
+        self.assertIn("first line second line", message)
+
+    def test_long_dynamic_json_keys_cannot_grow_error_messages(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+        payload: dict[str, object] = {}
+        value["candidate_plan"] = payload
+        current = payload
+        long_key_fragment = "sensitive-dynamic-key-" + "x" * 100
+        for index in range(40):
+            child: dict[str, object] = {}
+            current[f"{long_key_fragment}-{index}"] = child
+            current = child
+        current["invalid"] = object()
+
+        with self.assertRaises(SchemaViolation) as caught:
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+        message = str(caught.exception)
+        self.assertLessEqual(len(message), 1024)
+        self.assertNotIn(long_key_fragment, message)
 
     def test_base_properties_are_required_and_bounded(self) -> None:
         invalid_values = {
@@ -266,7 +354,7 @@ class AgentSchemaTests(unittest.TestCase):
         value = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)
         value["confidence"] = float("nan")
 
-        with self.assertRaisesRegex(SchemaViolation, "confidence"):
+        with self.assertRaisesRegex(SchemaViolation, "non-finite"):
             validate_model_output(ModelRole.PLANNER, WorkflowNode.K, value)
 
     def test_each_planner_node_payload_is_required_and_must_be_an_object(self) -> None:
@@ -343,14 +431,14 @@ class AgentSchemaTests(unittest.TestCase):
             value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
             value["candidate_plan"] = {"nested": invalid}
             with self.subTest(invalid_type=type(invalid).__name__):
-                with self.assertRaisesRegex(SchemaViolation, "candidate_plan"):
+                with self.assertRaises(SchemaViolation):
                     validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
 
     def test_validate_model_output_rejects_non_string_object_keys(self) -> None:
         value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
         value["candidate_plan"] = {1: "not-json"}
 
-        with self.assertRaisesRegex(SchemaViolation, "candidate_plan"):
+        with self.assertRaisesRegex(SchemaViolation, "object key"):
             validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
 
     def test_validate_model_output_rejects_circular_containers(self) -> None:
@@ -365,6 +453,47 @@ class AgentSchemaTests(unittest.TestCase):
             with self.subTest(container_type=type(circular).__name__):
                 with self.assertRaisesRegex(SchemaViolation, "circular"):
                     validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+    def test_deep_parsed_json_fails_with_a_controlled_schema_violation(self) -> None:
+        nested = '{"member":' * 500 + "null" + "}" * 500
+        text = (
+            '{"decision":"decide","reasoning_summary":"reason",'
+            '"evidence_refs":["artifact:a"],"confidence":0.5,'
+            f'"candidate_plan":{nested}}}'
+        )
+        value = parse_json_text(text)
+
+        with self.assertRaisesRegex(SchemaViolation, "nesting"):
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.I, value)
+
+    def test_json_nesting_limit_has_an_explicit_boundary(self) -> None:
+        self.assertEqual(agent_schemas.MAX_JSON_NESTING, 64)
+
+        def nested_value(depth: int) -> dict[str, object]:
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
+            payload: dict[str, object] = {}
+            value["candidate_plan"] = payload
+            current = payload
+            for _ in range(depth - 1):
+                child: dict[str, object] = {}
+                current["member"] = child
+                current = child
+            return value
+
+        self.assertEqual(
+            validate_model_output(
+                ModelRole.PLANNER,
+                WorkflowNode.I,
+                nested_value(agent_schemas.MAX_JSON_NESTING),
+            )["decision"],
+            "decide",
+        )
+        with self.assertRaisesRegex(SchemaViolation, "nesting"):
+            validate_model_output(
+                ModelRole.PLANNER,
+                WorkflowNode.I,
+                nested_value(agent_schemas.MAX_JSON_NESTING + 1),
+            )
 
     def test_validate_model_output_returns_a_deep_snapshot(self) -> None:
         value = self.valid_value(ModelRole.PLANNER, WorkflowNode.I)
@@ -493,7 +622,7 @@ class AgentSchemaTests(unittest.TestCase):
         ):
             value = {**base, key: extra}
             with self.subTest(key=key):
-                with self.assertRaisesRegex(SchemaViolation, key):
+                with self.assertRaisesRegex(SchemaViolation, "unexpected property"):
                     validate_model_output(ModelRole.OPERATOR, WorkflowNode.K, value)
 
     def test_all_referenced_evidence_is_required(self) -> None:

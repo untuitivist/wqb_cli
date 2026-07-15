@@ -594,11 +594,14 @@ class AgentStoreTests(unittest.TestCase):
                     "WHERE type = 'index' AND name = 'idx_node_attempts_run_completed'"
                 ).fetchone()[0]
                 attempts = (
+                    ("legacy", "B", 1, "COMPLETED", None),
                     ("legacy", "F", 1, "COMPLETED", "2026-01-01T00:00:00Z"),
                     ("legacy", "H", 1, "FAILED", "2026-01-01T00:00:00Z"),
                     ("legacy", "A", 1, "INTERRUPTED", "2026-01-02T00:00:00Z"),
                     ("legacy", "M", 1, "RUNNING", None),
+                    ("other", "C", 1, "INTERRUPTED", None),
                     ("other", "G", 1, "FAILED", "2026-01-01T00:00:00Z"),
+                    ("other", "J", 1, "COMPLETED", "2026-01-02T00:00:00Z"),
                 )
                 ids = []
                 for run_id, node, attempt_number, status, finished_at in attempts:
@@ -647,11 +650,14 @@ class AgentStoreTests(unittest.TestCase):
                     for row in rows
                 ],
                 [
-                    ("legacy", "F", 1),
-                    ("legacy", "H", 2),
-                    ("legacy", "A", 3),
+                    ("legacy", "B", 1),
+                    ("legacy", "F", 2),
+                    ("legacy", "H", 3),
+                    ("legacy", "A", 4),
                     ("legacy", "M", None),
-                    ("other", "G", 1),
+                    ("other", "C", 1),
+                    ("other", "G", 2),
+                    ("other", "J", 3),
                 ],
             )
             self.assertEqual([row["version"] for row in versions], [1, 2])
@@ -659,7 +665,7 @@ class AgentStoreTests(unittest.TestCase):
             self.assertEqual(upgraded.latest_completed_node("legacy"), WorkflowNode.F)
 
             running = NodeAttemptRecord(
-                id=ids[3],
+                id=ids[4],
                 run_id="legacy",
                 node=WorkflowNode.M,
                 attempt_number=1,
@@ -672,8 +678,16 @@ class AgentStoreTests(unittest.TestCase):
                     "SELECT completion_sequence FROM node_attempts WHERE id = ?",
                     (running.id,),
                 ).fetchone()[0]
-            self.assertEqual(sequence, 4)
-            AgentStore(path).initialize()
+            self.assertEqual(sequence, 5)
+            reopened = AgentStore(path)
+            reopened.initialize()
+            self.assertEqual(reopened.latest_completed_node("legacy"), WorkflowNode.M)
+
+    def test_v2_migration_uses_no_window_function_syntax(self) -> None:
+        migration_sql = "\n".join(store_module._MIGRATIONS[1].statements).upper()
+        self.assertNotIn("ROW_NUMBER", migration_sql)
+        self.assertNotIn(" OVER ", migration_sql)
+        self.assertIn("COUNT(", migration_sql)
 
     def test_unknown_future_schema_version_preserves_delete_journal_and_tables(
         self,

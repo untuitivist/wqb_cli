@@ -143,21 +143,31 @@ _MIGRATIONS = (
         statements=(
             "ALTER TABLE node_attempts ADD COLUMN completion_sequence INTEGER",
             """
-            WITH ranked AS (
-                SELECT
-                    id,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY run_id
-                        ORDER BY finished_at, id
-                    ) AS sequence
-                FROM node_attempts
-                WHERE status IN ('COMPLETED', 'FAILED', 'INTERRUPTED')
-            )
             UPDATE node_attempts
-            SET completion_sequence = (
-                SELECT sequence FROM ranked WHERE ranked.id = node_attempts.id
+            SET completion_sequence = 1 + (
+                SELECT COUNT(*)
+                FROM node_attempts AS earlier
+                WHERE earlier.run_id = node_attempts.run_id
+                  AND earlier.status IN ('COMPLETED', 'FAILED', 'INTERRUPTED')
+                  AND (
+                      (
+                          earlier.finished_at IS NULL
+                          AND node_attempts.finished_at IS NOT NULL
+                      )
+                      OR earlier.finished_at < node_attempts.finished_at
+                      OR (
+                          (
+                              earlier.finished_at = node_attempts.finished_at
+                              OR (
+                                  earlier.finished_at IS NULL
+                                  AND node_attempts.finished_at IS NULL
+                              )
+                          )
+                          AND earlier.id < node_attempts.id
+                      )
+                  )
             )
-            WHERE id IN (SELECT id FROM ranked)
+            WHERE status IN ('COMPLETED', 'FAILED', 'INTERRUPTED')
             """,
             "DROP INDEX idx_node_attempts_run_completed",
             """

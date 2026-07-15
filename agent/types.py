@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
+from math import isfinite
 from typing import Any
 
 
@@ -73,10 +74,14 @@ class Budget:
             "operator_calls",
         )
         for name in positive_fields:
-            if getattr(self, name) <= 0:
-                raise ValueError(f"{name} must be positive")
-        if self.max_model_cost_usd is not None and self.max_model_cost_usd < 0:
-            raise ValueError("max_model_cost_usd must be non-negative")
+            value = getattr(self, name)
+            if type(value) is not int or value <= 0:
+                raise ValueError(f"{name} must be a positive integer")
+        cost = self.max_model_cost_usd
+        if cost is not None and (
+            type(cost) not in {int, float} or not isfinite(cost) or cost < 0
+        ):
+            raise ValueError("max_model_cost_usd must be a finite non-negative number or None")
 
 
 @dataclass(frozen=True)
@@ -89,9 +94,20 @@ class RunConfig:
     budget: Budget = field(default_factory=Budget)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.scope_mode, ScopeMode):
+            raise ValueError("scope_mode must be a ScopeMode")
+        if not isinstance(self.budget, Budget):
+            raise ValueError("budget must be a Budget")
+
         market_fields = ("region", "delay", "universe", "neutralization")
         if self.scope_mode is ScopeMode.MANUAL:
-            missing = [name for name in market_fields if getattr(self, name) is None]
+            missing = [
+                name
+                for name in ("region", "universe", "neutralization")
+                if not isinstance(getattr(self, name), str) or not getattr(self, name).strip()
+            ]
+            if type(self.delay) is not int or self.delay not in {0, 1}:
+                missing.append("delay")
             if missing:
                 raise ValueError(f"manual scope requires {', '.join(missing)}")
         elif any(getattr(self, name) is not None for name in market_fields):

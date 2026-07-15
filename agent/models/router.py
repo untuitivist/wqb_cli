@@ -16,6 +16,7 @@ from .base import (
     ModelResult,
     ModelTransportError,
     elapsed_ms,
+    sanitize_provider_request_id,
 )
 
 
@@ -180,7 +181,7 @@ class ModelRouter:
                 cost_usd=_cost_from_counts(config, persisted_input, persisted_output),
                 latency_ms=latency_ms,
                 fallback_used=fallback_used,
-                provider_request_id=provider_request_id,
+                provider_request_id=sanitize_provider_request_id(provider_request_id),
                 error=safe_error,
             )
             raise _sanitized_exception(error) from None
@@ -248,7 +249,9 @@ class ModelRouter:
                 cost_usd=cost_usd,
                 latency_ms=latency_ms,
                 fallback_used=fallback_used,
-                provider_request_id=provider_request_id,
+                provider_request_id=sanitize_provider_request_id(
+                    provider_request_id
+                ),
                 error=error,
             )
         except Exception:
@@ -308,10 +311,9 @@ def _persistable_token_count(value: int | None) -> int | None:
 
 
 def _failure_request_id(error: Exception) -> str | None:
-    value = getattr(error, "model_provider_request_id", None)
-    if type(value) is str and value.strip():
-        return value
-    return None
+    return sanitize_provider_request_id(
+        getattr(error, "model_provider_request_id", None)
+    )
 
 
 def _safe_error(error: Exception) -> str:

@@ -26,6 +26,15 @@ from wqb_cli.core.secrets import get_named_secret
 
 
 FAKE_SECRET = "sk-test-super-secret"
+UNSAFE_PROVIDER_REQUEST_IDS = (
+    "request\nInjected",
+    "request\x00control",
+    "Authorization: Bearer credential",
+    '{"id":"raw-body"}',
+    "request-id-nonascii-\u8bf7\u6c42",
+    "a" * 256,
+    f"request-{FAKE_SECRET}",
+)
 
 
 def model_config(
@@ -109,7 +118,12 @@ def openai_response(
         {
             "id": request_id,
             "output": [
-                {"content": [{"type": "output_text", "text": json.dumps(value)}]}
+                {
+                    "type": "message",
+                    "content": [
+                        {"type": "output_text", "text": json.dumps(value)}
+                    ],
+                }
             ],
             "usage": {"input_tokens": input_tokens, "output_tokens": output_tokens},
         },
@@ -156,12 +170,29 @@ class ModelValueTests(unittest.TestCase):
             lambda: ModelResult({}, True, 2, 0, None),
             lambda: ModelResult({}, 1, -1, 0, None),
             lambda: ModelResult({}, 1, 2, -1, None),
-            lambda: ModelResult({}, 1, 2, 0, " "),
         )
         for operation in invalid_results:
             with self.subTest(operation=operation):
                 with self.assertRaises((TypeError, ValueError)):
                     operation()
+
+    def test_model_result_sanitizes_untrusted_provider_request_ids(self) -> None:
+        for safe_id in (
+            "resp_123",
+            "chatcmpl-123",
+            "request.123",
+            "a" * 255,
+        ):
+            with self.subTest(safe_id=safe_id):
+                result = ModelResult({"ok": True}, 1, 2, 3, safe_id)
+                self.assertEqual(result.provider_request_id, safe_id)
+        for unsafe_id in (*UNSAFE_PROVIDER_REQUEST_IDS, " ", 123):
+            with self.subTest(unsafe_id=unsafe_id):
+                result = ModelResult({"ok": True}, 1, 2, 3, unsafe_id)  # type: ignore[arg-type]
+                self.assertIsNone(result.provider_request_id)
+                self.assertNotIn("provider_request_id", repr(result))
+                if unsafe_id not in {" ", 123}:
+                    self.assertNotIn(str(unsafe_id), repr(result))
 
     def test_request_and_result_repr_do_not_expand_sensitive_payloads(self) -> None:
         request = ModelRequest(
@@ -303,12 +334,41 @@ class AdapterTests(unittest.TestCase):
                 self.assertEqual(result.value, valid_output(role, node))
                 self.assertNotIn(FAKE_SECRET, json.dumps(session.calls[0]["json"]))
 
+    def test_compatible_drops_untrusted_request_ids_without_losing_usage(self) -> None:
+        for unsafe_id in UNSAFE_PROVIDER_REQUEST_IDS:
+            with self.subTest(unsafe_id=unsafe_id):
+                response = compatible_response(
+                    valid_output(ModelRole.OPERATOR, WorkflowNode.B)
+                )
+                assert isinstance(response._payload, dict)
+                response._payload["id"] = unsafe_id
+                adapter = CompatibleAdapter(
+                    model_config(role=ModelRole.OPERATOR),
+                    FAKE_SECRET,
+                    session=FakeSession([response]),
+                )
+                result = adapter.invoke(
+                    ModelRequest(ModelRole.OPERATOR, WorkflowNode.B, "Execute", {})
+                )
+                self.assertIsNone(result.provider_request_id)
+                self.assertEqual(result.input_tokens, 5)
+                self.assertEqual(result.output_tokens, 3)
+
     def test_refusal_is_controlled_and_not_repaired(self) -> None:
         session = FakeSession(
             [
                 FakeResponse(
                     200,
-                    {"output": [{"content": [{"type": "refusal", "refusal": FAKE_SECRET}]}]},
+                    {
+                        "output": [
+                            {
+                                "type": "message",
+                                "content": [
+                                    {"type": "refusal", "refusal": FAKE_SECRET}
+                                ],
+                            }
+                        ]
+                    },
                 )
             ]
         )
@@ -326,6 +386,48 @@ class AdapterTests(unittest.TestCase):
         adapter = OpenAIResponsesAdapter(model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session)
         result = adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
         self.assertEqual(result.value, valid_output(ModelRole.PLANNER, WorkflowNode.B))
+
+    def test_openai_only_accepts_output_text_from_message_items(self) -> None:
+        fake = valid_output(ModelRole.PLANNER, WorkflowNode.B)
+        fake["decision"] = "reasoning must not win"
+        real = valid_output(ModelRole.PLANNER, WorkflowNode.B)
+        reasoning_item = {
+            "type": "reasoning",
+            "content": [{"type": "output_text", "text": json.dumps(fake)}],
+        }
+        message_item = {
+            "type": "message",
+            "content": [{"type": "output_text", "text": json.dumps(real)}],
+        }
+
+        mixed_response = FakeResponse(
+            200, {"output": [reasoning_item, message_item]}
+        )
+        session = FakeSession([mixed_response, mixed_response, mixed_response])
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
+        )
+        result = adapter.invoke(
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+        )
+        self.assertEqual(result.value, real)
+
+    def test_openai_rejects_reasoning_only_pseudo_output_text(self) -> None:
+        fake = valid_output(ModelRole.PLANNER, WorkflowNode.B)
+        reasoning_item = {
+            "type": "reasoning",
+            "content": [{"type": "output_text", "text": json.dumps(fake)}],
+        }
+        reasoning_only = FakeSession(
+            [FakeResponse(200, {"output": [reasoning_item]})]
+        )
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER),
+            FAKE_SECRET,
+            session=reasoning_only,
+        )
+        with self.assertRaisesRegex(RuntimeError, "no output text"):
+            adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
 
     def test_retryable_http_and_network_failures_are_finite_and_sanitized(self) -> None:
         retryable = (requests.ConnectionError(FAKE_SECRET), FakeResponse(429, {}), FakeResponse(503, {}))
@@ -607,27 +709,89 @@ class RouterTests(unittest.TestCase):
         self.assertAlmostEqual(store.calls[0]["cost_usd"], 0.000008)
         self.assertEqual(store.calls[0]["provider_request_id"], "malformed-id")
 
-    def test_provider_request_id_cannot_reflect_api_key_into_persistence(self) -> None:
-        session = FakeSession(
-            [
-                openai_response(
-                    valid_output(ModelRole.PLANNER, WorkflowNode.B),
-                    request_id=f"request-{FAKE_SECRET}",
+    def test_untrusted_provider_response_ids_are_dropped_without_losing_usage(self) -> None:
+        for unsafe_id in UNSAFE_PROVIDER_REQUEST_IDS:
+            with self.subTest(unsafe_id=unsafe_id):
+                session = FakeSession(
+                    [
+                        openai_response(
+                            valid_output(ModelRole.PLANNER, WorkflowNode.B),
+                            request_id=unsafe_id,
+                        )
+                    ]
                 )
-            ]
-        )
-        planner = OpenAIResponsesAdapter(
-            model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
-        )
-        operator = RecordingAdapter(
-            model_config(role=ModelRole.OPERATOR),
-            [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
-        )
-        store = RecordingStore()
-        router = ModelRouter(planner, operator, store=store, run_id="run-1")
-        result = router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
-        self.assertIsNone(result.provider_request_id)
-        self.assertNotIn(FAKE_SECRET, json.dumps(store.calls))
+                planner = OpenAIResponsesAdapter(
+                    model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
+                )
+                operator = RecordingAdapter(
+                    model_config(role=ModelRole.OPERATOR),
+                    [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                result = router.invoke(
+                    ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                )
+                self.assertIsNone(result.provider_request_id)
+                self.assertIsNone(store.calls[0]["provider_request_id"])
+                self.assertEqual(store.calls[0]["input_tokens"], 11)
+                self.assertEqual(store.calls[0]["output_tokens"], 7)
+                self.assertGreaterEqual(store.calls[0]["latency_ms"], 0)
+                self.assertNotIn(unsafe_id, json.dumps(store.calls))
+
+    def test_custom_model_results_cannot_bypass_request_id_sanitizer(self) -> None:
+        for unsafe_id in UNSAFE_PROVIDER_REQUEST_IDS:
+            with self.subTest(unsafe_id=unsafe_id):
+                result = ModelResult(
+                    valid_output(ModelRole.PLANNER, WorkflowNode.B),
+                    3,
+                    2,
+                    7,
+                    unsafe_id,
+                )
+                planner = RecordingAdapter(
+                    model_config(role=ModelRole.PLANNER), [result]
+                )
+                operator = RecordingAdapter(
+                    model_config(role=ModelRole.OPERATOR),
+                    [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                returned = router.invoke(
+                    ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                )
+                self.assertIsNone(returned.provider_request_id)
+                self.assertIsNone(store.calls[0]["provider_request_id"])
+                self.assertEqual(store.calls[0]["input_tokens"], 3)
+                self.assertEqual(store.calls[0]["latency_ms"], 7)
+
+    def test_failure_metadata_cannot_bypass_request_id_sanitizer(self) -> None:
+        for unsafe_id in UNSAFE_PROVIDER_REQUEST_IDS:
+            with self.subTest(unsafe_id=unsafe_id):
+                error = ModelTransportError("provider unavailable")
+                error.model_input_tokens = 3
+                error.model_output_tokens = 2
+                error.model_latency_ms = 7
+                error.model_provider_request_id = unsafe_id
+                planner = RecordingAdapter(
+                    model_config(role=ModelRole.PLANNER), [error]
+                )
+                operator = RecordingAdapter(
+                    model_config(role=ModelRole.OPERATOR),
+                    [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+                )
+                store = RecordingStore()
+                router = ModelRouter(planner, operator, store=store, run_id="run-1")
+                with self.assertRaises(ModelTransportError) as raised:
+                    router.invoke(
+                        ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                    )
+                self.assertIsNone(store.calls[0]["provider_request_id"])
+                self.assertEqual(store.calls[0]["input_tokens"], 3)
+                self.assertEqual(store.calls[0]["output_tokens"], 2)
+                self.assertEqual(store.calls[0]["latency_ms"], 7)
+                self.assertNotIn(unsafe_id, str(raised.exception))
 
     def test_malformed_usage_preserves_request_id_and_valid_token_side(self) -> None:
         payload = openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.B))._payload
@@ -715,8 +879,11 @@ class RouterTests(unittest.TestCase):
         )
         store = RecordingStore()
         router = ModelRouter(planner, operator, store=store, run_id="run-1")
-        with self.assertRaises(RuntimeError):
-            router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+        result = router.invoke(
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+        )
+        self.assertIsNone(result.provider_request_id)
+        self.assertEqual(store.calls[0]["status"], "COMPLETED")
         self.assertEqual(store.calls[0]["input_tokens"], 2)
         self.assertEqual(store.calls[0]["output_tokens"], 1)
         self.assertAlmostEqual(store.calls[0]["cost_usd"], 0.000008)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from math import isfinite
@@ -14,6 +15,16 @@ from ..types import ModelRole, WorkflowNode
 
 HTTP_TIMEOUT_SECONDS = 60
 MAX_HTTP_RETRIES = 2
+MAX_PROVIDER_REQUEST_ID_LENGTH = 255
+
+_PROVIDER_REQUEST_ID_PATTERN = re.compile(
+    rf"[A-Za-z0-9][A-Za-z0-9._-]{{0,{MAX_PROVIDER_REQUEST_ID_LENGTH - 1}}}\Z",
+    re.ASCII,
+)
+_SENSITIVE_ID_MARKER_PATTERN = re.compile(
+    r"(?:^|[._-])(?:sk|secret|token|bearer|authorization|api[_-]?key)(?=$|[._-])",
+    re.ASCII | re.IGNORECASE,
+)
 
 
 class ModelError(RuntimeError):
@@ -67,7 +78,9 @@ def attach_failure_metadata(
     error.model_input_tokens = input_tokens  # type: ignore[attr-defined]
     error.model_output_tokens = output_tokens  # type: ignore[attr-defined]
     error.model_latency_ms = latency_ms  # type: ignore[attr-defined]
-    error.model_provider_request_id = provider_request_id  # type: ignore[attr-defined]
+    error.model_provider_request_id = sanitize_provider_request_id(  # type: ignore[attr-defined]
+        provider_request_id
+    )
     return error
 
 
@@ -176,7 +189,7 @@ class ModelResult:
         object.__setattr__(
             self,
             "provider_request_id",
-            _optional_nonblank(self.provider_request_id, "provider_request_id"),
+            sanitize_provider_request_id(self.provider_request_id),
         )
 
 
@@ -231,20 +244,26 @@ def response_object(response: requests.Response) -> dict[str, Any]:
     return payload
 
 
-def optional_response_id(payload: dict[str, Any]) -> str | None:
-    value = payload.get("id")
-    if value is None:
+def sanitize_provider_request_id(
+    value: object,
+    *,
+    secret: str | None = None,
+) -> str | None:
+    if type(value) is not str or _PROVIDER_REQUEST_ID_PATTERN.fullmatch(value) is None:
         return None
-    if type(value) is not str or not value.strip():
-        raise ModelResponseError("model provider returned an invalid request id")
+    if secret is not None and secret and secret in value:
+        return None
+    if _SENSITIVE_ID_MARKER_PATTERN.search(value) is not None:
+        return None
     return value
+
+
+def optional_response_id(payload: dict[str, Any]) -> str | None:
+    return sanitize_provider_request_id(payload.get("id"))
 
 
 def safe_response_id(payload: dict[str, Any], secret: str) -> str | None:
-    value = optional_response_id(payload)
-    if value is not None and secret in value:
-        return None
-    return value
+    return sanitize_provider_request_id(payload.get("id"), secret=secret)
 
 
 def usage_counts(

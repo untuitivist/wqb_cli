@@ -186,9 +186,9 @@ class OpenAIResponsesAdapter:
         for item in output:
             if type(item) is not dict:
                 raise ModelResponseError("model provider returned malformed output")
-            if "content" not in item:
+            if item.get("type") != "message":
                 continue
-            content = item["content"]
+            content = item.get("content")
             if type(content) is not list:
                 raise ModelResponseError("model provider returned malformed output content")
             for part in content:

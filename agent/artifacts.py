@@ -268,14 +268,17 @@ def _strict_json_decoder() -> json.JSONDecoder:
     )
 
 
-def _literal_object_end(value: str, start: int) -> int | None:
-    depth = 0
+def _scan_object_spans(value: str) -> tuple[list[tuple[int, int]], int | None]:
+    """Return complete outer object spans and the earliest unclosed object."""
+    spans: list[tuple[int, int]] = []
+    starts: list[int] = []
     quote: str | None = None
     escaped = False
-    for index in range(start, len(value)):
-        if index - start >= MAX_JSON_CHARS:
-            return None
-        character = value[index]
+    for index, character in enumerate(value):
+        if not starts:
+            if character == "{":
+                starts.append(index)
+            continue
         if quote is not None:
             if escaped:
                 escaped = False
@@ -287,12 +290,12 @@ def _literal_object_end(value: str, start: int) -> int | None:
         if character in {"'", '"'}:
             quote = character
         elif character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
-                return index + 1
-    return None
+            starts.append(index)
+        elif character == "}" and starts:
+            start = starts.pop()
+            if not starts:
+                spans.append((start, index + 1))
+    return spans, starts[0] if starts else None
 
 
 def _pair_string_value(raw: str) -> str | None:
@@ -357,50 +360,43 @@ def _literal_eval_without_duplicate_keys(candidate: str) -> Any:
     return ast.literal_eval(tree)
 
 
+def _redact_embedded_object(candidate: str) -> str:
+    try:
+        parsed = _strict_json_object(candidate)
+    except ArtifactError:
+        try:
+            parsed = _literal_eval_without_duplicate_keys(candidate)
+        except Exception:
+            return "[REDACTED]" if _has_dynamic_secret_shape(candidate) else candidate
+    if type(parsed) is not dict:
+        return candidate
+    try:
+        return _canonical_json_object(_redacted_json(parsed))
+    except Exception:
+        return "[REDACTED]"
+
+
 def _redact_embedded_objects(value: str) -> str:
     if len(value) > MAX_JSON_CHARS:
         return "[REDACTED]"
+    spans, unclosed_start = _scan_object_spans(value)
+    if unclosed_start is not None:
+        spans = [span for span in spans if span[1] <= unclosed_start]
+
     output: list[str] = []
     cursor = 0
-    while True:
-        start = value.find("{", cursor)
-        if start < 0:
-            output.append(value[cursor:])
-            return "".join(output)
+    for start, end in spans:
         output.append(value[cursor:start])
-        end = _literal_object_end(value, start)
-        if end is None:
-            candidate = value[start:]
-            output.append(
-                "[REDACTED]" if _has_dynamic_secret_shape(candidate) else candidate
-            )
-            return "".join(output)
-        candidate = value[start:end]
-        try:
-            parsed = _strict_json_object(candidate)
-        except ArtifactError:
-            try:
-                parsed = _literal_eval_without_duplicate_keys(candidate)
-            except Exception:
-                output.append(
-                    "[REDACTED]"
-                    if _has_dynamic_secret_shape(candidate)
-                    else candidate
-                )
-                cursor = end
-                continue
-        if type(parsed) is not dict:
-            output.append(candidate)
-            cursor = end
-            continue
-        try:
-            redacted = _redacted_json(parsed)
-        except Exception:
-            output.append("[REDACTED]")
-            cursor = end
-            continue
-        output.append(_canonical_json_object(redacted))
+        output.append(_redact_embedded_object(value[start:end]))
         cursor = end
+    if unclosed_start is None:
+        output.append(value[cursor:])
+        return "".join(output)
+
+    output.append(value[cursor:unclosed_start])
+    candidate = value[unclosed_start:]
+    output.append("[REDACTED]" if _has_dynamic_secret_shape(candidate) else candidate)
+    return "".join(output)
 
 
 def _strict_json_object(text: str) -> dict[str, Any]:

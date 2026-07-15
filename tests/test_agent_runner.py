@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import threading
 import unittest
+import wqb_cli.agent.artifacts as artifacts_module
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -570,13 +571,13 @@ class ArtifactWriterTests(unittest.TestCase):
         with (
             patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 64),
             patch("wqb_cli.agent.artifacts._strict_json_decoder") as decoder,
-            patch("wqb_cli.agent.artifacts._literal_object_end") as span_end,
+            patch("wqb_cli.agent.artifacts._scan_object_spans") as span_scan,
         ):
             oversized_redacted = redact_text(oversized)
 
         self.assertEqual(oversized_redacted, "[REDACTED]")
         decoder.assert_not_called()
-        span_end.assert_not_called()
+        span_scan.assert_not_called()
 
         unclosed = "{" * 100 + "'name':'api_key','value':'LINEAR-LEAK'"
         decode_error = json.JSONDecodeError("invalid", "", 0)
@@ -590,6 +591,22 @@ class ArtifactWriterTests(unittest.TestCase):
     def test_malformed_safe_code_block_is_not_rewritten(self) -> None:
         code = "function example() { return call('ordinary'); }"
         self.assertEqual(redact_text(code), code)
+
+    def test_malformed_nested_secret_descriptor_uses_one_quote_aware_scan(self) -> None:
+        review_sample = (
+            "prefix {'child': {' name ':'api_key','name':'ordinary',"
+            "' value ':'NESTED-LEAK', broken}} suffix"
+        )
+
+        with patch(
+            "wqb_cli.agent.artifacts._scan_object_spans",
+            wraps=artifacts_module._scan_object_spans,
+        ) as span_scan:
+            redacted = redact_text(review_sample)
+
+        self.assertNotIn("NESTED-LEAK", redacted)
+        self.assertEqual(redacted, "prefix [REDACTED] suffix")
+        span_scan.assert_called_once_with(review_sample)
 
     def test_append_jsonl_rewrites_existing_lines_through_strict_redaction(self) -> None:
         target = self.root / "run" / "01_A" / "commands.jsonl"
@@ -1416,6 +1433,58 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
 
                 self.store.fail_command.assert_not_called()
                 self.store.complete_command.assert_not_called()
+
+    def test_explicit_invalid_resource_fields_remain_recoverable_for_all_exit_codes(self) -> None:
+        candidate = self.root / "invalid-resource-recovery.json"
+        candidate.write_text('{"expression":"rank(close)"}', encoding="utf-8")
+        cases = (
+            ("alpha_id", "", 0),
+            ("simulation_id", None, 1),
+            ("id", "unsafe id", 0),
+        )
+        for index, (field, invalid_value, returncode) in enumerate(cases):
+            with self.subTest(field=field, returncode=returncode):
+                self.store.reset_mock()
+                self.store.reserve_command.return_value = command_record(id=140 + index)
+                completed = subprocess.CompletedProcess(
+                    [],
+                    returncode,
+                    json.dumps({field: invalid_value}),
+                    "temporary" if returncode else "",
+                )
+                with patch(
+                    "wqb_cli.agent.runner.subprocess.run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(RunnerError, "resource"):
+                        self.runner.run(
+                            f"invalid-resource-recovery-{index}",
+                            WorkflowNode.J,
+                            ("sim", "create", "--input", str(candidate)),
+                            "result.json",
+                        )
+
+                self.store.fail_command.assert_not_called()
+                self.store.complete_command.assert_not_called()
+
+    def test_invalid_alpha_submit_output_keeps_prebound_ledger_started(self) -> None:
+        store = AgentStore(self.root / "agent.sqlite3")
+        store.initialize()
+        store.create_run("alpha-invalid", RunConfig(scope_mode=ScopeMode.AUTO))
+        runner = AgentRunner(store, AgentPolicy(Budget()), ArtifactWriter(self.root / "artifacts"))
+        completed = subprocess.CompletedProcess([], 1, '{"id":null}', "temporary")
+
+        with patch("wqb_cli.agent.runner.subprocess.run", return_value=completed):
+            with self.assertRaisesRegex(RunnerError, "resource"):
+                runner.run(
+                    "alpha-invalid",
+                    WorkflowNode.M,
+                    ("alpha", "submit", "ALPHA-BOUND"),
+                    "result.json",
+                )
+
+        command = store.get_command(1)
+        self.assertEqual(command.status, "STARTED")
+        self.assertEqual(command.resource_id, "ALPHA-BOUND")
 
     def test_ledger_terminal_and_unknown_statuses_fail_closed(self) -> None:
         for status in ("FAILED", "CANCELLED", "mystery"):

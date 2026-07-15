@@ -28,3 +28,15 @@ def get_secret(service: str, username: str) -> str | None:
         return keyring.get_password(service, username)
     except Exception:
         return None
+
+
+def get_named_secret(secret_name: str, service: str = "wqb-cli") -> str | None:
+    if type(secret_name) is not str:
+        raise TypeError("secret_name must be a string")
+    if not secret_name.strip():
+        raise ValueError("secret_name must be nonblank")
+    if type(service) is not str:
+        raise TypeError("service must be a string")
+    if not service.strip():
+        raise ValueError("service must be nonblank")
+    return get_secret(service, secret_name)

@@ -51,6 +51,12 @@ class AgentExpressionTests(unittest.TestCase):
                 with self.assertRaises(ExpressionViolation):
                     normalize_expression(expression)
 
+    def test_normalization_rejects_significant_whitespace_between_tokens(self) -> None:
+        for expression in ("a b", "1 2"):
+            with self.subTest(expression=expression):
+                with self.assertRaisesRegex(ExpressionViolation, "whitespace"):
+                    normalize_expression(expression)
+
     def test_unknown_field_and_banned_field_are_rejected(self) -> None:
         candidate = self.candidate("rank(secret_field)", field_id="secret_field")
         with self.assertRaisesRegex(ExpressionViolation, "field"):
@@ -99,6 +105,44 @@ class AgentExpressionTests(unittest.TestCase):
                 banned_fields=set(),
                 operators={"ts_quantile": {"arity": 2}},
             )
+
+    def test_unknown_named_argument_is_rejected_but_known_parameter_is_allowed(self) -> None:
+        with self.assertRaisesRegex(ExpressionViolation, "named argument"):
+            validate_candidate(
+                self.candidate("rank(volume,evil=1)"),
+                allowed_fields={"volume"},
+                banned_fields=set(),
+                operators={"rank": {"arity": 1}},
+            )
+        result = validate_candidate(
+            self.candidate("ts_weighted_decay(volume,k=0.5)"),
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators={"ts_weighted_decay": {"arity": 1}},
+        )
+        self.assertEqual(result.operators, ("ts_weighted_decay",))
+
+    def test_excessive_unary_operators_raise_expression_violation(self) -> None:
+        with self.assertRaisesRegex(ExpressionViolation, "unary"):
+            validate_candidate(
+                self.candidate("rank(" + "-" * 1000 + "volume)"),
+                allowed_fields={"volume"},
+                banned_fields=set(),
+                operators={"rank": {"arity": 1}},
+            )
+
+    def test_original_candidate_is_a_deep_immutable_snapshot(self) -> None:
+        candidate = self.candidate("rank(volume)", settings={"window": [20]})
+        result = validate_candidate(
+            candidate,
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators={"rank": {"arity": 1}},
+        )
+        candidate["settings"]["window"].append(40)  # type: ignore[index]
+        self.assertEqual(result.original_candidate["settings"]["window"], (20,))  # type: ignore[index]
+        with self.assertRaises(TypeError):
+            result.original_candidate["settings"] = {}  # type: ignore[index]
 
     def test_explicit_i_node_parameters_are_required(self) -> None:
         cases = (

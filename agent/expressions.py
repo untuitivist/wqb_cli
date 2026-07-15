@@ -21,6 +21,8 @@ MAX_NUMBER_CHARS = 256
 MAX_NUMBER_EXPONENT = 1_024
 MAX_OPERATOR_CALLS = 5
 MAX_FIELDS = 2
+MAX_CANDIDATE_DEPTH = 64
+MAX_CANDIDATE_NODES = 10_000
 
 
 class ExpressionViolation(ValueError):
@@ -86,6 +88,16 @@ _REQUIRED_NAMED_PARAMETERS = {
     "ts_target_tvr_hump": ("lambda_min", "lambda_max", "target_tvr"),
     "ts_poly_regression": ("k",),
 }
+_ALLOWED_NAMED_PARAMETERS = {
+    "kth_element": frozenset({"k"}),
+    "ts_weighted_decay": frozenset({"k"}),
+    "hump_decay": frozenset({"p"}),
+    "group_mean": frozenset({"weight"}),
+    "ts_target_tvr_decay": frozenset({"lambda_min", "lambda_max", "target_tvr"}),
+    "ts_target_tvr_hump": frozenset({"lambda_min", "lambda_max", "target_tvr"}),
+    "ts_poly_regression": frozenset({"k"}),
+    "ts_quantile": frozenset({"driver"}),
+}
 
 
 def _normalized_number(text: str) -> str:
@@ -122,6 +134,7 @@ def _tokenize(expression: str) -> tuple[_Token, ...]:
 
     position = 0
     tokens: list[_Token] = []
+    whitespace_after_token = False
     while position < len(expression):
         match = TOKEN.match(expression, position)
         if match is None:
@@ -135,12 +148,20 @@ def _tokenize(expression: str) -> tuple[_Token, ...]:
         token_offset = position
         position = match.end()
         if kind == "space":
+            whitespace_after_token = bool(tokens)
             continue
         if kind == "number":
             text = _normalized_number(text)
         elif kind == "identifier":
             text = text.lower()
+        if (
+            whitespace_after_token
+            and tokens[-1].kind in {"identifier", "number", "string"}
+            and kind in {"identifier", "number", "string"}
+        ):
+            raise ExpressionViolation("whitespace cannot separate lexical tokens")
         tokens.append(_Token(kind, text, token_offset))
+        whitespace_after_token = False
         if len(tokens) > MAX_TOKENS:
             raise ExpressionViolation("expression exceeds token limit")
     if not tokens:
@@ -174,6 +195,7 @@ class _Parser:
     def __init__(self, tokens: tuple[_Token, ...]) -> None:
         self._tokens = tokens
         self._position = 0
+        self._expression_depth = 0
 
     def parse(self) -> _Expression:
         expression = self._parse_expression(0)
@@ -193,33 +215,48 @@ class _Parser:
         return token
 
     def _parse_expression(self, minimum_precedence: int) -> _Expression:
-        left = self._parse_prefix()
-        while True:
-            token = self._peek()
-            precedence = _BINARY_PRECEDENCE.get(token.text) if token is not None else None
-            if precedence is None or precedence < minimum_precedence:
-                return left
-            operator = self._take().text
-            right = self._parse_expression(precedence + 1)
-            left = _Binary(operator, left, right)
+        self._expression_depth += 1
+        if self._expression_depth > MAX_NESTING:
+            self._expression_depth -= 1
+            raise ExpressionViolation("expression exceeds parser nesting limit")
+        try:
+            left = self._parse_prefix()
+            while True:
+                token = self._peek()
+                precedence = _BINARY_PRECEDENCE.get(token.text) if token is not None else None
+                if precedence is None or precedence < minimum_precedence:
+                    return left
+                operator = self._take().text
+                right = self._parse_expression(precedence + 1)
+                left = _Binary(operator, left, right)
+        finally:
+            self._expression_depth -= 1
 
     def _parse_prefix(self) -> _Expression:
+        unary: list[str] = []
+        while self._peek() is not None and self._peek().text in {"+", "-"}:
+            unary.append(self._take().text)
+            if len(unary) > MAX_NESTING:
+                raise ExpressionViolation("expression exceeds unary operator limit")
         token = self._take()
         if token.kind == "number" or token.kind == "string":
-            return _Literal(token.kind, token.text)
-        if token.kind == "identifier":
+            expression: _Expression = _Literal(token.kind, token.text)
+        elif token.kind == "identifier":
             if self._peek() is not None and self._peek().text == "(":
-                return self._parse_call(token.text)
-            return _Identifier(token.text)
-        if token.text in {"+", "-"}:
-            return _Unary(token.text, self._parse_prefix())
-        if token.text == "(":
+                expression = self._parse_call(token.text)
+            else:
+                expression = _Identifier(token.text)
+        elif token.text == "(":
             grouped = self._parse_expression(0)
             closing = self._take()
             if closing.text != ")":
                 raise ExpressionViolation(f"expected ')' at offset {closing.offset}")
-            return grouped
-        raise ExpressionViolation(f"unexpected token at offset {token.offset}")
+            expression = grouped
+        else:
+            raise ExpressionViolation(f"unexpected token at offset {token.offset}")
+        for operator in reversed(unary):
+            expression = _Unary(operator, expression)
+        return expression
 
     def _parse_call(self, name: str) -> _Call:
         opening = self._take()
@@ -333,6 +370,12 @@ def _walk_expression(
     if expression.name not in operator_metadata:
         raise ExpressionViolation(f"unknown operator: {expression.name}")
     named = dict(expression.named)
+    allowed_named = _ALLOWED_NAMED_PARAMETERS.get(expression.name, frozenset())
+    unknown_named = sorted(set(named) - allowed_named)
+    if unknown_named:
+        raise ExpressionViolation(
+            f"operator {expression.name} does not allow named argument {unknown_named[0]}"
+        )
     for parameter in _REQUIRED_NAMED_PARAMETERS.get(expression.name, ()):
         if parameter not in named:
             raise ExpressionViolation(f"operator {expression.name} requires parameter {parameter}")
@@ -419,5 +462,44 @@ def validate_candidate(
         fingerprint=hashlib.sha256(canonical_expression.encode("utf-8")).hexdigest(),
         fields=tuple(fields),
         operators=tuple(used_operators),
-        original_candidate=MappingProxyType(dict(candidate)),
+        original_candidate=_immutable_candidate_snapshot(candidate),
     )
+
+
+def _immutable_candidate_snapshot(candidate: Mapping[object, object]) -> Mapping[str, object]:
+    nodes = 0
+    active: set[int] = set()
+
+    def freeze(value: object, depth: int) -> object:
+        nonlocal nodes
+        nodes += 1
+        if nodes > MAX_CANDIDATE_NODES or depth > MAX_CANDIDATE_DEPTH:
+            raise ExpressionViolation("candidate snapshot exceeds structural limit")
+        if value is None or type(value) in {bool, int, float, str}:
+            return value
+        if isinstance(value, Mapping):
+            identity = id(value)
+            if identity in active:
+                raise ExpressionViolation("candidate snapshot must not contain cycles")
+            active.add(identity)
+            copied: dict[str, object] = {}
+            for key, child in value.items():
+                if type(key) is not str:
+                    raise ExpressionViolation("candidate snapshot keys must be strings")
+                copied[key] = freeze(child, depth + 1)
+            active.remove(identity)
+            return MappingProxyType(copied)
+        if isinstance(value, (list, tuple)):
+            identity = id(value)
+            if identity in active:
+                raise ExpressionViolation("candidate snapshot must not contain cycles")
+            active.add(identity)
+            copied_items = tuple(freeze(child, depth + 1) for child in value)
+            active.remove(identity)
+            return copied_items
+        raise ExpressionViolation("candidate snapshot must contain JSON-native values")
+
+    frozen = freeze(candidate, 0)
+    if not isinstance(frozen, Mapping):
+        raise ExpressionViolation("candidate snapshot must be an object")
+    return frozen

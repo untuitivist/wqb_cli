@@ -5,7 +5,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
-from collections import OrderedDict, UserDict
+from collections import UserDict
 from contextlib import closing
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
@@ -391,7 +391,7 @@ class AgentStoreTests(unittest.TestCase):
         self.store.finish_node_attempt(
             first,
             "COMPLETED",
-            OrderedDict((("z", 1), ("a", "中文"))),
+            {"z": 1, "a": "中文"},
         )
         with closing(self.store.connect()) as connection:
             row = connection.execute(
@@ -505,6 +505,29 @@ class AgentStoreTests(unittest.TestCase):
         )
         with self.assertRaises(InvalidNodeAttempt):
             self.store.finish_node_attempt(unknown, "COMPLETED", {})
+
+    def test_attempt_summary_rejects_non_native_json_without_finishing(self) -> None:
+        self.store.create_run("summary-json", auto_config())
+        circular: dict[str, object] = {}
+        circular["self"] = circular
+        invalid_summaries = (
+            {1: "non-string-key"},
+            {"tuple": (1, 2)},
+            {"infinity": float("inf")},
+            circular,
+        )
+        for summary in invalid_summaries:
+            attempt = self.store.start_node_attempt("summary-json", WorkflowNode.A)
+            with self.subTest(summary=summary):
+                with self.assertRaises((TypeError, ValueError)):
+                    self.store.finish_node_attempt(attempt, "COMPLETED", summary)
+                with closing(self.store.connect()) as connection:
+                    row = connection.execute(
+                        "SELECT status, summary_json, finished_at "
+                        "FROM node_attempts WHERE id = ?",
+                        (attempt.id,),
+                    ).fetchone()
+                self.assertEqual(tuple(row), ("RUNNING", None, None))
 
     def test_concurrent_double_finish_allows_exactly_one_winner(self) -> None:
         self.store.create_run("finish-race", auto_config())

@@ -220,22 +220,28 @@ _ALLOWED_TRANSITIONS: dict[RunState, frozenset[RunState]] = {
 _FINISHED_ATTEMPT_STATUSES = frozenset({"COMPLETED", "FAILED", "INTERRUPTED"})
 _TERMINAL_TASK_STATUSES = frozenset({"COMPLETED", "FAILED"})
 _TERMINAL_SIMULATION_STATUSES = frozenset(
-    {"COMPLETE", "WARNING", "ERROR", "FAIL", "FAILED", "TIMED_OUT"}
+    {"COMPLETE", "WARNING", "ERROR", "FAIL", "FAILED"}
 )
 _SIMULATION_STATUSES = frozenset(
-    {"CREATED", "PENDING", "QUEUED", "RUNNING"}
+    {"CREATED", "PENDING", "QUEUED", "RUNNING", "TIMED_OUT"}
 ) | _TERMINAL_SIMULATION_STATUSES
 _SIMULATION_TRANSITIONS: dict[str, frozenset[str]] = {
     "CREATED": frozenset(
-        {"PENDING", "QUEUED", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+        {"CREATED", "PENDING", "QUEUED", "RUNNING", "TIMED_OUT"}
+        | _TERMINAL_SIMULATION_STATUSES
     ),
     "PENDING": frozenset(
-        {"QUEUED", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+        {"PENDING", "QUEUED", "RUNNING", "TIMED_OUT"}
+        | _TERMINAL_SIMULATION_STATUSES
     ),
     "QUEUED": frozenset(
-        {"PENDING", "RUNNING"} | _TERMINAL_SIMULATION_STATUSES
+        {"PENDING", "QUEUED", "RUNNING", "TIMED_OUT"}
+        | _TERMINAL_SIMULATION_STATUSES
     ),
-    "RUNNING": _TERMINAL_SIMULATION_STATUSES,
+    "RUNNING": frozenset({"RUNNING", "TIMED_OUT"})
+    | _TERMINAL_SIMULATION_STATUSES,
+    "TIMED_OUT": frozenset({"TIMED_OUT", "RUNNING"})
+    | _TERMINAL_SIMULATION_STATUSES,
 }
 _NOW_SQL = "strftime('%Y-%m-%dT%H:%M:%fZ', 'now')"
 _SCHEMA_VERSION_BOOTSTRAP = f"""
@@ -1559,7 +1565,9 @@ class AgentStore:
                     raise StoreConflict(
                         f"simulation is terminal: {run_id}.{simulation_id}.{source_status}"
                     )
-            elif status not in _SIMULATION_TRANSITIONS[source_status]:
+            elif status not in _SIMULATION_TRANSITIONS.get(
+                source_status, frozenset()
+            ):
                 raise StoreConflict(
                     f"invalid simulation transition: {source_status} to {status}"
                 )
@@ -1576,7 +1584,7 @@ class AgentStore:
                     f"{run_id}.{simulation_id}"
                 )
             if (
-                source_status in _TERMINAL_SIMULATION_STATUSES
+                source_status == status
                 and (alpha_id is None or alpha_id == existing["alpha_id"])
                 and (
                     result_artifact_id is None
@@ -2100,7 +2108,7 @@ class AgentStore:
         _validate_attempt(attempt)
         _validate_finished_status(status)
         _validate_summary(summary)
-        summary_json = _canonical_json(summary)
+        summary_json = _validated_json_object(summary, "summary")
         with self._transaction() as connection:
             completion_sequence = connection.execute(
                 "SELECT COALESCE(MAX(completion_sequence), 0) + 1 "

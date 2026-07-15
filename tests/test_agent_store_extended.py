@@ -547,6 +547,37 @@ class AgentStoreExtendedTests(unittest.TestCase):
         )
         self.assertEqual(diagnosis_json, '{"a":["adjust"],"z":"retry"}')
 
+    def test_simulation_timeout_recovers_and_running_repeat_is_idempotent(self) -> None:
+        self.create_run()
+        simulation = self.store.record_simulation(
+            "run", "recoverable-simulation", "CREATED"
+        )
+        running = self.store.update_simulation(
+            "run", simulation.simulation_id, "RUNNING"
+        )
+        repeated = self.store.update_simulation(
+            "run", simulation.simulation_id, "RUNNING"
+        )
+        self.assertEqual(repeated, running)
+
+        timed_out = self.store.update_simulation(
+            "run", simulation.simulation_id, "TIMED_OUT"
+        )
+        self.assertEqual(timed_out.status, "TIMED_OUT")
+        completed = self.store.update_simulation(
+            "run", simulation.simulation_id, "COMPLETE", alpha_id="alpha-recovered"
+        )
+        self.assertEqual(completed.status, "COMPLETE")
+        self.assertEqual(completed.alpha_id, "alpha-recovered")
+
+        recover_to_running = self.store.record_simulation(
+            "run", "timeout-to-running", "TIMED_OUT"
+        )
+        recovered = self.store.update_simulation(
+            "run", recover_to_running.simulation_id, "RUNNING"
+        )
+        self.assertEqual(recovered.status, "RUNNING")
+
     def test_approval_records_match_exact_tuple_without_submission_behavior(self) -> None:
         self.create_run()
         before = self.store.get_run("run")

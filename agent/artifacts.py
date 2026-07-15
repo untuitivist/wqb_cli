@@ -272,6 +272,41 @@ def _contains_secret_text(value: str) -> bool:
     return unclosed_start is not None and _has_dynamic_secret_shape(value[unclosed_start:])
 
 
+def _snapshot_text_variants(content: bytes) -> tuple[str, ...]:
+    variants = [content.decode("latin-1")]
+    encodings: list[str] = []
+    if content.startswith((b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")):
+        encodings.append("utf-32")
+    elif content.startswith((b"\xff\xfe", b"\xfe\xff")):
+        encodings.append("utf-16")
+    else:
+        sample = content[: min(len(content), 256)]
+        if len(sample) >= 8 and len(sample) % 4 == 0:
+            lanes = tuple(
+                sum(byte == 0 for byte in sample[offset::4])
+                for offset in range(4)
+            )
+            lane_size = len(sample) // 4
+            if all(count * 4 >= lane_size * 3 for count in lanes[1:]):
+                encodings.append("utf-32-le")
+            elif all(count * 4 >= lane_size * 3 for count in lanes[:3]):
+                encodings.append("utf-32-be")
+        if len(sample) >= 4 and len(sample) % 2 == 0:
+            even_zeros = sum(byte == 0 for byte in sample[::2])
+            odd_zeros = sum(byte == 0 for byte in sample[1::2])
+            lane_size = len(sample) // 2
+            if odd_zeros * 4 >= lane_size * 3:
+                encodings.append("utf-16-le")
+            elif even_zeros * 4 >= lane_size * 3:
+                encodings.append("utf-16-be")
+    for encoding in encodings:
+        try:
+            variants.append(content.decode(encoding))
+        except UnicodeDecodeError:
+            raise ArtifactError("input snapshot has an unsupported text encoding") from None
+    return tuple(variants)
+
+
 def redact_text(value: str) -> str:
     if type(value) is not str:
         raise TypeError("text must be a string")
@@ -526,7 +561,7 @@ class ArtifactWriter:
             or hashlib.sha256(content).hexdigest() != sha256
         ):
             raise ArtifactError("input snapshot hash is invalid")
-        if _contains_secret_text(content.decode("latin-1")):
+        if any(_contains_secret_text(text) for text in _snapshot_text_variants(content)):
             raise ArtifactError("input snapshot must not contain secret material")
         name = f".inputs/{sha256}-{len(content)}.bin"
         with self._lock:
@@ -718,9 +753,7 @@ class ArtifactWriter:
         target = self._target(run_id, node, name)
         expected_parent = target.parent.resolve(strict=True)
         expected_target = expected_parent / target.name
-        temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
         descriptor: int | None = None
-        temporary_created = False
         try:
             try:
                 self._verify_input_snapshot(target, sha256, len(content))
@@ -729,30 +762,14 @@ class ArtifactWriter:
                 if target.exists():
                     raise
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
-            descriptor = os.open(temporary, flags, 0o600)
-            temporary_created = True
-            if self._final_path_for_fd(descriptor).parent != expected_parent:
-                raise ArtifactError("input snapshot temporary handle escaped its directory")
+            descriptor = os.open(target, flags, 0o600)
+            if self._final_path_for_fd(descriptor) != expected_target:
+                raise ArtifactError("input snapshot handle escaped its directory")
             with os.fdopen(descriptor, "wb") as stream:
                 descriptor = None
                 stream.write(content)
                 stream.flush()
                 os.fsync(stream.fileno())
-            if target.parent.resolve(strict=True) != expected_parent:
-                raise ArtifactError("input snapshot directory identity changed")
-            try:
-                os.link(temporary, target, follow_symlinks=False)
-            except FileExistsError:
-                self._verify_input_snapshot(target, sha256, len(content))
-                return target
-            temporary.unlink()
-            temporary_created = False
-            descriptor = os.open(target, os.O_RDONLY | getattr(os, "O_BINARY", 0))
-            if self._final_path_for_fd(descriptor) != expected_target:
-                raise ArtifactError("input snapshot handle escaped its directory")
-            os.close(descriptor)
-            descriptor = None
-            target.chmod(stat.S_IREAD)
             self._verify_input_snapshot(target, sha256, len(content))
             return target
         except ArtifactError:
@@ -762,11 +779,6 @@ class ArtifactWriter:
         finally:
             if descriptor is not None:
                 os.close(descriptor)
-            if temporary_created:
-                try:
-                    temporary.unlink()
-                except OSError:
-                    pass
 
     def _ensure_directory(self, directory: Path, *, create: bool) -> Path:
         try:
@@ -1020,6 +1032,153 @@ class ArtifactWriter:
             and hasattr(os, "O_NOFOLLOW")
         )
 
+    def _open_windows_directory_handle(self, directory: Path, expected: Path) -> int:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+
+        create_file = ctypes.WinDLL("kernel32", use_last_error=True).CreateFileW
+        create_file.argtypes = (
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        )
+        create_file.restype = wintypes.HANDLE
+        handle = create_file(
+            str(directory),
+            0x80000000 | 0x40000000,
+            0x00000001 | 0x00000002 | 0x00000004,
+            None,
+            3,
+            0x02000000 | 0x00200000,
+            None,
+        )
+        if handle == wintypes.HANDLE(-1).value:
+            raise ArtifactError("artifact directory cannot be opened securely")
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+        try:
+            if self._final_path_for_fd(descriptor) != expected:
+                raise ArtifactError("artifact directory handle escaped its path")
+            return descriptor
+        except Exception:
+            os.close(descriptor)
+            raise
+
+    def _open_windows_file_handle(
+        self, path: Path, expected: Path, access: int
+    ) -> int:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+
+        create_file = ctypes.WinDLL("kernel32", use_last_error=True).CreateFileW
+        create_file.argtypes = (
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.HANDLE,
+        )
+        create_file.restype = wintypes.HANDLE
+        handle = create_file(
+            str(path), access, 0x00000001 | 0x00000002 | 0x00000004, None, 3, 0, None
+        )
+        if handle == wintypes.HANDLE(-1).value:
+            if ctypes.get_last_error() in {2, 3}:
+                raise FileNotFoundError(path)
+            raise ArtifactError("artifact file cannot be opened securely")
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+        try:
+            if self._final_path_for_fd(descriptor) != expected:
+                raise ArtifactError("artifact file handle escaped its path")
+            return descriptor
+        except Exception:
+            os.close(descriptor)
+            raise
+
+    def _rename_windows_handle(
+        self, descriptor: int, directory_descriptor: int, name: str
+    ) -> None:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+
+        class _FileRenameInfo(ctypes.Structure):
+            _fields_ = (
+                ("replace", wintypes.BOOLEAN),
+                ("root_directory", wintypes.HANDLE),
+                ("name_length", wintypes.DWORD),
+                ("name", wintypes.WCHAR * 1),
+        )
+
+        encoded = name.encode("utf-16-le")
+        name_offset = _FileRenameInfo.name.offset
+        buffer = ctypes.create_string_buffer(ctypes.sizeof(_FileRenameInfo) + len(encoded))
+        info = _FileRenameInfo.from_buffer(buffer)
+        info.replace = True
+        info.root_directory = msvcrt.get_osfhandle(directory_descriptor)
+        info.name_length = len(encoded)
+        ctypes.memmove(ctypes.addressof(buffer) + name_offset, encoded, len(encoded))
+        class _IoStatusBlock(ctypes.Structure):
+            _fields_ = (("status", wintypes.LONG), ("information", ctypes.c_size_t))
+
+        set_information = ctypes.WinDLL("ntdll").NtSetInformationFile
+        set_information.argtypes = (
+            wintypes.HANDLE,
+            ctypes.POINTER(_IoStatusBlock),
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            wintypes.DWORD,
+        )
+        set_information.restype = wintypes.LONG
+        status = set_information(
+            msvcrt.get_osfhandle(descriptor),
+            ctypes.byref(_IoStatusBlock()),
+            buffer,
+            len(buffer),
+            10,
+        )
+        if status != 0:
+            raise ArtifactError("artifact handle rename failed")
+
+    def _unlink_windows_handle(self, descriptor: int) -> None:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+
+        delete = wintypes.BOOL(True)
+        set_information = ctypes.WinDLL(
+            "kernel32", use_last_error=True
+        ).SetFileInformationByHandle
+        set_information.argtypes = (
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        )
+        set_information.restype = wintypes.BOOL
+        if not set_information(
+            msvcrt.get_osfhandle(descriptor), 4, ctypes.byref(delete), ctypes.sizeof(delete)
+        ):
+            raise ArtifactError("artifact handle deletion failed")
+
+    def _remove_windows_temporary(self, path: Path, expected: Path) -> None:
+        descriptor: int | None = None
+        try:
+            descriptor = self._open_windows_file_handle(path, expected, 0x00010000)
+            self._unlink_windows_handle(descriptor)
+        except FileNotFoundError:
+            return
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+
     def _write_with_windows_handles(
         self, run_id: str, node: WorkflowNode, name: str, text: str
     ) -> tuple[Path, str]:
@@ -1027,6 +1186,8 @@ class ArtifactWriter:
         expected_parent = target.parent.resolve(strict=True)
         temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
         descriptor: int | None = None
+        directory_descriptor: int | None = None
+        renamed = False
         try:
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             flags |= getattr(os, "O_BINARY", 0)
@@ -1042,12 +1203,20 @@ class ArtifactWriter:
                 stream.write(text)
                 stream.flush()
                 os.fsync(stream.fileno())
-            checked_target = self._target(run_id, node, name, create=False)
-            if checked_target.parent.resolve(strict=True) != expected_parent:
-                raise ArtifactError("artifact directory identity changed")
-            os.replace(temporary, target)
-            if target.parent.resolve(strict=True) != expected_parent:
-                raise ArtifactError("artifact directory identity changed")
+            descriptor = self._open_windows_file_handle(
+                temporary,
+                expected_parent / temporary.name,
+                0x80000000 | 0x00010000,
+            )
+            directory_descriptor = self._open_windows_directory_handle(
+                target.parent, expected_parent
+            )
+            self._rename_windows_handle(descriptor, directory_descriptor, target.name)
+            renamed = True
+            os.close(descriptor)
+            descriptor = None
+            os.close(directory_descriptor)
+            directory_descriptor = None
             read_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
             descriptor = os.open(target, read_flags)
             actual_target = self._final_path_for_fd(descriptor)
@@ -1066,7 +1235,15 @@ class ArtifactWriter:
         finally:
             if descriptor is not None:
                 os.close(descriptor)
-            temporary.unlink(missing_ok=True)
+            if directory_descriptor is not None:
+                os.close(directory_descriptor)
+            if not renamed:
+                try:
+                    self._remove_windows_temporary(
+                        temporary, expected_parent / temporary.name
+                    )
+                except ArtifactError:
+                    pass
 
     def _capture_with_windows_handle(
         self, run_id: str, node: WorkflowNode, name: str
@@ -1129,15 +1306,14 @@ class ArtifactWriter:
         if not snapshot.existed:
             descriptor: int | None = None
             try:
-                read_flags = os.O_RDONLY | getattr(os, "O_BINARY", 0)
-                descriptor = os.open(target, read_flags)
-                if self._final_path_for_fd(descriptor) != expected_target:
-                    raise ArtifactError("artifact rollback target escaped its directory")
+                descriptor = self._open_windows_file_handle(
+                    target, expected_target, 0x00010000
+                )
                 if not stat.S_ISREG(os.fstat(descriptor).st_mode):
                     raise ArtifactError("artifact rollback target must be a regular file")
+                self._unlink_windows_handle(descriptor)
                 os.close(descriptor)
                 descriptor = None
-                target.unlink()
                 return
             except FileNotFoundError:
                 return
@@ -1147,6 +1323,8 @@ class ArtifactWriter:
 
         temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
         descriptor = None
+        directory_descriptor: int | None = None
+        renamed = False
         try:
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             flags |= getattr(os, "O_BINARY", 0)
@@ -1159,9 +1337,20 @@ class ArtifactWriter:
                 stream.flush()
                 os.fchmod(stream.fileno(), snapshot.mode)
                 os.fsync(stream.fileno())
-            if target.parent.resolve(strict=True) != expected_parent:
-                raise ArtifactError("artifact directory identity changed")
-            os.replace(temporary, target)
+            descriptor = self._open_windows_file_handle(
+                temporary,
+                expected_parent / temporary.name,
+                0x80000000 | 0x00010000,
+            )
+            directory_descriptor = self._open_windows_directory_handle(
+                target.parent, expected_parent
+            )
+            self._rename_windows_handle(descriptor, directory_descriptor, target.name)
+            renamed = True
+            os.close(descriptor)
+            descriptor = None
+            os.close(directory_descriptor)
+            directory_descriptor = None
             descriptor = os.open(
                 target, os.O_RDONLY | getattr(os, "O_BINARY", 0)
             )
@@ -1173,7 +1362,15 @@ class ArtifactWriter:
         finally:
             if descriptor is not None:
                 os.close(descriptor)
-            temporary.unlink(missing_ok=True)
+            if directory_descriptor is not None:
+                os.close(directory_descriptor)
+            if not renamed:
+                try:
+                    self._remove_windows_temporary(
+                        temporary, expected_parent / temporary.name
+                    )
+                except ArtifactError:
+                    pass
 
     @staticmethod
     def _final_path_for_fd(descriptor: int) -> Path:

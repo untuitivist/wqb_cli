@@ -192,8 +192,12 @@ class ArtifactWriterTests(unittest.TestCase):
             self.writer.write_json("run", WorkflowNode.A, "escape/x.json", {})
 
     def test_atomic_failure_removes_unique_temporary_file(self) -> None:
-        with patch("wqb_cli.agent.artifacts.os.replace", side_effect=OSError("fail")):
-            with self.assertRaises(OSError):
+        with patch.object(
+            self.writer,
+            "_rename_windows_handle",
+            side_effect=ArtifactError("rename failed"),
+        ):
+            with self.assertRaises(ArtifactError):
                 self.writer.write_json("run", WorkflowNode.A, "result.json", {})
         directory = self.root / "run" / "01_A"
         self.assertEqual(list(directory.glob("*.tmp")), [])
@@ -231,6 +235,60 @@ class ArtifactWriterTests(unittest.TestCase):
         )
         self.assertNotIn(b"DIRECT-SNAPSHOT-SECRET", rendered)
         self.assertNotIn(b"DYNAMIC-SNAPSHOT-SECRET", rendered)
+
+    def test_input_snapshots_reject_recognizable_utf_secret_encodings_before_writing(self) -> None:
+        direct = '{"api_key":"UTF-DIRECT-SNAPSHOT-SECRET"}'
+        dynamic = "{'name':'client_secret','value':'UTF-DYNAMIC-SNAPSHOT-SECRET', broken}"
+        cases = tuple(
+            (text, encoding)
+            for encoding in ("utf-16", "utf-16-le", "utf-16-be", "utf-32", "utf-32-le", "utf-32-be")
+            for text in (direct, dynamic)
+        )
+        for index, (text, encoding) in enumerate(cases):
+            content = text.encode(encoding)
+            with self.subTest(index=index, encoding=encoding), self.assertRaises(ArtifactError):
+                self.writer.stage_input(
+                    "run",
+                    WorkflowNode.J,
+                    content,
+                    hashlib.sha256(content).hexdigest(),
+                )
+
+        rendered = b"".join(
+            path.read_bytes() for path in self.root.rglob("*") if path.is_file()
+        )
+        for secret in ("UTF-DIRECT-SNAPSHOT-SECRET", "UTF-DYNAMIC-SNAPSHOT-SECRET"):
+            self.assertNotIn(secret.encode("utf-8"), rendered)
+            self.assertNotIn(secret, rendered.decode("latin-1"))
+
+    def test_input_snapshots_reject_ambiguous_text_encoding_before_writing(self) -> None:
+        content = b'{\x00"\x00a\x00"\x00:\x00\x00\xd8'
+        with self.assertRaises(ArtifactError):
+            self.writer.stage_input(
+                "run",
+                WorkflowNode.J,
+                content,
+                hashlib.sha256(content).hexdigest(),
+            )
+        self.assertFalse(any(path.is_file() for path in self.root.rglob("*")))
+
+    @unittest.skipUnless(os.name == "nt", "Windows handle security")
+    def test_windows_snapshot_staging_does_not_use_pathname_link_after_validation(self) -> None:
+        content = b'{"expression":"rank(close)"}'
+        with patch("wqb_cli.agent.artifacts.os.link", side_effect=AssertionError("path link")) as link:
+            self.writer.stage_input(
+                "run",
+                WorkflowNode.J,
+                content,
+                hashlib.sha256(content).hexdigest(),
+            )
+        link.assert_not_called()
+
+    @unittest.skipUnless(os.name == "nt", "Windows handle security")
+    def test_windows_artifact_write_does_not_use_pathname_replace_after_validation(self) -> None:
+        with patch("wqb_cli.agent.artifacts.os.replace", side_effect=AssertionError("path replace")) as replace:
+            self.writer.write_json("run", WorkflowNode.J, "result.json", {"ok": True})
+        replace.assert_not_called()
 
     @unittest.skipUnless(os.name == "posix", "POSIX dir_fd security")
     def test_input_snapshots_fail_closed_when_secure_parent_traversal_is_unavailable(self) -> None:

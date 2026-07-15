@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -225,6 +226,7 @@ def redact_text(value: str) -> str:
         raise TypeError("text must be a string")
 
     result = _redact_embedded_json_objects(value)
+    result = _redact_embedded_literal_objects(result)
     result = _TEXT_SECRET.sub(
         lambda match: match.group("prefix") + "[REDACTED]", result
     )
@@ -286,6 +288,71 @@ def _redact_embedded_json_objects(value: str) -> str:
             cursor = start + 1
             continue
         output.append(_canonical_json_object(_redacted_json(parsed)))
+        cursor = end
+
+
+def _literal_object_end(value: str, start: int) -> int | None:
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    for index in range(start, len(value)):
+        if index - start >= MAX_JSON_CHARS:
+            return None
+        character = value[index]
+        if quote is not None:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == quote:
+                quote = None
+            continue
+        if character in {"'", '"'}:
+            quote = character
+        elif character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return index + 1
+    return None
+
+
+def _redact_embedded_literal_objects(value: str) -> str:
+    output: list[str] = []
+    cursor = 0
+    while True:
+        start = value.find("{", cursor)
+        if start < 0:
+            output.append(value[cursor:])
+            return "".join(output)
+        output.append(value[cursor:start])
+        end = _literal_object_end(value, start)
+        if end is None:
+            output.append("[REDACTED]")
+            cursor = len(value)
+            continue
+        if end - start > MAX_JSON_CHARS:
+            output.append("[REDACTED]")
+            cursor = end
+            continue
+        try:
+            parsed = ast.literal_eval(value[start:end])
+        except Exception:
+            output.append("[REDACTED]")
+            cursor = end
+            continue
+        if type(parsed) is not dict:
+            output.append("{")
+            cursor = start + 1
+            continue
+        try:
+            redacted = _redacted_json(parsed)
+        except Exception:
+            output.append("[REDACTED]")
+            cursor = end
+            continue
+        output.append(_canonical_json_object(redacted))
         cursor = end
 
 
@@ -478,7 +545,13 @@ class ArtifactWriter:
                 elif create:
                     if current.resolve(strict=True) != current:
                         raise ArtifactError("artifact directory identity changed")
-                    candidate.mkdir()
+                    try:
+                        candidate.mkdir()
+                    except FileExistsError:
+                        if _is_link(candidate) or not candidate.is_dir():
+                            raise ArtifactError(
+                                "artifact parent must be a directory"
+                            ) from None
                 resolved = candidate.resolve(strict=create)
             except ArtifactError:
                 raise
@@ -522,33 +595,41 @@ class ArtifactWriter:
         kind: str,
     ) -> Any:
         with self._lock, self._artifact_lock(run_id, node, name):
-            snapshot = self._capture_target(run_id, node, name)
-            if os.name == "posix":
-                if not self._supports_secure_dir_fd():
-                    raise ArtifactError("secure dir_fd artifact writes are unavailable")
-                target, digest = self._write_with_dir_fd(
-                    run_id, node, name, text
-                )
-            elif os.name == "nt":
-                target, digest = self._write_with_windows_handles(
-                    run_id, node, name, text
-                )
-            else:
-                raise ArtifactError("secure artifact writes are unavailable")
-            if self._store is None:
-                return WrittenArtifact(
-                    None, run_id, node, name, str(target), digest, kind
-                )
+            return self._write_locked(run_id, node, name, text, kind)
+
+    def _write_locked(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        text: str,
+        kind: str,
+    ) -> Any:
+        snapshot = self._capture_target(run_id, node, name)
+        if os.name == "posix":
+            if not self._supports_secure_dir_fd():
+                raise ArtifactError("secure dir_fd artifact writes are unavailable")
+            target, digest = self._write_with_dir_fd(run_id, node, name, text)
+        elif os.name == "nt":
+            target, digest = self._write_with_windows_handles(
+                run_id, node, name, text
+            )
+        else:
+            raise ArtifactError("secure artifact writes are unavailable")
+        if self._store is None:
+            return WrittenArtifact(
+                None, run_id, node, name, str(target), digest, kind
+            )
+        try:
+            return self._store.add_or_update_artifact(
+                run_id, node, name, target, digest, kind
+            )
+        except Exception:
             try:
-                return self._store.add_or_update_artifact(
-                    run_id, node, name, target, digest, kind
-                )
+                self._restore_target(run_id, node, name, snapshot, digest)
             except Exception:
-                try:
-                    self._restore_target(run_id, node, name, snapshot, digest)
-                except Exception:
-                    pass
-                raise ArtifactError("artifact registry update failed") from None
+                pass
+            raise ArtifactError("artifact registry update failed") from None
 
     @contextmanager
     def _artifact_lock(
@@ -1074,7 +1155,10 @@ class ArtifactWriter:
                 try:
                     child = os.open(part, flags, dir_fd=current)
                 except FileNotFoundError:
-                    os.mkdir(part, 0o700, dir_fd=current)
+                    try:
+                        os.mkdir(part, 0o700, dir_fd=current)
+                    except FileExistsError:
+                        pass
                     child = os.open(part, flags, dir_fd=current)
                 os.close(current)
                 current = child
@@ -1125,7 +1209,7 @@ class ArtifactWriter:
         if type(value) is not dict:
             raise ArtifactError("JSONL records must be objects")
         rendered = _canonical_json_object(_redacted_json(value))
-        with self._lock:
+        with self._lock, self._artifact_lock(run_id, node, name):
             target = self._target(run_id, node, name)
             try:
                 existing = target.read_text(encoding="utf-8") if target.exists() else ""
@@ -1138,7 +1222,7 @@ class ArtifactWriter:
                 parsed = _strict_json_object(line)
                 records.append(_canonical_json_object(_redacted_json(parsed)))
             records.append(rendered)
-            return self._write(
+            return self._write_locked(
                 run_id, node, name, "\n".join(records) + "\n", "jsonl"
             )
 

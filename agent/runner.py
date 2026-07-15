@@ -472,21 +472,12 @@ class AgentRunner:
                 self._fail(command, run_id, node, argv, fingerprint, "EXECUTION_ERROR", None, "")
             raise RunnerError("command execution failed") from None
 
-        if completed.returncode != 0:
-            self._fail(
-                command,
-                run_id,
-                node,
-                argv,
-                fingerprint,
-                "NONZERO_EXIT",
-                completed.returncode,
-                completed.stderr,
-            )
-            raise RunnerError("command exited with a nonzero status")
         try:
             payload = self._parse_stdout(completed.stdout)
         except RunnerError:
+            failure_status = (
+                "NONZERO_EXIT" if completed.returncode != 0 else "INVALID_OUTPUT"
+            )
             if self._is_mutation(argv):
                 self._recoverable_log(
                     command,
@@ -494,7 +485,7 @@ class AgentRunner:
                     node,
                     argv,
                     fingerprint,
-                    "INVALID_OUTPUT",
+                    failure_status,
                     completed.returncode,
                     completed.stderr,
                     prebound_resource_id,
@@ -506,7 +497,7 @@ class AgentRunner:
                     node,
                     argv,
                     fingerprint,
-                    "INVALID_OUTPUT",
+                    failure_status,
                     completed.returncode,
                     completed.stderr,
                 )
@@ -520,7 +511,45 @@ class AgentRunner:
                 raise RunnerError("command resource could not be persisted") from None
             bound_resource_id = resource_id
         elif resource_id is not None and resource_id != bound_resource_id:
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "RESOURCE_CONFLICT",
+                    completed.returncode,
+                    completed.stderr,
+                    bound_resource_id,
+                )
             raise RunnerError("command resource conflicts with its ledger binding")
+
+        if completed.returncode != 0:
+            if self._is_mutation(argv):
+                self._recoverable_log(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "NONZERO_EXIT",
+                    completed.returncode,
+                    completed.stderr,
+                    bound_resource_id,
+                )
+            else:
+                self._fail(
+                    command,
+                    run_id,
+                    node,
+                    argv,
+                    fingerprint,
+                    "NONZERO_EXIT",
+                    completed.returncode,
+                    completed.stderr,
+                )
+            raise RunnerError("command exited with a nonzero status")
         safe_payload = redact_json(payload)
 
         artifact = None
@@ -661,7 +690,14 @@ class AgentRunner:
         if argv[:2] == ("sim", "create"):
             value = payload.get("simulation_id")
         elif argv[:2] == ("alpha", "submit"):
-            value = argv[2] if len(argv) > 2 else None
+            if "alpha_id" in payload:
+                value = payload["alpha_id"]
+                if type(value) is not str or RESOURCE_ID.fullmatch(value) is None:
+                    raise RunnerError(
+                        "command resource conflicts with its ledger binding"
+                    )
+            else:
+                value = argv[2] if len(argv) > 2 else None
         return value if type(value) is str and RESOURCE_ID.fullmatch(value) else None
 
     @staticmethod

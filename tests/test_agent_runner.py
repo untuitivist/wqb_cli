@@ -501,6 +501,49 @@ class ArtifactWriterTests(unittest.TestCase):
         self.assertIn("tail", rendered)
         self.assertIn("--ordinary visible", rendered)
 
+    def test_single_quoted_embedded_dynamic_secrets_are_structurally_redacted(self) -> None:
+        text = (
+            "payload={'name':'api_key','value':'DYNAMIC-LEAK'}\n"
+            "payload={'value':'TYPE-LEAK','type':'client_secret'}\n"
+            "payload={'value':'PASSWORD-LEAK','key':'password'}\n"
+            "ordinary apostrophe: don't rewrite {'safe': 'visible'}"
+        )
+
+        redacted = redact_text(text)
+
+        for secret in ("DYNAMIC-LEAK", "TYPE-LEAK", "PASSWORD-LEAK"):
+            self.assertNotIn(secret, redacted)
+        self.assertIn("ordinary apostrophe: don't rewrite", redacted)
+        self.assertIn('"safe":"visible"', redacted)
+
+    def test_oversized_or_deep_literal_objects_fail_closed_without_secret_leaks(self) -> None:
+        deep = "{'child':" * 70
+        deep += "{'name':'api_key','value':'DEEP-LEAK'}"
+        deep += "}" * 70
+        oversized = "{'name':'api_key','value':'SIZE-LEAK-" + "x" * 80 + "'}"
+
+        deep_redacted = redact_text(deep)
+        with patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 64):
+            oversized_redacted = redact_text(oversized)
+
+        self.assertNotIn("DEEP-LEAK", deep_redacted)
+        self.assertNotIn("SIZE-LEAK", oversized_redacted)
+        self.assertIn("[REDACTED]", deep_redacted)
+        self.assertIn("[REDACTED]", oversized_redacted)
+
+    def test_malformed_or_unclosed_literal_objects_fail_closed(self) -> None:
+        malformed = "{'name':'api_key','value':'PARSE-LEAK', broken}"
+        unclosed = "{" * 500 + "'name':'api_key','value':'UNCLOSED-LEAK'"
+
+        malformed_redacted = redact_text(malformed)
+        with patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 64):
+            unclosed_redacted = redact_text(unclosed)
+
+        self.assertNotIn("PARSE-LEAK", malformed_redacted)
+        self.assertNotIn("UNCLOSED-LEAK", unclosed_redacted)
+        self.assertEqual(malformed_redacted, "[REDACTED]")
+        self.assertEqual(unclosed_redacted, "[REDACTED]")
+
     def test_append_jsonl_rewrites_existing_lines_through_strict_redaction(self) -> None:
         target = self.root / "run" / "01_A" / "commands.jsonl"
         target.parent.mkdir(parents=True)
@@ -568,6 +611,108 @@ class ArtifactWriterTests(unittest.TestCase):
                     )
                 self.assertEqual(target.read_text(encoding="utf-8"), existing)
                 store.add_or_update_artifact.assert_not_called()
+
+    def test_append_jsonl_serializes_full_read_modify_write_across_writers(self) -> None:
+        target = self.root / "run" / "01_A" / "commands.jsonl"
+        target.parent.mkdir(parents=True)
+        target.write_text("", encoding="utf-8")
+        first_read = threading.Event()
+        second_read = threading.Event()
+        read_lock = threading.Lock()
+        reads = 0
+        original_read_text = Path.read_text
+
+        def interleaved_read(path: Path, *args: object, **kwargs: object) -> str:
+            nonlocal reads
+            if path == target:
+                with read_lock:
+                    reads += 1
+                    current = reads
+                if current == 1:
+                    first_read.set()
+                    second_read.wait(0.25)
+                elif current == 2:
+                    second_read.set()
+            return original_read_text(path, *args, **kwargs)
+
+        failures: list[BaseException] = []
+
+        def append(writer: ArtifactWriter, sequence: int) -> None:
+            try:
+                writer.append_jsonl(
+                    "run", WorkflowNode.A, "commands.jsonl", {"sequence": sequence}
+                )
+            except BaseException as exc:
+                failures.append(exc)
+
+        writers = (ArtifactWriter(self.root), ArtifactWriter(self.root))
+        threads = tuple(
+            threading.Thread(target=append, args=(writer, index))
+            for index, writer in enumerate(writers, start=1)
+        )
+        with patch.object(Path, "read_text", interleaved_read):
+            threads[0].start()
+            self.assertTrue(first_read.wait(1))
+            threads[1].start()
+            for thread in threads:
+                thread.join(2)
+
+        self.assertEqual(failures, [])
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertEqual(
+            {json.loads(line)["sequence"] for line in target.read_text().splitlines()},
+            {1, 2},
+        )
+
+    def test_concurrent_first_append_tolerates_directory_creation_race(self) -> None:
+        barrier = threading.Barrier(2)
+        original_mkdir = Path.mkdir
+
+        def synchronized_mkdir(path: Path, *args: object, **kwargs: object) -> None:
+            if path == self.root / "run":
+                barrier.wait(1)
+            original_mkdir(path, *args, **kwargs)
+
+        failures: list[BaseException] = []
+
+        def append(name: str) -> None:
+            try:
+                ArtifactWriter(self.root).append_jsonl(
+                    "run", WorkflowNode.A, name, {"name": name}
+                )
+            except BaseException as exc:
+                failures.append(exc)
+
+        threads = (
+            threading.Thread(target=append, args=("first.jsonl",)),
+            threading.Thread(target=append, args=("second.jsonl",)),
+        )
+        with patch.object(Path, "mkdir", synchronized_mkdir):
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join(2)
+
+        self.assertEqual(failures, [])
+        self.assertTrue(all(not thread.is_alive() for thread in threads))
+        self.assertTrue((self.root / "run" / "01_A" / "first.jsonl").is_file())
+        self.assertTrue((self.root / "run" / "01_A" / "second.jsonl").is_file())
+
+    def test_posix_dirfd_open_tolerates_a_concurrent_directory_creator(self) -> None:
+        with (
+            patch.object(os, "O_DIRECTORY", 0, create=True),
+            patch.object(os, "O_NOFOLLOW", 0, create=True),
+            patch("wqb_cli.agent.artifacts.os.open") as open_path,
+            patch("wqb_cli.agent.artifacts.os.mkdir") as make_directory,
+            patch("wqb_cli.agent.artifacts.os.close") as close_descriptor,
+        ):
+            open_path.side_effect = (10, FileNotFoundError(), 11)
+            make_directory.side_effect = FileExistsError()
+
+            descriptor = self.writer._open_parent_dir_fd(("shared",))
+
+        self.assertEqual(descriptor, 11)
+        close_descriptor.assert_called_once_with(10)
 
     def test_registered_hash_detects_tampering_and_forged_in_root_path(self) -> None:
         artifact = self.writer.write_json("run", WorkflowNode.A, "result.json", {"ok": True})
@@ -1019,6 +1164,176 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
                 self.assertNotIn("stderr-secret", rendered)
                 self.assertNotIn("oserror-secret", rendered)
 
+    def test_nonzero_sim_mutation_binds_resource_and_next_attempt_only_recovers(self) -> None:
+        candidate = self.root / "nonzero-candidate.json"
+        candidate.write_text('{"expression":"rank(close)"}', encoding="utf-8")
+        argv = ("sim", "create", "--input", str(candidate))
+        self.store.reserve_command.side_effect = (
+            command_record(id=101),
+            command_record(
+                id=101, status="RECOVERY_REQUIRED", resource_id="SIM-NONZERO"
+            ),
+        )
+        outcomes = (
+            subprocess.CompletedProcess(
+                [], 1, '{"simulation_id":"SIM-NONZERO"}', "temporary failure"
+            ),
+            subprocess.CompletedProcess(
+                [], 0, '{"simulation_id":"SIM-NONZERO","status":"COMPLETE"}', ""
+            ),
+        )
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", side_effect=outcomes
+        ) as process:
+            with self.assertRaises(RunnerError):
+                self.runner.run(
+                    "sim-nonzero",
+                    WorkflowNode.J,
+                    argv,
+                    "result.json",
+                )
+            result = self.runner.run(
+                "sim-nonzero",
+                WorkflowNode.J,
+                argv,
+                "result.json",
+            )
+
+        self.store.mark_command_resource.assert_called_once_with(101, "SIM-NONZERO")
+        self.store.fail_command.assert_not_called()
+        self.store.complete_command.assert_called_once()
+        self.assertEqual(result.payload["simulation_id"], "SIM-NONZERO")
+        self.assertIn("create", process.call_args_list[0].args[0])
+        self.assertNotIn("create", process.call_args_list[1].args[0])
+        self.assertEqual(
+            process.call_args_list[1].args[0][-5:],
+            ["sim", "get", "SIM-NONZERO", "--max-wait-seconds", "900"],
+        )
+
+    def test_recovery_nonzero_remains_recoverable_for_another_inspection(self) -> None:
+        self.store.reserve_command.side_effect = (
+            command_record(
+                id=102, status="RECOVERY_REQUIRED", resource_id="SIM-RECOVER"
+            ),
+            command_record(
+                id=102, status="RECOVERY_REQUIRED", resource_id="SIM-RECOVER"
+            ),
+        )
+        outcomes = (
+            subprocess.CompletedProcess([], 3, '{"simulation_id":"SIM-RECOVER"}', "busy"),
+            subprocess.CompletedProcess([], 0, '{"simulation_id":"SIM-RECOVER"}', ""),
+        )
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", side_effect=outcomes
+        ) as process:
+            with self.assertRaises(RunnerError):
+                self.runner.run(
+                    "recover-nonzero",
+                    WorkflowNode.J,
+                    ("sim", "create", "--input", "candidate.json"),
+                    "result.json",
+                )
+            self.runner.run(
+                "recover-nonzero",
+                WorkflowNode.J,
+                ("sim", "create", "--input", "candidate.json"),
+                "result.json",
+            )
+
+        self.store.fail_command.assert_not_called()
+        self.assertEqual(process.call_count, 2)
+        for call in process.call_args_list:
+            self.assertNotIn("create", call.args[0])
+
+    def test_nonzero_alpha_submit_keeps_prebound_id_and_rejects_stdout_conflict(self) -> None:
+        self.store.reserve_command.return_value = command_record(id=103)
+        completed = subprocess.CompletedProcess(
+            [], 1, '{"alpha_id":"OTHER-ALPHA"}', "ambiguous response"
+        )
+
+        with patch("wqb_cli.agent.runner.subprocess.run", return_value=completed):
+            with self.assertRaisesRegex(RunnerError, "conflicts"):
+                self.runner.run(
+                    "alpha-conflict",
+                    WorkflowNode.M,
+                    ("alpha", "submit", "ALPHA-BOUND"),
+                    "result.json",
+                )
+
+        self.store.mark_command_resource.assert_called_once_with(103, "ALPHA-BOUND")
+        self.store.fail_command.assert_not_called()
+        self.store.complete_command.assert_not_called()
+
+    def test_nonzero_alpha_submit_with_matching_id_only_gets_on_next_attempt(self) -> None:
+        self.store.reserve_command.side_effect = (
+            command_record(id=104),
+            command_record(
+                id=104, status="RECOVERY_REQUIRED", resource_id="ALPHA-BOUND"
+            ),
+        )
+        outcomes = (
+            subprocess.CompletedProcess(
+                [], 1, '{"alpha_id":"ALPHA-BOUND"}', "temporary failure"
+            ),
+            subprocess.CompletedProcess([], 0, '{"id":"ALPHA-BOUND"}', ""),
+        )
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", side_effect=outcomes
+        ) as process:
+            with self.assertRaises(RunnerError):
+                self.runner.run(
+                    "alpha-nonzero",
+                    WorkflowNode.M,
+                    ("alpha", "submit", "ALPHA-BOUND"),
+                    "result.json",
+                )
+            self.runner.run(
+                "alpha-nonzero",
+                WorkflowNode.M,
+                ("alpha", "submit", "ALPHA-BOUND"),
+                "result.json",
+            )
+
+        self.store.mark_command_resource.assert_called_once_with(104, "ALPHA-BOUND")
+        self.store.fail_command.assert_not_called()
+        self.store.complete_command.assert_called_once()
+        self.assertIn("submit", process.call_args_list[0].args[0])
+        self.assertNotIn("submit", process.call_args_list[1].args[0])
+        self.assertEqual(
+            process.call_args_list[1].args[0][-3:],
+            ["alpha", "get", "ALPHA-BOUND"],
+        )
+
+    def test_alpha_submit_rejects_explicit_invalid_stdout_resource_ids(self) -> None:
+        invalid_ids = ("OTHER ALPHA", None, 7, ["ALPHA-BOUND"])
+        for index, invalid_id in enumerate(invalid_ids):
+            with self.subTest(invalid_id=invalid_id):
+                self.store.reset_mock()
+                self.store.reserve_command.return_value = command_record(id=110 + index)
+                completed = subprocess.CompletedProcess(
+                    [], 0, json.dumps({"alpha_id": invalid_id}), ""
+                )
+
+                with patch(
+                    "wqb_cli.agent.runner.subprocess.run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(RunnerError, "conflicts"):
+                        self.runner.run(
+                            f"alpha-invalid-output-{index}",
+                            WorkflowNode.M,
+                            ("alpha", "submit", "ALPHA-BOUND"),
+                            "result.json",
+                        )
+
+                self.store.mark_command_resource.assert_called_once_with(
+                    110 + index, "ALPHA-BOUND"
+                )
+                self.store.fail_command.assert_not_called()
+                self.store.complete_command.assert_not_called()
+
     def test_ledger_terminal_and_unknown_statuses_fail_closed(self) -> None:
         for status in ("FAILED", "CANCELLED", "mystery"):
             with self.subTest(status=status):
@@ -1164,7 +1479,7 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
     def test_resource_marking_uses_command_specific_identity_before_completion(self) -> None:
         cases = (
             (("sim", "create"), {"simulation_id": "SIM1", "id": "wrong"}, "SIM1"),
-            (("alpha", "submit", "A1"), {"alpha_id": "ALPHA1", "id": "wrong"}, "A1"),
+            (("alpha", "submit", "A1"), {"alpha_id": "A1", "id": "wrong"}, "A1"),
         )
         for index, (argv, payload, expected) in enumerate(cases):
             with self.subTest(argv=argv):

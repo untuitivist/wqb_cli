@@ -256,10 +256,24 @@ class ModelRouter:
 
         persisted_input = _persistable_token_count(result.input_tokens)
         persisted_output = _persistable_token_count(result.output_tokens)
-        if (
+        persisted_latency = _persistable_latency_ms(result.latency_ms)
+        invalid_usage = (
             persisted_input != result.input_tokens
             or persisted_output != result.output_tokens
-        ):
+        )
+        invalid_latency = persisted_latency != result.latency_ms
+        if invalid_usage or invalid_latency:
+            try:
+                failure_cost = _cost_from_counts(
+                    config, persisted_input, persisted_output
+                )
+            except _UnpersistableCost:
+                failure_cost = None
+            invalid_fields = []
+            if invalid_usage:
+                invalid_fields.append("usage")
+            if invalid_latency:
+                invalid_fields.append("latency")
             self._record(
                 config,
                 request,
@@ -267,33 +281,13 @@ class ModelRouter:
                 status="FAILED",
                 input_tokens=persisted_input,
                 output_tokens=persisted_output,
-                latency_ms=result.latency_ms,
-                fallback_used=fallback_used,
-                provider_request_id=result.provider_request_id,
-                error="model usage exceeded persistence range",
-            )
-            raise ModelPersistenceError("model usage could not be persisted")
-
-        persisted_latency = _persistable_latency_ms(result.latency_ms)
-        if persisted_latency != result.latency_ms:
-            try:
-                failure_cost = _cost_usd(config, result)
-            except _UnpersistableCost:
-                failure_cost = None
-            self._record(
-                config,
-                request,
-                purpose,
-                status="FAILED",
-                input_tokens=result.input_tokens,
-                output_tokens=result.output_tokens,
                 cost_usd=failure_cost,
                 latency_ms=persisted_latency,
                 fallback_used=fallback_used,
                 provider_request_id=result.provider_request_id,
-                error="model latency exceeded persistence range",
+                error=f"model {' and '.join(invalid_fields)} exceeded persistence range",
             )
-            raise ModelPersistenceError("model latency could not be persisted")
+            raise ModelPersistenceError("model metadata could not be persisted")
 
         try:
             cost_usd = _cost_usd(config, result)
@@ -303,9 +297,9 @@ class ModelRouter:
                 request,
                 purpose,
                 status="FAILED",
-                input_tokens=result.input_tokens,
-                output_tokens=result.output_tokens,
-                latency_ms=result.latency_ms,
+                input_tokens=persisted_input,
+                output_tokens=persisted_output,
+                latency_ms=persisted_latency,
                 fallback_used=fallback_used,
                 provider_request_id=result.provider_request_id,
                 error="model cost exceeded persistence range",
@@ -317,10 +311,10 @@ class ModelRouter:
             request,
             purpose,
             status="COMPLETED",
-            input_tokens=result.input_tokens,
-            output_tokens=result.output_tokens,
+            input_tokens=persisted_input,
+            output_tokens=persisted_output,
             cost_usd=cost_usd,
-            latency_ms=result.latency_ms,
+            latency_ms=persisted_latency,
             fallback_used=fallback_used,
             provider_request_id=result.provider_request_id,
         )

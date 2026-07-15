@@ -1495,6 +1495,40 @@ class RouterStoreIntegrationTests(unittest.TestCase):
             self.assertEqual(summary["input_tokens"], 0)
             self.assertEqual(summary["output_tokens"], 0)
 
+    def test_combined_unpersistable_usage_and_latency_creates_real_failure_record(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = AgentStore(f"{tmp}/agent.sqlite3")
+            store.initialize()
+            store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+            overflow = 10**1000
+            planner = RecordingAdapter(
+                model_config(role=ModelRole.PLANNER),
+                [
+                    ModelResult(
+                        valid_output(ModelRole.PLANNER, WorkflowNode.B),
+                        overflow,
+                        overflow,
+                        overflow,
+                        "combined-overflow",
+                    )
+                ],
+            )
+            operator = RecordingAdapter(
+                model_config(role=ModelRole.OPERATOR),
+                [ModelResult(valid_output(ModelRole.OPERATOR, WorkflowNode.B), 1, 1, 1, None)],
+            )
+            router = ModelRouter(planner, operator, store=store, run_id="run-1")
+            with self.assertRaises(ModelPersistenceError) as raised:
+                router.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+            self.assertNotIn(str(overflow), str(raised.exception))
+            summary = store.usage_summary("run-1")["planner"]
+            self.assertEqual(summary["calls"], 1)
+            self.assertEqual(summary["failures"], 1)
+            self.assertEqual(summary["input_tokens"], 0)
+            self.assertEqual(summary["output_tokens"], 0)
+            self.assertEqual(summary["cost_usd"], 0.0)
+            self.assertEqual(summary["latency_ms"], 0.0)
+
     def test_extreme_finite_cost_persists_to_agent_store(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = AgentStore(f"{tmp}/agent.sqlite3")

@@ -18,6 +18,15 @@ def planner_choice(candidate_id: str) -> dict[str, object]:
     }
 
 
+def runner_with_authoritative_platform() -> Mock:
+    runner = Mock()
+    runner.run.side_effect = [
+        Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}, artifact=Mock(id=1, sha256="a" * 64)),
+        Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}, artifact=Mock(id=2, sha256="b" * 64)),
+    ]
+    return runner
+
+
 class DiscoveryNodeTests(unittest.TestCase):
     def test_a_pauses_when_authentication_is_missing(self) -> None:
         runner = Mock()
@@ -90,7 +99,7 @@ class DiscoveryNodeTests(unittest.TestCase):
             },
         }
 
-        result = DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
+        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
             "run-1", config, candidates
         )
 
@@ -130,8 +139,8 @@ class DiscoveryNodeTests(unittest.TestCase):
             },
         }
 
-        result = DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, sim_options=candidates["sim_options"]
+        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
         )
 
         self.assertEqual(result.summary["scope"]["category"], "PV")
@@ -157,8 +166,8 @@ class DiscoveryNodeTests(unittest.TestCase):
         }
 
         with self.assertRaisesRegex(ValueError, "supplied candidates"):
-            DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, sim_options=candidates["sim_options"]
+            DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
             )
 
     def test_d_fails_closed_without_prevalidated_platform_scope_options(self) -> None:
@@ -171,7 +180,7 @@ class DiscoveryNodeTests(unittest.TestCase):
             ]
         }
 
-        with self.assertRaisesRegex(ValueError, "validated sim_options"):
+        with self.assertRaisesRegex(ValueError, "malformed payload"):
             DiscoveryNodes(runner=Mock(), router=Mock(), store=Mock()).run_d(
                 "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
             )
@@ -185,8 +194,8 @@ class DiscoveryNodeTests(unittest.TestCase):
         }
         sim_options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
 
-        result = DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, sim_options=sim_options
+        result = DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source
         )
 
         self.assertEqual(result.summary["scope"]["category"], "PV")
@@ -204,8 +213,8 @@ class DiscoveryNodeTests(unittest.TestCase):
         sim_options = {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
 
         with self.assertRaisesRegex(ValueError, "supplied candidates"):
-            DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, sim_options=sim_options
+            DiscoveryNodes(runner=runner_with_authoritative_platform(), router=router, store=Mock()).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source
             )
         offered = router.invoke.call_args.args[0].context["candidates"]
         self.assertEqual([candidate["candidate_id"] for candidate in offered], ["USA_D1_PV"])
@@ -216,11 +225,11 @@ class DiscoveryNodeTests(unittest.TestCase):
         runner = Mock()
         runner.run.side_effect = [
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}, artifact=Mock(id=1, sha256="a" * 64)),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}, artifact=Mock(id=2, sha256="b" * 64)),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}),
         ]
         result = DiscoveryNodes(runner=runner, router=router, store=Mock()).run_d(
             "run-1", RunConfig.from_dict({"scope_mode": "auto"}), user_id="fixture-user"
@@ -234,11 +243,9 @@ class DiscoveryNodeTests(unittest.TestCase):
 
     def test_d_default_collection_fails_before_network_without_user_id(self) -> None:
         runner = Mock()
-        options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
-
         with self.assertRaisesRegex(ValueError, "user_id"):
             DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), sim_options=options
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"})
             )
         runner.run.assert_not_called()
 

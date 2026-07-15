@@ -151,16 +151,18 @@ class DiscoveryNodes:
     ) -> NodeResult:
         if not isinstance(config, RunConfig):
             raise TypeError("config must be a RunConfig")
+        if sim_options is not None:
+            raise DiscoveryError("caller-provided sim_options are not permitted")
+        if candidates is None and (type(user_id) is not str or not user_id.strip()):
+            raise DiscoveryError("user_id is required to collect user diversity")
+        platform = self._collect_platform_options(run_id)
         source = (
             self._collect_d_source(run_id, user_id=user_id)
             if candidates is None
             else self._snapshot_mapping(candidates, "candidates")
         )
-        supplied_options = source.get("sim_options") if candidates is None else sim_options
-        if supplied_options is None and isinstance(candidates, Mapping):
-            supplied_options = candidates.get("sim_options")
-        options = self._validated_sim_options(supplied_options)
-        valid_candidates = self._validated_candidates(source, config, options)
+        options = self._validated_sim_options(platform["sim_options"])
+        valid_candidates = self._validated_candidates(source, config, options, platform["category_ids"])
         if not valid_candidates:
             raise DiscoveryError("no validated current-quarter candidates are available")
         # The planner sees IDs and immutable candidate facts, never an authority to change scope.
@@ -188,10 +190,11 @@ class DiscoveryNodes:
             "needed_to_light": selected["neededToLight"],
             "multiplier": selected["multiplier"],
             "scope_hash": scope_hash,
-            "platform_options_source": source.get("platform_options_source", {}),
+            "platform_options_source": platform["sim_options_source"],
+            "data_categories_source": platform["categories_source"],
             "planner": planner,
         }
-        artifact_ids = tuple(source.get("command_artifact_ids", ()))
+        artifact_ids = tuple(platform["artifact_ids"]) + tuple(source.get("command_artifact_ids", ()))
         artifact_ids += self._write_json(
             run_id,
             WorkflowNode.D,
@@ -207,10 +210,29 @@ class DiscoveryNodes:
             payload={"scope": deepcopy(scope), "scope_hash": scope_hash},
         )
 
+    def _collect_platform_options(self, run_id: str) -> dict[str, Any]:
+        sim_options = self._run(run_id, WorkflowNode.D, ("sim", "options"), "sim_options.json")
+        categories = self._run(run_id, WorkflowNode.D, ("data", "categories"), "data_categories.json")
+        category_rows = self._successful_body_list(self._payload(categories), "data categories")
+        category_ids = set()
+        for item in category_rows:
+            identifier = item.get("id")
+            if type(identifier) is not str or not identifier.strip():
+                raise DiscoveryError("data categories entry has invalid id")
+            category_ids.add(identifier.strip().upper())
+        if not category_ids:
+            raise DiscoveryError("data categories response is empty")
+        return {
+            "sim_options": self._successful_body(self._payload(sim_options)),
+            "category_ids": frozenset(category_ids),
+            "sim_options_source": self._artifact_reference(sim_options),
+            "categories_source": self._artifact_reference(categories),
+            "artifact_ids": self._artifact_ids(sim_options, categories),
+        }
+
     def _collect_d_source(self, run_id: str, *, user_id: str | None) -> dict[str, Any]:
         if type(user_id) is not str or not user_id.strip():
             raise DiscoveryError("user_id is required to collect user diversity")
-        sim_options = self._run(run_id, WorkflowNode.D, ("sim", "options"), "sim_options.json")
         summary = self._run(run_id, WorkflowNode.D, ("user", "consultant-summary"), "consultant_summary.json")
         body = self._successful_body(self._payload(summary))
         start, end = self._quarter_bounds(body)
@@ -227,21 +249,17 @@ class DiscoveryNodes:
         diversity = self._run(
             run_id, WorkflowNode.D, ("user", "user-diversity", user_id.strip()), "diversity.json"
         )
-        categories = self._run(run_id, WorkflowNode.D, ("data", "categories"), "data_categories.json")
         return {
             "consultant_summary": body,
-            "sim_options": self._successful_body(self._payload(sim_options)),
-            "platform_options_source": self._artifact_reference(sim_options),
             "pyramids": self._records(self._successful_body(self._payload(pyramids))),
             "pyramid_multipliers": self._records(self._successful_body(self._payload(multipliers))),
             "diversity": self._successful_body(self._payload(diversity)),
-            "data_categories": self._successful_body_list(self._payload(categories), "data categories"),
-            "command_artifact_ids": self._artifact_ids(sim_options, summary, pyramids, multipliers, diversity, categories),
+            "command_artifact_ids": self._artifact_ids(summary, pyramids, multipliers, diversity),
             "quarter": {"start": start, "end": end},
         }
 
     def _validated_candidates(
-        self, source: dict[str, Any], config: RunConfig, options: dict[str, list[Any]]
+        self, source: dict[str, Any], config: RunConfig, options: dict[str, list[Any]], category_ids: frozenset[str]
     ) -> list[dict[str, Any]]:
         raw = source.get("quarter_towers", source.get("pyramids"))
         if type(raw) is not list:
@@ -252,6 +270,8 @@ class DiscoveryNodes:
             if type(item) is not dict:
                 raise DiscoveryError("quarter tower entries must be objects")
             for candidate in self._normalize_candidates(item, multipliers, options):
+                if candidate["category"] not in category_ids:
+                    raise DiscoveryError("candidate category is not platform-authorized")
                 if not self._candidate_allowed_by_options(candidate, options):
                     continue
                 if config.scope_mode is ScopeMode.MANUAL and any(

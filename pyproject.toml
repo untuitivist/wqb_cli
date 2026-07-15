@@ -28,7 +28,7 @@ Repository = "https://github.com/untuitivist/wqb_cli"
 Author = "https://github.com/untuitivist"
 
 [tool.setuptools]
-packages = ["wqb_cli", "wqb_cli.agent", "wqb_cli.agent.models", "wqb_cli.commands", "wqb_cli.core"]
+packages = ["wqb_cli", "wqb_cli.agent", "wqb_cli.agent.models", "wqb_cli.agent.nodes", "wqb_cli.commands", "wqb_cli.core"]
 
 [tool.setuptools.package-dir]
 wqb_cli = "."

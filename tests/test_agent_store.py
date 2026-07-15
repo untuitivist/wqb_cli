@@ -566,7 +566,7 @@ class AgentStoreTests(unittest.TestCase):
                         "SELECT version FROM schema_version"
                     ).fetchall()
                 ],
-                [1, 2],
+                [1, 2, 3],
             )
             with self.assertRaises(sqlite3.IntegrityError):
                 connection.execute(
@@ -660,7 +660,7 @@ class AgentStoreTests(unittest.TestCase):
                     ("other", "J", 3),
                 ],
             )
-            self.assertEqual([row["version"] for row in versions], [1, 2])
+            self.assertEqual([row["version"] for row in versions], [1, 2, 3])
             self.assertIn("completion_sequence DESC", index_sql)
             self.assertEqual(upgraded.latest_completed_node("legacy"), WorkflowNode.F)
 
@@ -698,7 +698,7 @@ class AgentStoreTests(unittest.TestCase):
                 connection.execute(
                     "CREATE TABLE schema_version (version INTEGER PRIMARY KEY)"
                 )
-                connection.execute("INSERT INTO schema_version(version) VALUES (3)")
+                connection.execute("INSERT INTO schema_version(version) VALUES (4)")
                 connection.execute("CREATE TABLE sentinel (value TEXT)")
                 connection.commit()
                 self.assertEqual(
@@ -746,7 +746,7 @@ class AgentStoreTests(unittest.TestCase):
 
     def test_failed_injected_migration_is_atomic_and_does_not_enable_wal(self) -> None:
         failing = store_module._Migration(
-            version=3,
+            version=4,
             statements=(
                 "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
                 "INSERT INTO table_that_does_not_exist(value) VALUES (1)",
@@ -767,9 +767,9 @@ class AgentStoreTests(unittest.TestCase):
             self.assertEqual(journal_mode, "delete")
 
     def test_only_unapplied_ordered_migrations_execute(self) -> None:
-        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 2)
-        third = store_module._Migration(
-            version=3,
+        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 3)
+        fourth = store_module._Migration(
+            version=4,
             statements=(
                 "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
                 "INSERT INTO migration_probe(value) VALUES (1)",
@@ -779,13 +779,13 @@ class AgentStoreTests(unittest.TestCase):
             path = Path(tmp) / "migrations.sqlite3"
             store = AgentStore(
                 path,
-                _migrations=(*store_module._MIGRATIONS, third),
+                _migrations=(*store_module._MIGRATIONS, fourth),
             )
             store.initialize()
             store.initialize()
             AgentStore(
                 path,
-                _migrations=(*store_module._MIGRATIONS, third),
+                _migrations=(*store_module._MIGRATIONS, fourth),
             ).initialize()
 
             with closing(store.connect()) as connection:
@@ -795,7 +795,7 @@ class AgentStoreTests(unittest.TestCase):
                 probe = connection.execute(
                     "SELECT value FROM migration_probe"
                 ).fetchall()
-        self.assertEqual([row["version"] for row in versions], [1, 2, 3])
+        self.assertEqual([row["version"] for row in versions], [1, 2, 3, 4])
         self.assertEqual([row["value"] for row in probe], [1])
 
     def test_separate_store_instances_allocate_unique_attempt_numbers(self) -> None:

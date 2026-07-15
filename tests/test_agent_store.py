@@ -86,9 +86,21 @@ class AgentStoreTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def create_at_state(self, run_id: str, state: RunState) -> None:
+        if state is RunState.SUBMITTED:
+            self.seed_submitted_run(run_id)
+            return
         self.store.create_run(run_id, auto_config())
         for target in PATH_TO_STATE[state]:
             self.store.transition(run_id, target, f"reach {target.value}")
+
+    def seed_submitted_run(self, run_id: str) -> None:
+        self.store.create_run(run_id, auto_config())
+        with closing(self.store.connect()) as connection:
+            connection.execute(
+                "UPDATE runs SET state = ? WHERE run_id = ?",
+                (RunState.SUBMITTED.value, run_id),
+            )
+            connection.commit()
 
     def history(self, run_id: str) -> list[sqlite3.Row]:
         with closing(self.store.connect()) as connection:
@@ -152,7 +164,7 @@ class AgentStoreTests(unittest.TestCase):
                     )
 
     def test_every_invalid_transition_preserves_state_and_history(self) -> None:
-        sources = tuple(PATH_TO_STATE)
+        sources = (*PATH_TO_STATE, RunState.SUBMITTED)
         for index, source in enumerate(sources):
             invalid_targets = set(RunState) - ALLOWED_TRANSITIONS[source]
             for target in invalid_targets:

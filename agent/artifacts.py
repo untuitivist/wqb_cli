@@ -207,6 +207,27 @@ def redact_json(value: dict[str, Any]) -> dict[str, Any]:
     return _redacted_json(value)
 
 
+def _contains_secret_json(value: Any) -> bool:
+    if type(value) is dict:
+        dynamic_secret = any(
+            type(key) is str
+            and key.strip().casefold() in {"key", "name", "type"}
+            and type(child) is str
+            and _is_secret_key(child)
+            for key, child in value.items()
+        )
+        return any(
+            _is_secret_key(key)
+            or (dynamic_secret and key.strip().casefold() == "value")
+            or _contains_secret_json(child)
+            for key, child in value.items()
+            if type(key) is str
+        )
+    if type(value) is list:
+        return any(_contains_secret_json(child) for child in value)
+    return False
+
+
 _TEXT_SECRET = re.compile(
     r"(?im)(?P<prefix>(?:authorization|cookie|api[_-]?key|password|secret|token)"
     r"\s*(?::|=)\s*)(?P<value>[^\r\n]+)"
@@ -221,6 +242,34 @@ _CLI_PAIR = re.compile(
     r"(?:(?P<equals>=)(?P<inline>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s]+)"
     r"|\s+(?P<next>\"(?:\\.|[^\"\\])*\"|'(?:\\.|[^'\\])*'|[^\s]+))"
 )
+
+
+def _contains_secret_text(value: str) -> bool:
+    for match in _TEXT_SECRET.finditer(value):
+        if _is_secret_key(match.group("prefix").split(None, 1)[0].rstrip(":=")):
+            return True
+    for match in _QUOTED_OR_UNQUOTED_PAIR.finditer(value):
+        if _is_secret_key(match.group("key")):
+            return True
+    for match in _CLI_PAIR.finditer(value):
+        if _is_secret_key(match.group("flag").lstrip("-")):
+            return True
+
+    spans, unclosed_start = _scan_object_spans(value)
+    for start, end in spans:
+        candidate = value[start:end]
+        try:
+            parsed = _strict_json_object(candidate)
+        except ArtifactError:
+            try:
+                parsed = _literal_eval_without_duplicate_keys(candidate)
+            except Exception:
+                if _has_dynamic_secret_shape(candidate):
+                    return True
+                continue
+        if _contains_secret_json(parsed):
+            return True
+    return unclosed_start is not None and _has_dynamic_secret_shape(value[unclosed_start:])
 
 
 def redact_text(value: str) -> str:
@@ -477,57 +526,34 @@ class ArtifactWriter:
             or hashlib.sha256(content).hexdigest() != sha256
         ):
             raise ArtifactError("input snapshot hash is invalid")
+        if _contains_secret_text(content.decode("latin-1")):
+            raise ArtifactError("input snapshot must not contain secret material")
         name = f".inputs/{sha256}-{len(content)}.bin"
         with self._lock:
-            target = self._target(run_id, node, name)
-            if target.exists():
-                self._verify_input_snapshot(target, sha256, len(content))
-                return target.resolve(strict=True)
-            temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
-            descriptor: int | None = None
-            try:
-                flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
-                flags |= getattr(os, "O_BINARY", 0) | getattr(os, "O_NOFOLLOW", 0)
-                descriptor = os.open(temporary, flags, 0o600)
-                if os.name == "nt":
-                    actual = self._final_path_for_fd(descriptor)
-                    if actual != temporary.resolve(strict=True):
-                        raise ArtifactError("input snapshot temporary path changed")
-                with os.fdopen(descriptor, "wb") as stream:
-                    descriptor = None
-                    stream.write(content)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                try:
-                    os.link(temporary, target, follow_symlinks=False)
-                except FileExistsError:
-                    pass
-                temporary.unlink()
-                self._verify_input_snapshot(target, sha256, len(content))
-                try:
-                    target.chmod(stat.S_IREAD)
-                except OSError:
-                    raise ArtifactError("input snapshot could not be made read-only") from None
-                return target.resolve(strict=True)
-            except ArtifactError:
-                raise
-            except OSError:
-                raise ArtifactError("input snapshot could not be staged securely") from None
-            finally:
-                if descriptor is not None:
-                    os.close(descriptor)
-                if temporary.exists():
-                    try:
-                        temporary.chmod(stat.S_IWRITE | stat.S_IREAD)
-                        temporary.unlink()
-                    except OSError:
-                        pass
+            if os.name == "posix":
+                if not self._supports_secure_dir_fd():
+                    raise ArtifactError("secure dir_fd input snapshots are unavailable")
+                return self._stage_input_with_dir_fd(
+                    run_id, node, name, content, sha256
+                )
+            if os.name == "nt":
+                return self._stage_input_with_windows_handles(
+                    run_id, node, name, content, sha256
+                )
+            raise ArtifactError("secure input snapshots are unavailable")
 
     def verify_input_snapshot(self, path: Path, sha256: str, size: int) -> None:
         with self._lock:
             self._verify_input_snapshot(path, sha256, size)
 
     def _verify_input_snapshot(self, path: Path, sha256: str, size: int) -> None:
+        if os.name == "posix":
+            try:
+                relative = path.absolute().relative_to(self.root)
+            except ValueError:
+                raise ArtifactError("input snapshot path is unsafe") from None
+            self._verify_input_snapshot_with_dir_fd(relative, sha256, size)
+            return
         descriptor: int | None = None
         try:
             resolved = path.resolve(strict=True)
@@ -570,6 +596,177 @@ class ArtifactWriter:
         finally:
             if descriptor is not None:
                 os.close(descriptor)
+
+    def _verify_input_snapshot_with_dir_fd(
+        self, relative: Path, sha256: str, size: int
+    ) -> None:
+        if relative.is_absolute() or not relative.parts:
+            raise ArtifactError("input snapshot path is unsafe")
+        parent_fd = self._open_parent_dir_fd(relative.parent.parts)
+        descriptor: int | None = None
+        try:
+            flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(relative.name, flags, dir_fd=parent_fd)
+            digest = hashlib.sha256()
+            consumed = 0
+            with os.fdopen(descriptor, "rb") as stream:
+                descriptor = None
+                before = os.fstat(stream.fileno())
+                if not stat.S_ISREG(before.st_mode):
+                    raise ArtifactError("input snapshot must be a regular file")
+                while chunk := stream.read(1024 * 1024):
+                    consumed += len(chunk)
+                    if consumed > size:
+                        raise ArtifactError("input snapshot size changed")
+                    digest.update(chunk)
+                after = os.fstat(stream.fileno())
+            if (
+                (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+                or consumed != size
+                or digest.hexdigest() != sha256
+            ):
+                raise ArtifactError("input snapshot content does not match its identity")
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("input snapshot could not be verified") from None
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            os.close(parent_fd)
+
+    def _stage_input_with_dir_fd(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        content: bytes,
+        sha256: str,
+    ) -> Path:
+        relative = Path(run_id) / NODE_DIRECTORIES[node] / Path(name)
+        parent_fd = self._open_parent_dir_fd(relative.parent.parts)
+        temporary_name = f".{relative.name}.{secrets.token_hex(12)}.tmp"
+        temporary_exists = False
+        target = self.root / relative
+        try:
+            try:
+                existing = os.stat(
+                    relative.name, dir_fd=parent_fd, follow_symlinks=False
+                )
+            except FileNotFoundError:
+                existing = None
+            if existing is not None:
+                if not stat.S_ISREG(existing.st_mode):
+                    raise ArtifactError("input snapshot must be a regular file")
+                self._verify_input_snapshot_with_dir_fd(relative, sha256, len(content))
+                return target
+
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW
+            flags |= getattr(os, "O_CLOEXEC", 0)
+            descriptor = os.open(temporary_name, flags, 0o600, dir_fd=parent_fd)
+            temporary_exists = True
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+            try:
+                os.link(
+                    temporary_name,
+                    relative.name,
+                    src_dir_fd=parent_fd,
+                    dst_dir_fd=parent_fd,
+                    follow_symlinks=False,
+                )
+            except FileExistsError:
+                self._verify_input_snapshot_with_dir_fd(relative, sha256, len(content))
+                return target
+            os.unlink(temporary_name, dir_fd=parent_fd)
+            temporary_exists = False
+            self._verify_input_snapshot_with_dir_fd(relative, sha256, len(content))
+            descriptor = os.open(
+                relative.name,
+                os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0),
+                dir_fd=parent_fd,
+            )
+            try:
+                os.fchmod(descriptor, stat.S_IREAD)
+            finally:
+                os.close(descriptor)
+            os.fsync(parent_fd)
+            return target
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("input snapshot could not be staged securely") from None
+        finally:
+            if temporary_exists:
+                try:
+                    os.unlink(temporary_name, dir_fd=parent_fd)
+                except OSError:
+                    pass
+            os.close(parent_fd)
+
+    def _stage_input_with_windows_handles(
+        self,
+        run_id: str,
+        node: WorkflowNode,
+        name: str,
+        content: bytes,
+        sha256: str,
+    ) -> Path:
+        target = self._target(run_id, node, name)
+        expected_parent = target.parent.resolve(strict=True)
+        expected_target = expected_parent / target.name
+        temporary = target.parent / f".{target.name}.{secrets.token_hex(12)}.tmp"
+        descriptor: int | None = None
+        temporary_created = False
+        try:
+            try:
+                self._verify_input_snapshot(target, sha256, len(content))
+                return target
+            except ArtifactError:
+                if target.exists():
+                    raise
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+            descriptor = os.open(temporary, flags, 0o600)
+            temporary_created = True
+            if self._final_path_for_fd(descriptor).parent != expected_parent:
+                raise ArtifactError("input snapshot temporary handle escaped its directory")
+            with os.fdopen(descriptor, "wb") as stream:
+                descriptor = None
+                stream.write(content)
+                stream.flush()
+                os.fsync(stream.fileno())
+            if target.parent.resolve(strict=True) != expected_parent:
+                raise ArtifactError("input snapshot directory identity changed")
+            try:
+                os.link(temporary, target, follow_symlinks=False)
+            except FileExistsError:
+                self._verify_input_snapshot(target, sha256, len(content))
+                return target
+            temporary.unlink()
+            temporary_created = False
+            descriptor = os.open(target, os.O_RDONLY | getattr(os, "O_BINARY", 0))
+            if self._final_path_for_fd(descriptor) != expected_target:
+                raise ArtifactError("input snapshot handle escaped its directory")
+            os.close(descriptor)
+            descriptor = None
+            target.chmod(stat.S_IREAD)
+            self._verify_input_snapshot(target, sha256, len(content))
+            return target
+        except ArtifactError:
+            raise
+        except OSError:
+            raise ArtifactError("input snapshot could not be staged securely") from None
+        finally:
+            if descriptor is not None:
+                os.close(descriptor)
+            if temporary_created:
+                try:
+                    temporary.unlink()
+                except OSError:
+                    pass
 
     def _ensure_directory(self, directory: Path, *, create: bool) -> Path:
         try:
@@ -1253,10 +1450,10 @@ class ArtifactWriter:
             raise ArtifactError("JSONL records must be objects")
         rendered = _canonical_json_object(_redacted_json(value))
         with self._lock, self._artifact_lock(run_id, node, name):
-            target = self._target(run_id, node, name)
+            snapshot = self._capture_target(run_id, node, name)
             try:
-                existing = target.read_text(encoding="utf-8") if target.exists() else ""
-            except (OSError, UnicodeError):
+                existing = snapshot.content.decode("utf-8") if snapshot.existed else ""
+            except UnicodeDecodeError:
                 raise ArtifactError("existing JSONL artifact cannot be read") from None
             records: list[str] = []
             for line in existing.splitlines():

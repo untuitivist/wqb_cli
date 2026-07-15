@@ -212,6 +212,42 @@ class ArtifactWriterTests(unittest.TestCase):
             if path.is_file():
                 self.assertNotIn(b"never-write-this", path.read_bytes())
 
+    def test_input_snapshots_reject_direct_and_dynamic_secret_bytes_before_writing(self) -> None:
+        cases = (
+            b'{"expression":"rank(close)","api_key":"DIRECT-SNAPSHOT-SECRET"}',
+            b"{'name':'client_secret','value':'DYNAMIC-SNAPSHOT-SECRET', broken}",
+        )
+        for index, content in enumerate(cases):
+            with self.subTest(index=index), self.assertRaises(ArtifactError):
+                self.writer.stage_input(
+                    "run",
+                    WorkflowNode.J,
+                    content,
+                    hashlib.sha256(content).hexdigest(),
+                )
+
+        rendered = b"".join(
+            path.read_bytes() for path in self.root.rglob("*") if path.is_file()
+        )
+        self.assertNotIn(b"DIRECT-SNAPSHOT-SECRET", rendered)
+        self.assertNotIn(b"DYNAMIC-SNAPSHOT-SECRET", rendered)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX dir_fd security")
+    def test_input_snapshots_fail_closed_when_secure_parent_traversal_is_unavailable(self) -> None:
+        content = b'{"expression":"rank(close)"}'
+        with patch.object(
+            self.writer,
+            "_open_parent_dir_fd",
+            side_effect=ArtifactError("parent swap"),
+        ) as open_parent, self.assertRaises(ArtifactError):
+            self.writer.stage_input(
+                "run",
+                WorkflowNode.J,
+                content,
+                hashlib.sha256(content).hexdigest(),
+            )
+        open_parent.assert_called_once()
+
     def test_concurrent_writes_use_distinct_temporary_names(self) -> None:
         failures: list[BaseException] = []
 
@@ -676,6 +712,21 @@ class ArtifactWriterTests(unittest.TestCase):
                 self.assertEqual(target.read_text(encoding="utf-8"), existing)
                 store.add_or_update_artifact.assert_not_called()
 
+    def test_append_jsonl_reads_existing_records_without_pathname_read_race(self) -> None:
+        target = self.root / "run" / "01_A" / "safe-read.jsonl"
+        target.parent.mkdir(parents=True)
+        target.write_text('{"existing":true}\n', encoding="utf-8")
+
+        with patch.object(Path, "read_text", side_effect=AssertionError("path read")):
+            self.writer.append_jsonl(
+                "run", WorkflowNode.A, "safe-read.jsonl", {"next": True}
+            )
+
+        self.assertEqual(
+            [json.loads(line) for line in target.read_text(encoding="utf-8").splitlines()],
+            [{"existing": True}, {"next": True}],
+        )
+
     def test_append_jsonl_serializes_full_read_modify_write_across_writers(self) -> None:
         target = self.root / "run" / "01_A" / "commands.jsonl"
         target.parent.mkdir(parents=True)
@@ -684,11 +735,16 @@ class ArtifactWriterTests(unittest.TestCase):
         second_read = threading.Event()
         read_lock = threading.Lock()
         reads = 0
-        original_read_text = Path.read_text
+        original_capture = ArtifactWriter._capture_target
 
-        def interleaved_read(path: Path, *args: object, **kwargs: object) -> str:
+        def interleaved_capture(
+            writer: ArtifactWriter,
+            run_id: str,
+            node: WorkflowNode,
+            name: str,
+        ) -> object:
             nonlocal reads
-            if path == target:
+            if run_id == "run" and node is WorkflowNode.A and name == "commands.jsonl":
                 with read_lock:
                     reads += 1
                     current = reads
@@ -697,7 +753,7 @@ class ArtifactWriterTests(unittest.TestCase):
                     second_read.wait(0.25)
                 elif current == 2:
                     second_read.set()
-            return original_read_text(path, *args, **kwargs)
+            return original_capture(writer, run_id, node, name)
 
         failures: list[BaseException] = []
 
@@ -714,7 +770,7 @@ class ArtifactWriterTests(unittest.TestCase):
             threading.Thread(target=append, args=(writer, index))
             for index, writer in enumerate(writers, start=1)
         )
-        with patch.object(Path, "read_text", interleaved_read):
+        with patch.object(ArtifactWriter, "_capture_target", interleaved_capture):
             threads[0].start()
             self.assertTrue(first_read.wait(1))
             threads[1].start()
@@ -884,6 +940,14 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
         self.runner = AgentRunner(
             self.store, AgentPolicy(Budget()), ArtifactWriter(self.root), timeout_seconds=7
         )
+
+    def test_stdout_parser_rejects_duplicate_resource_keys(self) -> None:
+        for stdout in (
+            '{"simulation_id":"SIM-ONE","simulation_id":"SIM-TWO"}',
+            '{"alpha_id":"ALPHA-ONE","alpha_id":"ALPHA-TWO"}',
+        ):
+            with self.subTest(stdout=stdout), self.assertRaises(RunnerError):
+                AgentRunner._parse_stdout(stdout)
 
     def test_subprocess_contract_and_sanitized_environment_are_exact(self) -> None:
         completed = subprocess.CompletedProcess([], 0, '{"ok":true}', "safe stderr")

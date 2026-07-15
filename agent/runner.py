@@ -12,7 +12,14 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
-from .artifacts import ArtifactError, ArtifactWriter, redact_argv, redact_json, redact_text
+from .artifacts import (
+    ArtifactError,
+    ArtifactWriter,
+    _strict_json_decoder,
+    redact_argv,
+    redact_json,
+    redact_text,
+)
 from .context import _is_secret_key
 from .policy import AgentPolicy, PolicyViolation
 from .types import WorkflowNode
@@ -685,11 +692,7 @@ class AgentRunner:
 
     @staticmethod
     def _parse_stdout(stdout: str) -> dict[str, Any]:
-        decoder = json.JSONDecoder(
-            parse_constant=lambda constant: (_ for _ in ()).throw(
-                ValueError("non-finite number")
-            )
-        )
+        decoder = _strict_json_decoder()
         try:
             start = len(stdout) - len(stdout.lstrip())
             value, end = decoder.raw_decode(stdout, start)

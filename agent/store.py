@@ -120,10 +120,8 @@ _MIGRATIONS = (
                 summary_json TEXT,
                 started_at TEXT NOT NULL DEFAULT ({_NOW_SQL}),
                 finished_at TEXT,
-                completion_sequence INTEGER,
                 FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE,
-                UNIQUE (run_id, node, attempt_number),
-                UNIQUE (run_id, completion_sequence)
+                UNIQUE (run_id, node, attempt_number)
             )
             """,
             """
@@ -132,7 +130,7 @@ _MIGRATIONS = (
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_node_attempts_run_completed
-            ON node_attempts(run_id, status, completion_sequence DESC, id DESC)
+            ON node_attempts(run_id, status, finished_at DESC, id DESC)
             """,
             """
             CREATE INDEX IF NOT EXISTS idx_node_attempts_run_node_latest
@@ -140,8 +138,41 @@ _MIGRATIONS = (
             """,
         ),
     ),
+    _Migration(
+        version=2,
+        statements=(
+            "ALTER TABLE node_attempts ADD COLUMN completion_sequence INTEGER",
+            """
+            WITH ranked AS (
+                SELECT
+                    id,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY run_id
+                        ORDER BY finished_at, id
+                    ) AS sequence
+                FROM node_attempts
+                WHERE status IN ('COMPLETED', 'FAILED', 'INTERRUPTED')
+            )
+            UPDATE node_attempts
+            SET completion_sequence = (
+                SELECT sequence FROM ranked WHERE ranked.id = node_attempts.id
+            )
+            WHERE id IN (SELECT id FROM ranked)
+            """,
+            "DROP INDEX idx_node_attempts_run_completed",
+            """
+            CREATE INDEX idx_node_attempts_run_completed
+            ON node_attempts(run_id, status, completion_sequence DESC, id DESC)
+            """,
+            """
+            CREATE UNIQUE INDEX idx_node_attempts_run_completion_sequence
+            ON node_attempts(run_id, completion_sequence)
+            WHERE completion_sequence IS NOT NULL
+            """,
+        ),
+    ),
 )
-LATEST_SCHEMA_VERSION = 1
+LATEST_SCHEMA_VERSION = _MIGRATIONS[-1].version
 
 
 def _canonical_json(value: Any) -> str:
@@ -211,7 +242,7 @@ def _validate_finished_status(status: object) -> None:
 
 
 def _validate_summary(summary: object) -> None:
-    if type(summary) is not dict:
+    if not isinstance(summary, dict):
         raise TypeError("summary must be a dictionary")
 
 
@@ -252,11 +283,7 @@ class AgentStore:
         actual_versions = tuple(migration.version for migration in self._migrations)
         if actual_versions != expected_versions:
             raise ValueError("migrations must be ordered and contiguous from version 1")
-        self._latest_schema_version = (
-            LATEST_SCHEMA_VERSION
-            if _migrations is None
-            else self._migrations[-1].version
-        )
+        self._latest_schema_version = self._migrations[-1].version
 
     def connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self.path, timeout=30.0)
@@ -279,27 +306,24 @@ class AgentStore:
     def initialize(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self.connect()) as connection:
-            connection.execute("PRAGMA journal_mode = WAL")
             connection.execute("BEGIN IMMEDIATE")
             try:
                 connection.execute(_SCHEMA_VERSION_BOOTSTRAP)
                 versions = connection.execute(
                     "SELECT version FROM schema_version ORDER BY version"
                 ).fetchall()
-                applied = {row["version"] for row in versions}
-                if any(
-                    version > self._latest_schema_version for version in applied
-                ):
+                applied = [row["version"] for row in versions]
+                if applied and applied[-1] > self._latest_schema_version:
                     raise RuntimeError(
                         "database has a future schema version "
                         f"above {self._latest_schema_version}"
                     )
-                known = {migration.version for migration in self._migrations}
-                if not applied <= known:
-                    raise RuntimeError("database has an unsupported schema version")
-                for migration in self._migrations:
-                    if migration.version in applied:
-                        continue
+                expected_prefix = list(range(1, len(applied) + 1))
+                if applied != expected_prefix:
+                    raise RuntimeError(
+                        "applied schema versions must be a contiguous prefix"
+                    )
+                for migration in self._migrations[len(applied) :]:
                     for statement in migration.statements:
                         connection.execute(statement)
                     connection.execute(
@@ -310,6 +334,7 @@ class AgentStore:
             except BaseException:
                 connection.rollback()
                 raise
+            connection.execute("PRAGMA journal_mode = WAL")
 
     def create_run(self, run_id: str, config: RunConfig) -> RunRecord:
         _validate_run_id(run_id)

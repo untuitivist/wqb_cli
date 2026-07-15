@@ -5,7 +5,7 @@ import sqlite3
 import tempfile
 import threading
 import unittest
-from collections import UserDict
+from collections import OrderedDict, UserDict
 from contextlib import closing
 from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
@@ -388,7 +388,11 @@ class AgentStoreTests(unittest.TestCase):
         self.assertEqual(other_run.attempt_number, 1)
         self.assertEqual(first.status, "RUNNING")
 
-        self.store.finish_node_attempt(first, "COMPLETED", {"z": 1, "a": "中文"})
+        self.store.finish_node_attempt(
+            first,
+            "COMPLETED",
+            OrderedDict((("z", 1), ("a", "中文"))),
+        )
         with closing(self.store.connect()) as connection:
             row = connection.execute(
                 "SELECT status, summary_json, finished_at FROM node_attempts WHERE id = ?",
@@ -439,6 +443,47 @@ class AgentStoreTests(unittest.TestCase):
             [(lower_id.id, 2), (higher_id.id, 1)],
         )
         self.assertEqual(self.store.latest_completed_node("ordered"), WorkflowNode.F)
+
+    def test_completion_sequence_includes_every_terminal_status_and_is_per_run(
+        self,
+    ) -> None:
+        for run_id in ("terminal-sequence", "other-sequence"):
+            self.store.create_run(run_id, auto_config())
+        attempts = [
+            self.store.start_node_attempt("terminal-sequence", node)
+            for node in (WorkflowNode.A, WorkflowNode.F, WorkflowNode.H)
+        ]
+        for attempt, status in zip(
+            attempts,
+            ("FAILED", "INTERRUPTED", "COMPLETED"),
+            strict=True,
+        ):
+            self.store.finish_node_attempt(attempt, status, {"status": status})
+        other = self.store.start_node_attempt("other-sequence", WorkflowNode.A)
+        self.store.finish_node_attempt(other, "FAILED", {})
+
+        with closing(self.store.connect()) as connection:
+            rows = connection.execute(
+                "SELECT status, completion_sequence FROM node_attempts "
+                "WHERE run_id = 'terminal-sequence' ORDER BY id"
+            ).fetchall()
+            other_sequence = connection.execute(
+                "SELECT completion_sequence FROM node_attempts WHERE id = ?",
+                (other.id,),
+            ).fetchone()[0]
+            with self.assertRaises(sqlite3.IntegrityError):
+                connection.execute(
+                    "UPDATE node_attempts SET completion_sequence = 1 WHERE id = ?",
+                    (attempts[-1].id,),
+                )
+        self.assertEqual(
+            [(row["status"], row["completion_sequence"]) for row in rows],
+            [("FAILED", 1), ("INTERRUPTED", 2), ("COMPLETED", 3)],
+        )
+        self.assertEqual(other_sequence, 1)
+        self.assertEqual(
+            self.store.latest_completed_node("terminal-sequence"), WorkflowNode.H
+        )
 
     def test_attempts_cannot_be_finished_twice_or_with_invalid_status(self) -> None:
         self.store.create_run("run", auto_config())
@@ -521,7 +566,7 @@ class AgentStoreTests(unittest.TestCase):
                         "SELECT version FROM schema_version"
                     ).fetchall()
                 ],
-                [1],
+                [1, 2],
             )
             with self.assertRaises(sqlite3.IntegrityError):
                 connection.execute(
@@ -530,16 +575,121 @@ class AgentStoreTests(unittest.TestCase):
                     ("missing", WorkflowNode.A.value, 1, "RUNNING"),
                 )
 
-    def test_unknown_future_schema_version_does_not_alter_tables(self) -> None:
+    def test_exact_v1_database_upgrades_backfills_and_reopens(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "legacy.sqlite3"
+            legacy = AgentStore(path, _migrations=store_module._MIGRATIONS[:1])
+            legacy.initialize()
+            legacy.create_run("legacy", auto_config())
+            legacy.create_run("other", auto_config())
+            with closing(legacy.connect()) as connection:
+                columns = [
+                    row["name"]
+                    for row in connection.execute(
+                        "PRAGMA table_info(node_attempts)"
+                    ).fetchall()
+                ]
+                completed_index_sql = connection.execute(
+                    "SELECT sql FROM sqlite_master "
+                    "WHERE type = 'index' AND name = 'idx_node_attempts_run_completed'"
+                ).fetchone()[0]
+                attempts = (
+                    ("legacy", "F", 1, "COMPLETED", "2026-01-01T00:00:00Z"),
+                    ("legacy", "H", 1, "FAILED", "2026-01-01T00:00:00Z"),
+                    ("legacy", "A", 1, "INTERRUPTED", "2026-01-02T00:00:00Z"),
+                    ("legacy", "M", 1, "RUNNING", None),
+                    ("other", "G", 1, "FAILED", "2026-01-01T00:00:00Z"),
+                )
+                ids = []
+                for run_id, node, attempt_number, status, finished_at in attempts:
+                    cursor = connection.execute(
+                        "INSERT INTO node_attempts "
+                        "(run_id, node, attempt_number, status, finished_at) "
+                        "VALUES (?, ?, ?, ?, ?)",
+                        (run_id, node, attempt_number, status, finished_at),
+                    )
+                    ids.append(cursor.lastrowid)
+                connection.commit()
+
+            self.assertEqual(
+                columns,
+                [
+                    "id",
+                    "run_id",
+                    "node",
+                    "attempt_number",
+                    "status",
+                    "summary_json",
+                    "started_at",
+                    "finished_at",
+                ],
+            )
+            self.assertIn("finished_at DESC", completed_index_sql)
+            self.assertNotIn("completion_sequence", completed_index_sql)
+
+            upgraded = AgentStore(path)
+            upgraded.initialize()
+            with closing(upgraded.connect()) as connection:
+                rows = connection.execute(
+                    "SELECT run_id, node, status, completion_sequence "
+                    "FROM node_attempts ORDER BY id"
+                ).fetchall()
+                versions = connection.execute(
+                    "SELECT version FROM schema_version ORDER BY version"
+                ).fetchall()
+                index_sql = connection.execute(
+                    "SELECT sql FROM sqlite_master "
+                    "WHERE type = 'index' AND name = 'idx_node_attempts_run_completed'"
+                ).fetchone()[0]
+            self.assertEqual(
+                [
+                    (row["run_id"], row["node"], row["completion_sequence"])
+                    for row in rows
+                ],
+                [
+                    ("legacy", "F", 1),
+                    ("legacy", "H", 2),
+                    ("legacy", "A", 3),
+                    ("legacy", "M", None),
+                    ("other", "G", 1),
+                ],
+            )
+            self.assertEqual([row["version"] for row in versions], [1, 2])
+            self.assertIn("completion_sequence DESC", index_sql)
+            self.assertEqual(upgraded.latest_completed_node("legacy"), WorkflowNode.F)
+
+            running = NodeAttemptRecord(
+                id=ids[3],
+                run_id="legacy",
+                node=WorkflowNode.M,
+                attempt_number=1,
+                status="RUNNING",
+            )
+            upgraded.finish_node_attempt(running, "COMPLETED", {"upgraded": True})
+            self.assertEqual(upgraded.latest_completed_node("legacy"), WorkflowNode.M)
+            with closing(upgraded.connect()) as connection:
+                sequence = connection.execute(
+                    "SELECT completion_sequence FROM node_attempts WHERE id = ?",
+                    (running.id,),
+                ).fetchone()[0]
+            self.assertEqual(sequence, 4)
+            AgentStore(path).initialize()
+
+    def test_unknown_future_schema_version_preserves_delete_journal_and_tables(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "future.sqlite3"
             with closing(sqlite3.connect(path)) as connection:
                 connection.execute(
                     "CREATE TABLE schema_version (version INTEGER PRIMARY KEY)"
                 )
-                connection.execute("INSERT INTO schema_version(version) VALUES (2)")
+                connection.execute("INSERT INTO schema_version(version) VALUES (3)")
                 connection.execute("CREATE TABLE sentinel (value TEXT)")
                 connection.commit()
+                self.assertEqual(
+                    connection.execute("PRAGMA journal_mode").fetchone()[0], "delete"
+                )
                 before = connection.execute(
                     "SELECT type, name, sql FROM sqlite_master "
                     "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name"
@@ -549,16 +699,63 @@ class AgentStoreTests(unittest.TestCase):
                 AgentStore(path).initialize()
 
             with closing(sqlite3.connect(path)) as connection:
+                self.assertEqual(
+                    connection.execute("PRAGMA journal_mode").fetchone()[0], "delete"
+                )
                 after = connection.execute(
                     "SELECT type, name, sql FROM sqlite_master "
                     "WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name"
                 ).fetchall()
             self.assertEqual(after, before)
 
+    def test_missing_schema_prefix_is_rejected_before_migrations_or_wal(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "gap.sqlite3"
+            with closing(sqlite3.connect(path)) as connection:
+                connection.execute(
+                    "CREATE TABLE schema_version (version INTEGER PRIMARY KEY)"
+                )
+                connection.execute("INSERT INTO schema_version(version) VALUES (2)")
+                connection.execute("CREATE TABLE sentinel (value TEXT)")
+                connection.commit()
+
+            with self.assertRaisesRegex(RuntimeError, "contiguous prefix"):
+                AgentStore(path).initialize()
+
+            with closing(sqlite3.connect(path)) as connection:
+                tables = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+                ).fetchall()
+                journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
+            self.assertEqual([row[0] for row in tables], ["schema_version", "sentinel"])
+            self.assertEqual(journal_mode, "delete")
+
+    def test_failed_injected_migration_is_atomic_and_does_not_enable_wal(self) -> None:
+        failing = store_module._Migration(
+            version=3,
+            statements=(
+                "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
+                "INSERT INTO table_that_does_not_exist(value) VALUES (1)",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "failed.sqlite3"
+            store = AgentStore(path, _migrations=(*store_module._MIGRATIONS, failing))
+            with self.assertRaises(sqlite3.OperationalError):
+                store.initialize()
+
+            with closing(sqlite3.connect(path)) as connection:
+                tables = connection.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+                journal_mode = connection.execute("PRAGMA journal_mode").fetchone()[0]
+            self.assertEqual(tables, [])
+            self.assertEqual(journal_mode, "delete")
+
     def test_only_unapplied_ordered_migrations_execute(self) -> None:
-        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 1)
-        second = store_module._Migration(
-            version=2,
+        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 2)
+        third = store_module._Migration(
+            version=3,
             statements=(
                 "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
                 "INSERT INTO migration_probe(value) VALUES (1)",
@@ -568,10 +765,14 @@ class AgentStoreTests(unittest.TestCase):
             path = Path(tmp) / "migrations.sqlite3"
             store = AgentStore(
                 path,
-                _migrations=(*store_module._MIGRATIONS, second),
+                _migrations=(*store_module._MIGRATIONS, third),
             )
             store.initialize()
             store.initialize()
+            AgentStore(
+                path,
+                _migrations=(*store_module._MIGRATIONS, third),
+            ).initialize()
 
             with closing(store.connect()) as connection:
                 versions = connection.execute(
@@ -580,7 +781,7 @@ class AgentStoreTests(unittest.TestCase):
                 probe = connection.execute(
                     "SELECT value FROM migration_probe"
                 ).fetchall()
-        self.assertEqual([row["version"] for row in versions], [1, 2])
+        self.assertEqual([row["version"] for row in versions], [1, 2, 3])
         self.assertEqual([row["value"] for row in probe], [1])
 
     def test_separate_store_instances_allocate_unique_attempt_numbers(self) -> None:

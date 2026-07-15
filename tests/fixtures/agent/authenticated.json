@@ -1,5 +1,5 @@
 {
   "ok": true,
   "request": {"method": "GET", "path": "/authentication"},
-  "response": {"status_code": 200, "body": {"authenticated": true, "user_id": "user_fixture_01"}}
+  "response": {"status_code": 200, "body": {"user": {"id": "user_fixture_01"}, "token": {"expiry": 123.5}, "permissions": ["CONSULTANT"]}}
 }

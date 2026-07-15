@@ -32,6 +32,31 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertEqual(result.run_state, RunState.NEEDS_AUTH)
         runner.run.assert_called_once_with("run-1", WorkflowNode.A, ("auth", "status"), "auth_status.json")
 
+    def test_a_accepts_real_auth_status_shape_only_with_live_token(self) -> None:
+        runner = Mock()
+        runner.run.return_value.payload = {
+            "ok": True,
+            "request": {"method": "GET", "path": "/authentication"},
+            "response": {"status_code": 200, "body": {"user": {"id": "fixture-user"}, "token": {"expiry": 123.5}}},
+        }
+
+        result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_a("run-1")
+
+        self.assertIsNone(result.run_state)
+        self.assertEqual(result.next_node, WorkflowNode.B)
+
+    def test_a_pauses_for_expired_or_malformed_real_auth_status(self) -> None:
+        for body in (
+            {"user": {"id": "fixture-user"}, "token": {"expiry": 0}},
+            {"user": {"id": "fixture-user"}, "token": {}},
+            {"user": {}, "token": {"expiry": 100}},
+        ):
+            with self.subTest(body=body):
+                runner = Mock()
+                runner.run.return_value.payload = {"ok": True, "response": {"status_code": 200, "body": body}}
+                result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_a("run-1")
+                self.assertEqual(result.run_state, RunState.NEEDS_AUTH)
+
     def test_manual_d_locks_market_scope_while_planner_selects_category(self) -> None:
         config = RunConfig.from_dict(
             {
@@ -54,6 +79,7 @@ class DiscoveryNodeTests(unittest.TestCase):
                     "neutralization": "SUBINDUSTRY",
                     "category": "PV",
                     "alphaCount": 1,
+                    "multiplier": 1.0,
                 }
             ],
             "sim_options": {
@@ -93,6 +119,7 @@ class DiscoveryNodeTests(unittest.TestCase):
                     "neutralization": "SUBINDUSTRY",
                     "category": "PV",
                     "alphaCount": 0,
+                    "multiplier": 1.0,
                 }
             ],
             "sim_options": {
@@ -104,7 +131,7 @@ class DiscoveryNodeTests(unittest.TestCase):
         }
 
         result = DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, sim_options=candidates["sim_options"]
         )
 
         self.assertEqual(result.summary["scope"]["category"], "PV")
@@ -123,6 +150,7 @@ class DiscoveryNodeTests(unittest.TestCase):
                     "neutralization": "SUBINDUSTRY",
                     "category": "PV",
                     "alphaCount": 0,
+                    "multiplier": 1.0,
                 }
             ],
             "sim_options": {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]},
@@ -130,7 +158,7 @@ class DiscoveryNodeTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "supplied candidates"):
             DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
-                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, sim_options=candidates["sim_options"]
             )
 
     def test_d_fails_closed_without_prevalidated_platform_scope_options(self) -> None:
@@ -143,10 +171,77 @@ class DiscoveryNodeTests(unittest.TestCase):
             ]
         }
 
-        with self.assertRaisesRegex(ValueError, "validated platform options"):
+        with self.assertRaisesRegex(ValueError, "validated sim_options"):
             DiscoveryNodes(runner=Mock(), router=Mock(), store=Mock()).run_d(
                 "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
             )
+
+    def test_d_normalizes_real_pyramids_and_expands_validated_scope_options(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D1_PV_TOP3000_SUBINDUSTRY")
+        source = {
+            "pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv", "name": "Price Volume"}, "alphaCount": 1}],
+            "pyramid_multipliers": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}],
+        }
+        sim_options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
+
+        result = DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, sim_options=sim_options
+        )
+
+        self.assertEqual(result.summary["scope"]["category"], "PV")
+        self.assertEqual(result.summary["multiplier"], 1.4)
+
+    def test_d1_unlit_candidates_exclude_d0_from_planner_and_reject_it(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D0_PV")
+        source = {
+            "quarter_towers": [
+                {"candidate_id": "USA_D1_PV", "region": "USA", "delay": 1, "universe": "TOP3000", "neutralization": "SUBINDUSTRY", "category": "PV", "alphaCount": 1, "multiplier": 1.2},
+                {"candidate_id": "USA_D0_PV", "region": "USA", "delay": 0, "universe": "TOP3000", "neutralization": "SUBINDUSTRY", "category": "PV", "alphaCount": 0, "multiplier": 1.2},
+            ]
+        }
+        sim_options = {"regions": ["USA"], "delays": [0, 1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
+
+        with self.assertRaisesRegex(ValueError, "supplied candidates"):
+            DiscoveryNodes(runner=Mock(), router=router, store=Mock()).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), source, sim_options=sim_options
+            )
+        offered = router.invoke.call_args.args[0].context["candidates"]
+        self.assertEqual([candidate["candidate_id"] for candidate in offered], ["USA_D1_PV"])
+
+    def test_d_default_collection_uses_dated_tower_sources_and_explicit_user_id(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D1_PV_TOP3000_SUBINDUSTRY")
+        runner = Mock()
+        runner.run.side_effect = [
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
+        ]
+        options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
+
+        result = DiscoveryNodes(runner=runner, router=router, store=Mock()).run_d(
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), sim_options=options, user_id="fixture-user"
+        )
+
+        self.assertEqual(result.summary["multiplier"], 1.4)
+        calls = [call.args[2] for call in runner.run.call_args_list]
+        self.assertIn(("user", "pyramid-alphas", "--start-date", "2026-04-01", "--end-date", "2026-06-30"), calls)
+        self.assertIn(("user", "pyramid-multipliers", "--start-date", "2026-04-01", "--end-date", "2026-06-30"), calls)
+        self.assertIn(("user", "user-diversity", "fixture-user"), calls)
+
+    def test_d_default_collection_fails_before_network_without_user_id(self) -> None:
+        runner = Mock()
+        options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
+
+        with self.assertRaisesRegex(ValueError, "user_id"):
+            DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), sim_options=options
+            )
+        runner.run.assert_not_called()
 
     def test_c_uses_exact_eastern_day_interval_and_remaining_regular_quota(self) -> None:
         runner = Mock()

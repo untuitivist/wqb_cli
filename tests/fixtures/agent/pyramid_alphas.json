@@ -1,5 +1,5 @@
 {
   "ok": true,
   "request": {"method": "GET", "path": "/users/self/activities/pyramid-alphas", "params": {"startDate": "2026-04-01", "endDate": "2026-06-30"}},
-  "response": {"status_code": 200, "body": {"pyramidAlphas": [{"region": "USA", "delay": 1, "category": "PV", "alphaCount": 1, "multiplier": 1.0}]}}
+  "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv", "name": "Price Volume"}, "alphaCount": 1}]}}
 }

@@ -1,5 +1,5 @@
 {
   "ok": true,
   "request": {"method": "GET", "path": "/users/self/consultant/summary"},
-  "response": {"status_code": 200, "body": {"performance": {"current": {"geniusLevel": "EXPERT", "currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}
+  "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}, "current": {"geniusLevel": "EXPERT", "quarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}
 }

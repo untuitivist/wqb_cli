@@ -25,7 +25,7 @@ def platform_binding() -> tuple[CoordinatorPlatformBinding, Mock]:
     binding = CoordinatorPlatformBinding(1, sim, 2, categories)
     store = Mock()
     records = {
-        1: SimpleNamespace(id=1, run_id="run-1", node=WorkflowNode.J, name="sim_options.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(sim)),
+        1: SimpleNamespace(id=1, run_id="run-1", node=WorkflowNode.D, name="validated_sim_options.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(sim)),
         2: SimpleNamespace(id=2, run_id="run-1", node=WorkflowNode.D, name="data_categories.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(categories)),
     }
     store.get_artifact.side_effect = records.__getitem__
@@ -191,6 +191,22 @@ class DiscoveryNodeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "coordinator platform binding"):
             DiscoveryNodes(runner=Mock(), router=Mock(), store=Mock()).run_d(
                 "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates
+            )
+
+    def test_d_rejects_a_future_j_sim_options_artifact(self) -> None:
+        binding, store = platform_binding()
+        store.get_artifact.side_effect = lambda identifier: SimpleNamespace(
+            id=identifier, run_id="run-1", node=WorkflowNode.J if identifier == 1 else WorkflowNode.D,
+            name="sim_options.json" if identifier == 1 else "data_categories.json", kind="json",
+            sha256=DiscoveryNodes._canonical_payload_hash(
+                binding.sim_options_envelope if identifier == 1 else binding.categories_envelope
+            ),
+        )
+        candidates = {"quarter_towers": []}
+
+        with self.assertRaisesRegex(ValueError, "artifact identity"):
+            DiscoveryNodes(runner=Mock(), router=Mock(), store=store).run_d(
+                "run-1", RunConfig.from_dict({"scope_mode": "auto"}), candidates, platform_binding=binding
             )
 
     def test_d_normalizes_real_pyramids_and_expands_validated_scope_options(self) -> None:

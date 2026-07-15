@@ -226,7 +226,7 @@ class DiscoveryNodes:
     ) -> dict[str, Any]:
         sim_payload = self._verify_bound_artifact(
             run_id, binding.sim_options_artifact_id, binding.sim_options_envelope,
-            WorkflowNode.J, "sim_options.json",
+            WorkflowNode.D, "validated_sim_options.json",
         )
         category_payload = self._verify_bound_artifact(
             run_id, binding.categories_artifact_id, binding.categories_envelope,
@@ -579,7 +579,12 @@ class DiscoveryNodes:
         record = self._store.get_artifact(artifact_id)
         if getattr(record, "run_id", None) != run_id:
             raise DiscoveryError("platform binding artifact belongs to another run")
-        return {"artifact_id": str(artifact_id), "sha256": record.sha256}
+        return {
+            "artifact_id": str(artifact_id),
+            "sha256": record.sha256,
+            "node": record.node.value,
+            "name": record.name,
+        }
 
     @staticmethod
     def _canonical_payload_hash(payload: dict[str, Any]) -> str:

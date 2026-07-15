@@ -29,6 +29,45 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "fastexpr_multi_batch_glb": 5,
         "max_wait_seconds": 900,
     },
+    "agent": {
+        "database_path": "",
+        "run_root": "",
+        "models": {
+            "planner": {
+                "provider": "openai",
+                "api_style": "responses",
+                "model": "",
+                "base_url": "https://api.openai.com/v1",
+                "reasoning": "high",
+                "secret_name": "agent-planner-api-key",
+                "structured_outputs": True,
+                "fallback_model": "",
+                "input_cost_per_million": None,
+                "output_cost_per_million": None,
+            },
+            "operator": {
+                "provider": "openai-compatible",
+                "api_style": "chat_completions",
+                "model": "",
+                "base_url": "",
+                "reasoning": "",
+                "secret_name": "agent-operator-api-key",
+                "structured_outputs": True,
+                "fallback_model": "",
+                "input_cost_per_million": None,
+                "output_cost_per_million": None,
+            },
+        },
+        "budget": {
+            "candidates_per_round": 8,
+            "rounds": 5,
+            "total_simulations": 40,
+            "max_runtime_minutes": 180,
+            "planner_calls": 20,
+            "operator_calls": 100,
+            "max_model_cost_usd": None,
+        },
+    },
 }
 
 

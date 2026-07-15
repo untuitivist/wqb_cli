@@ -22,12 +22,16 @@ MAX_SCHEMA_REPAIR_RETRIES = 2
 
 
 BASE_PROPERTIES: dict[str, dict[str, Any]] = {
-    "decision": {"type": "string", "minLength": 1},
-    "reasoning_summary": {"type": "string", "minLength": 1},
+    "decision": {"type": "string", "minLength": 1, "pattern": r"\S"},
+    "reasoning_summary": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": r"\S",
+    },
     "evidence_refs": {
         "type": "array",
         "minItems": 1,
-        "items": {"type": "string", "minLength": 1},
+        "items": {"type": "string", "minLength": 1, "pattern": r"\S"},
     },
     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
 }
@@ -45,7 +49,7 @@ _OBJECT_PAYLOAD = {"type": "object"}
 _TASK_RESULT = {
     "type": "object",
     "properties": {
-        "status": {"type": "string", "minLength": 1},
+        "status": {"type": "string", "minLength": 1, "pattern": r"\S"},
         "payload": {"type": "object"},
     },
     "required": ["status", "payload"],
@@ -69,6 +73,32 @@ _PLANNER_PAYLOADS: dict[WorkflowNode, tuple[str, dict[str, Any]]] = {
     WorkflowNode.I: ("candidate_plan", _OBJECT_PAYLOAD),
     WorkflowNode.K: ("diagnosis", _DIAGNOSIS),
     WorkflowNode.L: ("final_recommendation", _OBJECT_PAYLOAD),
+}
+
+_SUPPORTED_NODES = {
+    ModelRole.PLANNER: frozenset(
+        {
+            WorkflowNode.B,
+            WorkflowNode.D,
+            WorkflowNode.F,
+            WorkflowNode.G,
+            WorkflowNode.H,
+            WorkflowNode.I,
+            WorkflowNode.K,
+            WorkflowNode.L,
+        }
+    ),
+    ModelRole.OPERATOR: frozenset(
+        {
+            WorkflowNode.B,
+            WorkflowNode.F,
+            WorkflowNode.G,
+            WorkflowNode.H,
+            WorkflowNode.I,
+            WorkflowNode.K,
+            WorkflowNode.L,
+        }
+    ),
 }
 
 
@@ -97,6 +127,11 @@ def schema_for(role: ModelRole, node: WorkflowNode) -> dict[str, Any]:
         raise TypeError("role must be a ModelRole")
     if type(node) is not WorkflowNode:
         raise TypeError("node must be a WorkflowNode")
+    if node not in _SUPPORTED_NODES[role]:
+        raise SchemaViolation(
+            "unsupported model role/node combination: "
+            f"role={role.value}, node={node.value}"
+        )
     properties = deepcopy(BASE_PROPERTIES)
     required = list(BASE_REQUIRED)
     if role is ModelRole.OPERATOR:

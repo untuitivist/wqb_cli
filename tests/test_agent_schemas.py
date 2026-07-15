@@ -34,6 +34,28 @@ class AgentSchemaTests(unittest.TestCase):
         WorkflowNode.L: ("final_recommendation", {}),
     }
 
+    SUPPORTED_NODES = {
+        ModelRole.PLANNER: {
+            WorkflowNode.B,
+            WorkflowNode.D,
+            WorkflowNode.F,
+            WorkflowNode.G,
+            WorkflowNode.H,
+            WorkflowNode.I,
+            WorkflowNode.K,
+            WorkflowNode.L,
+        },
+        ModelRole.OPERATOR: {
+            WorkflowNode.B,
+            WorkflowNode.F,
+            WorkflowNode.G,
+            WorkflowNode.H,
+            WorkflowNode.I,
+            WorkflowNode.K,
+            WorkflowNode.L,
+        },
+    }
+
     def valid_value(self, role: ModelRole, node: WorkflowNode) -> dict[str, object]:
         value: dict[str, object] = dict(self.BASE)
         if role is ModelRole.OPERATOR:
@@ -43,9 +65,9 @@ class AgentSchemaTests(unittest.TestCase):
             value[name] = payload
         return value
 
-    def test_all_role_and_node_combinations_have_valid_public_schemas(self) -> None:
-        for role in ModelRole:
-            for node in WorkflowNode:
+    def test_supported_role_and_node_combinations_have_valid_schemas(self) -> None:
+        for role, nodes in self.SUPPORTED_NODES.items():
+            for node in nodes:
                 with self.subTest(role=role, node=node):
                     schema = schema_for(role, node)
                     self.assertFalse(schema["additionalProperties"])
@@ -53,6 +75,22 @@ class AgentSchemaTests(unittest.TestCase):
                         validate_model_output(role, node, self.valid_value(role, node)),
                         self.valid_value(role, node),
                     )
+
+    def test_unsupported_role_and_node_combinations_fail_closed(self) -> None:
+        for role in ModelRole:
+            unsupported = set(WorkflowNode) - self.SUPPORTED_NODES[role]
+            for node in unsupported:
+                for call in (
+                    lambda: schema_for(role, node),
+                    lambda: validate_model_output(
+                        role, node, self.valid_value(role, node)
+                    ),
+                ):
+                    with self.subTest(role=role, node=node, call=call):
+                        with self.assertRaises(SchemaViolation) as caught:
+                            call()
+                        self.assertIn(role.value, str(caught.exception))
+                        self.assertIn(node.value, str(caught.exception))
 
     def test_schema_for_returns_an_independent_copy(self) -> None:
         first = schema_for(ModelRole.PLANNER, WorkflowNode.K)
@@ -109,6 +147,24 @@ class AgentSchemaTests(unittest.TestCase):
             validate_model_output(
                 ModelRole.PLANNER, WorkflowNode.K, boolean_confidence
             )
+
+    def test_nonblank_fields_reject_whitespace_only_strings(self) -> None:
+        planner_cases = {
+            "decision": " \t",
+            "reasoning_summary": "\r\n",
+            "evidence_refs": [" \n\t"],
+        }
+        for field, invalid in planner_cases.items():
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)
+            value[field] = invalid
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(SchemaViolation, field):
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.K, value)
+
+        operator = self.valid_value(ModelRole.OPERATOR, WorkflowNode.K)
+        operator["task_result"] = {"status": "  ", "payload": {}}
+        with self.assertRaisesRegex(SchemaViolation, "task_result.status"):
+            validate_model_output(ModelRole.OPERATOR, WorkflowNode.K, operator)
 
     def test_confidence_rejects_non_finite_numbers(self) -> None:
         value = self.valid_value(ModelRole.PLANNER, WorkflowNode.K)

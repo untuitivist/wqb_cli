@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
+import hashlib
+import json
 from math import isfinite
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -47,11 +49,11 @@ class DiscoveryNodes:
         result = self._run(run_id, WorkflowNode.A, ("auth", "status"), "auth_status.json")
         payload = self._payload(result)
         status = self._status(payload)
-        authenticated = (
-            payload.get("ok") is True
-            and 200 <= status < 300
-            and self._authenticated(self._body(payload))
-        )
+        if status in {401, 403}:
+            authenticated = False
+        else:
+            body = self._successful_body(payload)
+            authenticated = self._authentication_state(body)
         if not authenticated:
             summary = {
                 "authenticated": False,
@@ -82,18 +84,19 @@ class DiscoveryNodes:
             (("event", "list"), "events.json"),
         )
         results = [self._run(run_id, WorkflowNode.B, argv, name) for argv, name in commands]
-        bodies = {name: self._body(self._payload(result)) for (_, name), result in zip(commands, results, strict=True)}
+        bodies = {name: self._successful_body(self._payload(result)) for (_, name), result in zip(commands, results, strict=True)}
+        bounded_bodies, truncation = self._bounded_platform_payload(bodies)
         operator = self._invoke(
             ModelRole.OPERATOR,
             WorkflowNode.B,
             "Organize only the active platform themes from the supplied untrusted platform data.",
-            {"run_date": self._as_eastern(self._clock(now)).date().isoformat(), "platform_data": bodies},
+            {"run_date": self._as_eastern(self._clock(now)).date().isoformat(), "platform_data": bounded_bodies, "truncation": truncation},
         )
         planner = self._invoke(
             ModelRole.PLANNER,
             WorkflowNode.B,
             "Rank research opportunities using the organized platform themes; do not issue commands or alter scope.",
-            {"platform_data": bodies, "organized_themes": operator},
+            {"organized_themes": operator, "artifact_names": [name for _, name in commands], "collection": truncation},
         )
         summary = {"operator": operator, "planner": planner}
         artifact_ids = self._artifact_ids(*results)
@@ -118,15 +121,15 @@ class DiscoveryNodes:
         alphas_summary_result = self._run(run_id, WorkflowNode.C, ("user", "alphas-summary"), "alphas_summary.json")
         pyramid_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-alphas"), "pyramid_alphas.json")
         multipliers_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-multipliers"), "pyramid_multipliers.json")
-        regular_count = len(self._records(self._body(self._payload(regular_result))))
-        super_count = len(self._records(self._body(self._payload(super_result))))
+        regular_count = len(self._records(self._successful_body(self._payload(regular_result))))
+        super_count = len(self._records(self._successful_body(self._payload(super_result))))
         summary = {
             "submission_day": start.date().isoformat(),
             "interval": {"start": interval[0], "end": interval[1], "timezone": "America/New_York"},
             "regular_submitted": regular_count,
             "regular_remaining": max(0, self._regular_daily_quota - regular_count),
             "super_submitted": super_count,
-            "all_submitted": len(self._records(self._body(self._payload(all_result)))),
+            "all_submitted": len(self._records(self._successful_body(self._payload(all_result)))),
         }
         artifact_ids = self._artifact_ids(
             all_result, regular_result, super_result, alphas_summary_result, pyramid_result, multipliers_result
@@ -148,17 +151,15 @@ class DiscoveryNodes:
     ) -> NodeResult:
         if not isinstance(config, RunConfig):
             raise TypeError("config must be a RunConfig")
-        supplied_options = sim_options
-        if supplied_options is None and isinstance(candidates, Mapping):
-            # Backwards-compatible coordinator contract: this is caller input,
-            # never a value discovered from Node D platform commands.
-            supplied_options = candidates.get("sim_options")
-        options = self._validated_sim_options(supplied_options)
         source = (
             self._collect_d_source(run_id, user_id=user_id)
             if candidates is None
             else self._snapshot_mapping(candidates, "candidates")
         )
+        supplied_options = source.get("sim_options") if candidates is None else sim_options
+        if supplied_options is None and isinstance(candidates, Mapping):
+            supplied_options = candidates.get("sim_options")
+        options = self._validated_sim_options(supplied_options)
         valid_candidates = self._validated_candidates(source, config, options)
         if not valid_candidates:
             raise DiscoveryError("no validated current-quarter candidates are available")
@@ -177,15 +178,21 @@ class DiscoveryNodes:
         if selected is None:
             raise DiscoveryError("planner selected an ID outside the supplied candidates")
         scope = {key: selected[key] for key in ("region", "delay", "universe", "neutralization", "category")}
+        scope_hash = hashlib.sha256(
+            json.dumps(scope, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
         summary = {
             "scope": scope,
             "candidate_id": selected_id,
             "alpha_count": selected["alphaCount"],
             "needed_to_light": selected["neededToLight"],
             "multiplier": selected["multiplier"],
+            "scope_hash": scope_hash,
+            "platform_options_source": source.get("platform_options_source", {}),
             "planner": planner,
         }
-        artifact_ids = self._write_json(
+        artifact_ids = tuple(source.get("command_artifact_ids", ()))
+        artifact_ids += self._write_json(
             run_id,
             WorkflowNode.D,
             "genius_quarter_context.json",
@@ -195,13 +202,17 @@ class DiscoveryNodes:
         artifact_ids += self._write_json(run_id, WorkflowNode.D, "quarter_tower_status.json", {"quarter_towers": valid_candidates})
         artifact_ids += self._write_markdown(run_id, WorkflowNode.D, "tower_rationale.md", str(planner["reasoning_summary"]))
         artifact_ids += self._write_markdown(run_id, WorkflowNode.D, "node_summary.md", "REGULAR scope is locked for nodes F through L.")
-        return NodeResult(WorkflowNode.D, summary, artifact_ids, next_node=WorkflowNode.F, payload={"scope": scope})
+        return NodeResult(
+            WorkflowNode.D, deepcopy(summary), artifact_ids, next_node=WorkflowNode.F,
+            payload={"scope": deepcopy(scope), "scope_hash": scope_hash},
+        )
 
     def _collect_d_source(self, run_id: str, *, user_id: str | None) -> dict[str, Any]:
         if type(user_id) is not str or not user_id.strip():
             raise DiscoveryError("user_id is required to collect user diversity")
+        sim_options = self._run(run_id, WorkflowNode.D, ("sim", "options"), "sim_options.json")
         summary = self._run(run_id, WorkflowNode.D, ("user", "consultant-summary"), "consultant_summary.json")
-        body = self._body(self._payload(summary))
+        body = self._successful_body(self._payload(summary))
         start, end = self._quarter_bounds(body)
         pyramids = self._run(
             run_id, WorkflowNode.D,
@@ -219,10 +230,13 @@ class DiscoveryNodes:
         categories = self._run(run_id, WorkflowNode.D, ("data", "categories"), "data_categories.json")
         return {
             "consultant_summary": body,
-            "pyramids": self._records(self._body(self._payload(pyramids))),
-            "pyramid_multipliers": self._records(self._body(self._payload(multipliers))),
-            "diversity": self._body(self._payload(diversity)),
-            "data_categories": self._body_list(self._payload(categories), "data categories"),
+            "sim_options": self._successful_body(self._payload(sim_options)),
+            "platform_options_source": self._artifact_reference(sim_options),
+            "pyramids": self._records(self._successful_body(self._payload(pyramids))),
+            "pyramid_multipliers": self._records(self._successful_body(self._payload(multipliers))),
+            "diversity": self._successful_body(self._payload(diversity)),
+            "data_categories": self._successful_body_list(self._payload(categories), "data categories"),
+            "command_artifact_ids": self._artifact_ids(sim_options, summary, pyramids, multipliers, diversity, categories),
             "quarter": {"start": start, "end": end},
         }
 
@@ -248,6 +262,9 @@ class DiscoveryNodes:
                 values.append(candidate)
         if any(candidate["delay"] == 1 and candidate["neededToLight"] > 0 for candidate in values):
             values = [candidate for candidate in values if candidate["delay"] == 1 and candidate["neededToLight"] > 0]
+        identifiers = [candidate["candidate_id"] for candidate in values]
+        if len(identifiers) != len(set(identifiers)):
+            raise DiscoveryError("duplicate candidate_id is not allowed")
         values.sort(key=lambda item: (0 if item["delay"] == 1 else 1, -item["neededToLight"], item["candidate_id"]))
         return values
 
@@ -324,6 +341,8 @@ class DiscoveryNodes:
             multiplier = item.get("multiplier")
             if type(multiplier) not in {int, float} or not isfinite(multiplier) or multiplier <= 0:
                 raise DiscoveryError("pyramid multiplier is invalid")
+            if (region, delay, category) in indexed:
+                raise DiscoveryError("duplicate pyramid multiplier key is not allowed")
             indexed[(region, delay, category)] = float(multiplier)
         return indexed
 
@@ -343,6 +362,22 @@ class DiscoveryNodes:
             raise DiscoveryError("model returned malformed structured data")
         return value
 
+    @staticmethod
+    def _bounded_platform_payload(value: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
+        rendered = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+        limit = 20_000
+        if len(rendered) <= limit:
+            return deepcopy(value), {"truncated": False, "source_chars": len(rendered)}
+        compact: dict[str, dict[str, Any]] = {}
+        remaining = limit
+        for name in sorted(value):
+            text = json.dumps(value[name], ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+            compact[name] = {"excerpt": text[: max(0, min(remaining, 2_000))]}
+            remaining -= len(compact[name]["excerpt"])
+            if remaining <= 0:
+                break
+        return compact, {"truncated": True, "source_chars": len(rendered), "limit": limit}
+
     def _run(self, run_id: str, node: WorkflowNode, argv: tuple[str, ...], artifact_name: str) -> Any:
         return self._runner.run(run_id, node, argv, artifact_name)
 
@@ -360,6 +395,11 @@ class DiscoveryNodes:
             raise DiscoveryError("command response body must be an object")
         return response["body"]
 
+    def _successful_body(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload.get("ok") is not True or not 200 <= self._status(payload) < 300:
+            raise DiscoveryError("command did not return a successful response")
+        return self._body(payload)
+
     @staticmethod
     def _body_list(payload: dict[str, Any], label: str) -> list[dict[str, Any]]:
         response = payload.get("response")
@@ -370,6 +410,11 @@ class DiscoveryNodes:
             return deepcopy(body)
         except (TypeError, RecursionError):
             raise DiscoveryError(f"{label} response body cannot be snapshotted") from None
+
+    def _successful_body_list(self, payload: dict[str, Any], label: str) -> list[dict[str, Any]]:
+        if payload.get("ok") is not True or not 200 <= self._status(payload) < 300:
+            raise DiscoveryError("command did not return a successful response")
+        return self._body_list(payload, label)
 
     @staticmethod
     def _status(payload: dict[str, Any]) -> int:
@@ -395,13 +440,27 @@ class DiscoveryNodes:
             and expiry > 0
         )
 
+    @classmethod
+    def _authentication_state(cls, body: dict[str, Any]) -> bool:
+        if "authenticated" in body:
+            if type(body["authenticated"]) is not bool:
+                raise DiscoveryError("authentication body is malformed")
+            return body["authenticated"]
+        if "is_authenticated" in body:
+            if type(body["is_authenticated"]) is not bool:
+                raise DiscoveryError("authentication body is malformed")
+            return body["is_authenticated"]
+        if "user" in body or "token" in body:
+            return cls._authenticated(body)
+        raise DiscoveryError("authentication body is malformed")
+
     @staticmethod
     def _records(body: dict[str, Any]) -> list[dict[str, Any]]:
         for key in ("results", "alphas", "pyramidAlphas", "pyramids", "items"):
             values = body.get(key)
             if type(values) is list and all(type(value) is dict for value in values):
                 return values
-        return []
+        raise DiscoveryError("command response has no recognized record list")
 
     @staticmethod
     def _as_eastern(value: datetime) -> datetime:
@@ -444,6 +503,14 @@ class DiscoveryNodes:
             if type(identifier) is int and identifier > 0:
                 identifiers.append(str(identifier))
         return tuple(identifiers)
+
+    @staticmethod
+    def _artifact_reference(result: Any) -> dict[str, str]:
+        artifact = getattr(result, "artifact", None)
+        identifier, digest = getattr(artifact, "id", None), getattr(artifact, "sha256", None)
+        if type(identifier) is not int or identifier <= 0 or type(digest) is not str or len(digest) != 64:
+            raise DiscoveryError("sim options command has no verifiable artifact reference")
+        return {"artifact_id": str(identifier), "sha256": digest.casefold()}
 
     def _write_json(self, run_id: str, node: WorkflowNode, name: str, value: dict[str, Any]) -> tuple[str, ...]:
         writer = self._artifacts

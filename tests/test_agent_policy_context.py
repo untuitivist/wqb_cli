@@ -277,6 +277,7 @@ class AgentPolicyTests(unittest.TestCase):
                 ("user", "pyramid-multipliers"),
             ),
             WorkflowNode.D: (
+                ("sim", "options"),
                 ("user", "consultant-summary"),
                 ("user", "pyramid-alphas"),
                 ("user", "pyramid-multipliers"),

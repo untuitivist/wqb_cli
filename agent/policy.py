@@ -98,6 +98,7 @@ NODE_COMMANDS = MappingProxyType(
             ("user", "pyramid-multipliers"),
         ),
         WorkflowNode.D: (
+            ("sim", "options"),
             ("user", "consultant-summary"),
             ("user", "pyramid-alphas"),
             ("user", "pyramid-multipliers"),

@@ -215,16 +215,15 @@ class DiscoveryNodeTests(unittest.TestCase):
         router.invoke.return_value.value = planner_choice("USA_D1_PV_TOP3000_SUBINDUSTRY")
         runner = Mock()
         runner.run.side_effect = [
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}}}, artifact=Mock(id=1, sha256="a" * 64)),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": [{"id": "pv", "name": "Price Volume"}]}}),
         ]
-        options = {"regions": ["USA"], "delays": [1], "universes": ["TOP3000"], "neutralizations": ["SUBINDUSTRY"]}
-
         result = DiscoveryNodes(runner=runner, router=router, store=Mock()).run_d(
-            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), sim_options=options, user_id="fixture-user"
+            "run-1", RunConfig.from_dict({"scope_mode": "auto"}), user_id="fixture-user"
         )
 
         self.assertEqual(result.summary["multiplier"], 1.4)

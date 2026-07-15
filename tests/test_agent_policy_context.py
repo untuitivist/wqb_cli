@@ -858,6 +858,7 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertEqual(calls, [])
 
         conflicting_aliases = (
+            {**dual_aliases, "id": "plan-1", "plan_id": "plan-2"},
             {**dual_aliases, "plan_version": 2},
             {**dual_aliases, "plan_version": True},
             {**dual_aliases, "plan_hash": "other-hash"},
@@ -1029,6 +1030,16 @@ class ContextBuilderTests(unittest.TestCase):
             "auth": "value-29",
             "cookie": "value-30",
             "secret": "value-31",
+            "dbpassword": "value-32",
+            "clientsecret": "value-33",
+            "sessioncookie": "value-34",
+            "auth_cookie": "value-35",
+            "csrf_cookie": "value-36",
+            "cookie_header": "value-37",
+            "cookies": "value-38",
+            "auth_header": "value-39",
+            "client_key": "value-40",
+            "access_key_id": "value-41",
             "tokenization": "ordinary-word",
             "token_bucket": "rate-limit-state",
             "passwordless": "passkey-mode",
@@ -1070,6 +1081,8 @@ class ContextBuilderTests(unittest.TestCase):
             "entries": [
                 {"name": "api_key", "value": "dynamic-api-secret"},
                 {"key": "password", "type": "text", "value": "dynamic-password"},
+                {"Name": "api_key", "Value": "CASE-LEAK"},
+                {" TYPE ": "clientsecret", " VALUE ": "TYPE-LEAK"},
                 {"name": "region", "value": "USA"},
             ],
             "api_key": cyclic,
@@ -1087,11 +1100,15 @@ class ContextBuilderTests(unittest.TestCase):
         entries = context["run_config"]["entries"]
         self.assertEqual(entries[0]["value"], "[REDACTED]")
         self.assertEqual(entries[1]["value"], "[REDACTED]")
-        self.assertEqual(entries[2]["value"], "USA")
+        self.assertEqual(entries[2]["Value"], "[REDACTED]")
+        self.assertEqual(entries[3][" VALUE "], "[REDACTED]")
+        self.assertEqual(entries[4]["value"], "USA")
         self.assertEqual(context["run_config"]["api_key"], "[REDACTED]")
         self.assertEqual(context["run_config"]["password"], "[REDACTED]")
         self.assertNotIn("dynamic-api-secret", repr(context))
         self.assertNotIn("dynamic-password", repr(context))
+        self.assertNotIn("CASE-LEAK", repr(context))
+        self.assertNotIn("TYPE-LEAK", repr(context))
 
     def test_malformed_inputs_and_resolver_fail_without_leaking_values(self) -> None:
         from wqb_cli.agent.context import ContextBuilder, ContextError

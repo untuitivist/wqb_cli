@@ -115,6 +115,10 @@ class ContextBuilder:
         if type(plan_snapshot) is not dict:
             raise ContextError("plan must be a JSON object")
         plan_version, plan_hash = _required_plan_lock(plan_snapshot)
+        plan_id = _optional_identifier(
+            _coalesce_alias(plan_snapshot, "id", "plan_id", "plan id"),
+            "plan id",
+        )
 
         task_id = _task_identifier(task_snapshot, "task selector")
 
@@ -163,11 +167,6 @@ class ContextBuilder:
             [] if evidence_refs is None else evidence_refs,
             budget,
         )
-        plan_id = _optional_identifier(
-            _coalesce_alias(plan_snapshot, "id", "plan_id", "plan id"),
-            "plan id",
-        )
-
         return {
             "task": {"task_id": task_id, "instruction": instruction},
             "plan_lock": {"version": plan_version, "hash": plan_hash},
@@ -244,9 +243,11 @@ def _safe_snapshot(value: Any, budget: _SnapshotBudget | None = None) -> Any:
             active.add(identity)
             result: dict[str, Any] = {}
             dynamic_secret = any(
-                type(item.get(descriptor)) is str
-                and _is_secret_key(item[descriptor])
-                for descriptor in ("name", "key")
+                type(raw_key) is str
+                and raw_key.strip().casefold() in {"key", "name", "type"}
+                and type(raw_value) is str
+                and _is_secret_key(raw_value)
+                for raw_key, raw_value in item.items()
             )
             for key, child in item.items():
                 if type(key) is not str:
@@ -310,7 +311,9 @@ def _is_secret_key(key: str) -> bool:
         "signingkey",
     }:
         return True
-    if compact.endswith("token"):
+    if compact == "cookies" or compact.endswith(
+        ("apikey", "cookie", "password", "secret", "token")
+    ):
         return True
     if any(segment in {"authorization", "passwd", "password", "pwd", "secret"} for segment in segments):
         return True
@@ -321,8 +324,15 @@ def _is_secret_key(key: str) -> bool:
     ):
         return True
     credential_pairs = {
+        ("access", "key"),
         ("api", "key"),
+        ("auth", "cookie"),
+        ("auth", "header"),
         ("basic", "auth"),
+        ("client", "key"),
+        ("cookie", "header"),
+        ("csrf", "cookie"),
+        ("csrf", "header"),
         ("oauth", "credentials"),
         ("private", "key"),
         ("session", "cookie"),

@@ -272,41 +272,6 @@ def _contains_secret_text(value: str) -> bool:
     return unclosed_start is not None and _has_dynamic_secret_shape(value[unclosed_start:])
 
 
-def _snapshot_text_variants(content: bytes) -> tuple[str, ...]:
-    variants = [content.decode("latin-1")]
-    encodings: list[str] = []
-    if content.startswith((b"\xff\xfe\x00\x00", b"\x00\x00\xfe\xff")):
-        encodings.append("utf-32")
-    elif content.startswith((b"\xff\xfe", b"\xfe\xff")):
-        encodings.append("utf-16")
-    else:
-        sample = content[: min(len(content), 256)]
-        if len(sample) >= 8 and len(sample) % 4 == 0:
-            lanes = tuple(
-                sum(byte == 0 for byte in sample[offset::4])
-                for offset in range(4)
-            )
-            lane_size = len(sample) // 4
-            if all(count * 4 >= lane_size * 3 for count in lanes[1:]):
-                encodings.append("utf-32-le")
-            elif all(count * 4 >= lane_size * 3 for count in lanes[:3]):
-                encodings.append("utf-32-be")
-        if len(sample) >= 4 and len(sample) % 2 == 0:
-            even_zeros = sum(byte == 0 for byte in sample[::2])
-            odd_zeros = sum(byte == 0 for byte in sample[1::2])
-            lane_size = len(sample) // 2
-            if odd_zeros * 4 >= lane_size * 3:
-                encodings.append("utf-16-le")
-            elif even_zeros * 4 >= lane_size * 3:
-                encodings.append("utf-16-be")
-    for encoding in encodings:
-        try:
-            variants.append(content.decode(encoding))
-        except UnicodeDecodeError:
-            raise ArtifactError("input snapshot has an unsupported text encoding") from None
-    return tuple(variants)
-
-
 def redact_text(value: str) -> str:
     if type(value) is not str:
         raise TypeError("text must be a string")
@@ -552,16 +517,29 @@ class ArtifactWriter:
         node: WorkflowNode,
         content: bytes,
         sha256: str,
+        *,
+        require_utf8_text: bool = False,
     ) -> Path:
         if type(content) is not bytes:
             raise TypeError("input snapshot content must be bytes")
+        if type(require_utf8_text) is not bool:
+            raise TypeError("require_utf8_text must be a boolean")
         if (
             type(sha256) is not str
             or re.fullmatch(r"[0-9a-f]{64}", sha256) is None
             or hashlib.sha256(content).hexdigest() != sha256
         ):
             raise ArtifactError("input snapshot hash is invalid")
-        if any(_contains_secret_text(text) for text in _snapshot_text_variants(content)):
+        if require_utf8_text:
+            if b"\x00" in content:
+                raise ArtifactError("text input snapshot must not contain NUL bytes")
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                raise ArtifactError("text input snapshot must be UTF-8") from None
+        else:
+            text = content.decode("latin-1")
+        if _contains_secret_text(text):
             raise ArtifactError("input snapshot must not contain secret material")
         name = f".inputs/{sha256}-{len(content)}.bin"
         with self._lock:

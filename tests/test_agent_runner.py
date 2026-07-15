@@ -228,6 +228,7 @@ class ArtifactWriterTests(unittest.TestCase):
                     WorkflowNode.J,
                     content,
                     hashlib.sha256(content).hexdigest(),
+                    require_utf8_text=True,
                 )
 
         rendered = b"".join(
@@ -252,6 +253,7 @@ class ArtifactWriterTests(unittest.TestCase):
                     WorkflowNode.J,
                     content,
                     hashlib.sha256(content).hexdigest(),
+                    require_utf8_text=True,
                 )
 
         rendered = b"".join(
@@ -269,6 +271,7 @@ class ArtifactWriterTests(unittest.TestCase):
                 WorkflowNode.J,
                 content,
                 hashlib.sha256(content).hexdigest(),
+                require_utf8_text=True,
             )
         self.assertFalse(any(path.is_file() for path in self.root.rglob("*")))
 
@@ -1270,6 +1273,43 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
                 snapshot = Path(process.call_args.args[0][-1])
                 self.assertEqual(snapshot.read_bytes(), content)
                 self.assertNotEqual(snapshot, source)
+
+    def test_simulation_text_input_rejects_unicode_prefixed_utf16_secret_encodings(self) -> None:
+        cases = (
+            '{"api_key":"UNICODE-DIRECT-SNAPSHOT-SECRET"}',
+            "{'name':'client_secret','value':'UNICODE-DYNAMIC-SNAPSHOT-SECRET', broken}",
+        )
+        for index, payload in enumerate(cases):
+            with self.subTest(index=index):
+                source = self.root / f"unicode-secret-{index}.json"
+                source.write_bytes(("\u6c49" * 200 + payload).encode("utf-16-le"))
+                runner = AgentRunner(
+                    self.store,
+                    AgentPolicy(Budget()),
+                    ArtifactWriter(self.root / f"unicode-artifacts-{index}"),
+                    command_cwd=self.root,
+                )
+                completed = subprocess.CompletedProcess(
+                    [], 0, '{"simulation_id":"SIM-UNICODE"}', ""
+                )
+                with patch(
+                    "wqb_cli.agent.runner.subprocess.run", return_value=completed
+                ) as process:
+                    with self.assertRaises(RunnerError):
+                        runner.run(
+                            f"unicode-secret-{index}",
+                            WorkflowNode.J,
+                            ("sim", "create", "--input", str(source)),
+                            "result.json",
+                        )
+                process.assert_not_called()
+                rendered = b"".join(
+                    path.read_bytes()
+                    for path in (self.root / f"unicode-artifacts-{index}").rglob("*")
+                    if path.is_file()
+                )
+                self.assertNotIn(b"UNICODE-DIRECT-SNAPSHOT-SECRET", rendered)
+                self.assertNotIn(b"UNICODE-DYNAMIC-SNAPSHOT-SECRET", rendered)
 
     def test_tampered_content_addressed_snapshot_is_never_overwritten(self) -> None:
         source = self.root / "immutable.json"

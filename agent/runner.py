@@ -635,7 +635,13 @@ class AgentRunner:
             digest = identity["file"]["sha256"]
             size = identity["file"]["size"]
             try:
-                path = self.artifacts.stage_input(run_id, node, content, digest)
+                path = self.artifacts.stage_input(
+                    run_id,
+                    node,
+                    content,
+                    digest,
+                    require_utf8_text=argv[:2] == ("sim", "create"),
+                )
             except ArtifactError:
                 raise RunnerError("command input snapshot could not be staged") from None
             snapshot = _InputSnapshot(path, digest, size)

@@ -131,6 +131,16 @@ class AgentExpressionTests(unittest.TestCase):
                 operators={"rank": {"arity": 1}},
             )
 
+    def test_left_deep_binary_expression_never_raises_raw_recursion_error(self) -> None:
+        result = validate_candidate(
+            self.candidate("+".join(["volume"] * 1000)),
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators={},
+        )
+        self.assertEqual(result.fields, ("volume",))
+        self.assertEqual(result.operators, ())
+
     def test_original_candidate_is_a_deep_immutable_snapshot(self) -> None:
         candidate = self.candidate("rank(volume)", settings={"window": [20]})
         result = validate_candidate(
@@ -143,6 +153,17 @@ class AgentExpressionTests(unittest.TestCase):
         self.assertEqual(result.original_candidate["settings"]["window"], (20,))  # type: ignore[index]
         with self.assertRaises(TypeError):
             result.original_candidate["settings"] = {}  # type: ignore[index]
+
+    def test_original_candidate_snapshot_rejects_nonfinite_float(self) -> None:
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ExpressionViolation, "finite"):
+                    validate_candidate(
+                        self.candidate("rank(volume)", settings={"value": value}),
+                        allowed_fields={"volume"},
+                        banned_fields=set(),
+                        operators={"rank": {"arity": 1}},
+                    )
 
     def test_explicit_i_node_parameters_are_required(self) -> None:
         cases = (

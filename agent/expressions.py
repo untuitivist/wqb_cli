@@ -4,6 +4,7 @@ import hashlib
 import re
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
+from math import isfinite
 from types import MappingProxyType
 from typing import Mapping
 
@@ -335,78 +336,49 @@ def _walk_expression(
     field_seen: set[str],
     operators: list[str],
 ) -> None:
-    if isinstance(expression, _Identifier):
-        if expression.name not in field_seen:
-            field_seen.add(expression.name)
-            fields.append(expression.name)
-        return
-    if isinstance(expression, _Literal):
-        return
-    if isinstance(expression, _Unary):
-        _walk_expression(
-            expression.value,
-            operator_metadata=operator_metadata,
-            fields=fields,
-            field_seen=field_seen,
-            operators=operators,
-        )
-        return
-    if isinstance(expression, _Binary):
-        _walk_expression(
-            expression.left,
-            operator_metadata=operator_metadata,
-            fields=fields,
-            field_seen=field_seen,
-            operators=operators,
-        )
-        _walk_expression(
-            expression.right,
-            operator_metadata=operator_metadata,
-            fields=fields,
-            field_seen=field_seen,
-            operators=operators,
-        )
-        return
-    if expression.name not in operator_metadata:
-        raise ExpressionViolation(f"unknown operator: {expression.name}")
-    named = dict(expression.named)
-    allowed_named = _ALLOWED_NAMED_PARAMETERS.get(expression.name, frozenset())
-    unknown_named = sorted(set(named) - allowed_named)
-    if unknown_named:
-        raise ExpressionViolation(
-            f"operator {expression.name} does not allow named argument {unknown_named[0]}"
-        )
-    for parameter in _REQUIRED_NAMED_PARAMETERS.get(expression.name, ()):
-        if parameter not in named:
-            raise ExpressionViolation(f"operator {expression.name} requires parameter {parameter}")
-    if expression.name == "ts_quantile":
-        driver = named.get("driver")
-        if not isinstance(driver, _Literal) or driver.kind != "string":
-            raise ExpressionViolation("operator ts_quantile requires string literal driver")
-    expected_arity = operator_metadata[expression.name]["arity"]
-    if len(expression.positional) != expected_arity:
-        raise ExpressionViolation(
-            f"operator {expression.name} arity requires {expected_arity} positional arguments"
-        )
-    operators.append(expression.name)
-    if len(operators) > MAX_OPERATOR_CALLS:
-        raise ExpressionViolation("expression exceeds operator call limit")
-    for argument in expression.positional:
-        _walk_expression(
-            argument,
-            operator_metadata=operator_metadata,
-            fields=fields,
-            field_seen=field_seen,
-            operators=operators,
-        )
-    for _, argument in expression.named:
-        _walk_expression(
-            argument,
-            operator_metadata=operator_metadata,
-            fields=fields,
-            field_seen=field_seen,
-            operators=operators,
-        )
+    pending = [expression]
+    while pending:
+        current = pending.pop()
+        if isinstance(current, _Identifier):
+            if current.name not in field_seen:
+                field_seen.add(current.name)
+                fields.append(current.name)
+            continue
+        if isinstance(current, _Literal):
+            continue
+        if isinstance(current, _Unary):
+            pending.append(current.value)
+            continue
+        if isinstance(current, _Binary):
+            pending.append(current.right)
+            pending.append(current.left)
+            continue
+        if current.name not in operator_metadata:
+            raise ExpressionViolation(f"unknown operator: {current.name}")
+        named = dict(current.named)
+        allowed_named = _ALLOWED_NAMED_PARAMETERS.get(current.name, frozenset())
+        unknown_named = sorted(set(named) - allowed_named)
+        if unknown_named:
+            raise ExpressionViolation(
+                f"operator {current.name} does not allow named argument {unknown_named[0]}"
+            )
+        for parameter in _REQUIRED_NAMED_PARAMETERS.get(current.name, ()):
+            if parameter not in named:
+                raise ExpressionViolation(f"operator {current.name} requires parameter {parameter}")
+        if current.name == "ts_quantile":
+            driver = named.get("driver")
+            if not isinstance(driver, _Literal) or driver.kind != "string":
+                raise ExpressionViolation("operator ts_quantile requires string literal driver")
+        expected_arity = operator_metadata[current.name]["arity"]
+        if len(current.positional) != expected_arity:
+            raise ExpressionViolation(
+                f"operator {current.name} arity requires {expected_arity} positional arguments"
+            )
+        operators.append(current.name)
+        if len(operators) > MAX_OPERATOR_CALLS:
+            raise ExpressionViolation("expression exceeds operator call limit")
+        arguments = (*current.positional, *(value for _, value in current.named))
+        pending.extend(reversed(arguments))
 
 
 def validate_candidate(
@@ -475,7 +447,11 @@ def _immutable_candidate_snapshot(candidate: Mapping[object, object]) -> Mapping
         nodes += 1
         if nodes > MAX_CANDIDATE_NODES or depth > MAX_CANDIDATE_DEPTH:
             raise ExpressionViolation("candidate snapshot exceeds structural limit")
-        if value is None or type(value) in {bool, int, float, str}:
+        if value is None or type(value) in {bool, int, str}:
+            return value
+        if type(value) is float:
+            if not isfinite(value):
+                raise ExpressionViolation("candidate snapshot numbers must be finite")
             return value
         if isinstance(value, Mapping):
             identity = id(value)

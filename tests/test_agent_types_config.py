@@ -4,7 +4,7 @@ import json
 import re
 import tempfile
 import unittest
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 import wqb_cli.agent.config as agent_config
@@ -336,6 +336,76 @@ class AgentConfigTests(unittest.TestCase):
         for payload, dotted_path in cases:
             with self.subTest(dotted_path=dotted_path):
                 self.assert_config_error(payload, dotted_path)
+
+    def test_unknown_agent_root_keys_are_rejected_with_paths(self) -> None:
+        cases = ("databse_path", "model")
+        for field in cases:
+            dotted_path = f"agent.{field}"
+            with self.subTest(dotted_path=dotted_path):
+                self.assert_config_error({"agent": {field: "value"}}, dotted_path)
+
+    def test_typed_config_requires_exact_model_role_keys_before_overrides(self) -> None:
+        base = load_agent_config(None)
+        planner = base.models[ModelRole.PLANNER]
+        operator = base.models[ModelRole.OPERATOR]
+        cases = (
+            (
+                "plain strings",
+                {"planner": planner, "operator": operator},
+                "agent.models.planner",
+            ),
+            ("unrelated", {"reviewer": planner}, "agent.models.reviewer"),
+            ("missing", {ModelRole.PLANNER: planner}, "agent.models.operator"),
+            (
+                "extra",
+                {**base.models, "reviewer": planner},
+                "agent.models.reviewer",
+            ),
+        )
+        for label, models, dotted_path in cases:
+            invalid = replace(base, models=models)  # type: ignore[arg-type]
+            for operation in (
+                lambda: agent_config.validate_agent_config(invalid, require_models=False),
+                lambda: with_model_overrides(invalid),
+            ):
+                with self.subTest(label=label, operation=operation.__code__.co_firstlineno):
+                    with self.assertRaisesRegex(ValueError, re.escape(dotted_path)):
+                        operation()
+
+    def test_configured_model_base_url_must_be_absolute_http_url(self) -> None:
+        invalid_urls = (
+            "models.example/v1",
+            "/v1",
+            "ftp://models.example/v1",
+            "https:///v1",
+            "https://",
+        )
+        for value in invalid_urls:
+            with self.subTest(value=value):
+                self.assert_config_error(
+                    {
+                        "agent": {
+                            "models": {
+                                "planner": {"model": "planner-x", "base_url": value}
+                            }
+                        }
+                    },
+                    "agent.models.planner.base_url",
+                )
+
+    def test_configured_model_accepts_absolute_http_urls(self) -> None:
+        for value in ("https://models.example/v1", "http://localhost:8000/v1"):
+            with self.subTest(value=value):
+                config = self.load_payload(
+                    {
+                        "agent": {
+                            "models": {
+                                "planner": {"model": "planner-x", "base_url": value}
+                            }
+                        }
+                    }
+                )
+                self.assertEqual(config.models[ModelRole.PLANNER].base_url, value)
 
     def test_model_fields_require_deliberate_types(self) -> None:
         cases = (

@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from math import isfinite
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from ..core.config_store import load_config
 from ..core.paths import DEFAULT_AGENT_SQLITE_PATH, DEFAULT_RESEARCH_RUNS_ROOT
@@ -12,6 +13,7 @@ from .types import Budget, ModelRole
 
 _PROVIDERS = {"openai", "openai-compatible"}
 _API_STYLES = {"responses", "chat_completions"}
+_AGENT_FIELDS = {"database_path", "run_root", "models", "budget"}
 _MODEL_TEXT_FIELDS = (
     "provider",
     "api_style",
@@ -58,6 +60,7 @@ class AgentConfig:
 
 def load_agent_config(path: str | None, *, require_models: bool = False) -> AgentConfig:
     raw = _require_object(load_config(path).get("agent"), "agent")
+    _reject_unknown_keys(raw, _AGENT_FIELDS, "agent")
     model_values = _require_object(raw.get("models"), "agent.models")
     _reject_unknown_keys(model_values, {role.value for role in ModelRole}, "agent.models")
     models = {
@@ -91,6 +94,7 @@ def with_model_overrides(
     operator_model: str | None = None,
     require_models: bool = False,
 ) -> AgentConfig:
+    validate_agent_config(config, require_models=False)
     overrides = {
         ModelRole.PLANNER: planner_model,
         ModelRole.OPERATOR: operator_model,
@@ -119,7 +123,7 @@ def validate_agent_config(
         raise ValueError("agent.models must be an object")
     expected_roles = set(ModelRole)
     for role in config.models:
-        if role not in expected_roles:
+        if not isinstance(role, ModelRole) or role not in expected_roles:
             label = role.value if isinstance(role, ModelRole) else str(role)
             raise ValueError(f"agent.models.{label} is not supported")
     for role in ModelRole:
@@ -164,6 +168,12 @@ def _validate_model_config(role: ModelRole, model: ModelConfig) -> ModelConfig:
     if model.model.strip():
         if not model.base_url.strip():
             raise ValueError(f"{path}.base_url must be nonblank when model is configured")
+        try:
+            parsed_base_url = urlparse(model.base_url.strip())
+        except ValueError as exc:
+            raise ValueError(f"{path}.base_url must be an absolute http(s) URL") from exc
+        if parsed_base_url.scheme.lower() not in {"http", "https"} or not parsed_base_url.netloc:
+            raise ValueError(f"{path}.base_url must be an absolute http(s) URL")
         if not model.secret_name.strip():
             raise ValueError(f"{path}.secret_name must be nonblank when model is configured")
     return model

@@ -20,6 +20,14 @@ from wqb_cli.core.config_store import DEFAULT_CONFIG
 
 
 class RunConfigTests(unittest.TestCase):
+    def test_direct_manual_scope_requires_all_market_fields(self) -> None:
+        with self.assertRaisesRegex(ValueError, "manual scope requires"):
+            RunConfig(scope_mode=ScopeMode.MANUAL)
+
+    def test_direct_auto_scope_rejects_pinned_market_fields(self) -> None:
+        with self.assertRaisesRegex(ValueError, "auto scope must not pin"):
+            RunConfig(scope_mode=ScopeMode.AUTO, region="USA")
+
     def test_manual_scope_requires_all_market_fields(self) -> None:
         with self.assertRaisesRegex(ValueError, "manual scope requires"):
             RunConfig.from_dict({"scope_mode": "manual", "region": "USA"})

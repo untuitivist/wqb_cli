@@ -88,6 +88,15 @@ class RunConfig:
     neutralization: str | None = None
     budget: Budget = field(default_factory=Budget)
 
+    def __post_init__(self) -> None:
+        market_fields = ("region", "delay", "universe", "neutralization")
+        if self.scope_mode is ScopeMode.MANUAL:
+            missing = [name for name in market_fields if getattr(self, name) is None]
+            if missing:
+                raise ValueError(f"manual scope requires {', '.join(missing)}")
+        elif any(getattr(self, name) is not None for name in market_fields):
+            raise ValueError("auto scope must not pin market fields")
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RunConfig:
         values = dict(data)
@@ -98,12 +107,4 @@ class RunConfig:
         if not isinstance(budget, Budget):
             raise ValueError("budget must be a Budget or object")
         values["budget"] = budget
-
-        market_fields = ("region", "delay", "universe", "neutralization")
-        if values["scope_mode"] is ScopeMode.MANUAL:
-            missing = [name for name in market_fields if values.get(name) is None]
-            if missing:
-                raise ValueError(f"manual scope requires {', '.join(missing)}")
-        elif any(values.get(name) is not None for name in market_fields):
-            raise ValueError("auto scope must not pin market fields")
         return cls(**values)

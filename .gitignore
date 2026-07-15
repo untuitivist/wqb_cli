@@ -43,3 +43,6 @@ Thumbs.db
 
 # run history
 research_runs/
+
+# Local git worktrees
+.worktrees/

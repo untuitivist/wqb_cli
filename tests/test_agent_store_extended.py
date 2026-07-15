@@ -56,8 +56,14 @@ class AgentStoreExtendedTests(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 )
             }
+            ledger_index_sql = connection.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' "
+                "AND name = 'idx_command_ledger_run_status'"
+            ).fetchone()
         self.assertEqual(versions, [1, 2, 3])
         self.assertTrue(expected_tables <= tables)
+        self.assertIsNotNone(ledger_index_sql)
+        self.assertIn("command_ledger(run_id, status)", ledger_index_sql[0])
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "v2.sqlite3"
@@ -68,11 +74,19 @@ class AgentStoreExtendedTests(unittest.TestCase):
                     "SELECT sql FROM sqlite_master "
                     "WHERE name IN ('runs', 'node_attempts') ORDER BY name"
                 ).fetchall()
+                self.assertIsNone(
+                    connection.execute(
+                        "SELECT 1 FROM sqlite_master WHERE type = 'index' "
+                        "AND name = 'idx_command_ledger_run_status'"
+                    ).fetchone()
+                )
 
             upgraded = AgentStore(path)
             upgraded.initialize()
             upgraded.initialize()
-            with closing(upgraded.connect()) as connection:
+            reopened = AgentStore(path)
+            reopened.initialize()
+            with closing(reopened.connect()) as connection:
                 after = connection.execute(
                     "SELECT sql FROM sqlite_master "
                     "WHERE name IN ('runs', 'node_attempts') ORDER BY name"
@@ -83,8 +97,16 @@ class AgentStoreExtendedTests(unittest.TestCase):
                         "SELECT version FROM schema_version ORDER BY version"
                     )
                 ]
+                upgraded_ledger_index = connection.execute(
+                    "SELECT sql FROM sqlite_master WHERE type = 'index' "
+                    "AND name = 'idx_command_ledger_run_status'"
+                ).fetchone()
             self.assertEqual(after, before)
             self.assertEqual(upgraded_versions, [1, 2, 3])
+            self.assertIsNotNone(upgraded_ledger_index)
+            self.assertIn(
+                "command_ledger(run_id, status)", upgraded_ledger_index[0]
+            )
 
     def test_research_plans_and_operator_tasks_are_versioned_and_terminal(self) -> None:
         self.create_run()
@@ -536,6 +558,43 @@ class AgentStoreExtendedTests(unittest.TestCase):
             self.store.search_experience("CHN", 1, "price-volume", limit=True)
         with self.assertRaises((TypeError, ValueError)):
             self.store.search_experience("CHN", 1, "price-volume", limit=0)
+
+    def test_add_experience_rolls_back_parent_when_field_insert_aborts(self) -> None:
+        self.create_run()
+        payload = {
+            "region": "CHN",
+            "delay": 1,
+            "category": "price-volume",
+            "expression_fingerprint": "rollback-expression",
+            "field_ids": ["close", "volume"],
+            "hypothesis": {"idea": "rollback"},
+            "metrics": {"sharpe": 0.5},
+        }
+        with closing(self.store.connect()) as connection:
+            before = (
+                connection.execute("SELECT COUNT(*) FROM experiences").fetchone()[0],
+                connection.execute("SELECT COUNT(*) FROM experience_fields").fetchone()[0],
+            )
+            connection.execute(
+                "CREATE TRIGGER fail_experience_field "
+                "BEFORE INSERT ON experience_fields BEGIN "
+                "SELECT RAISE(ABORT, 'forced field failure'); END"
+            )
+            connection.commit()
+        try:
+            with self.assertRaisesRegex(sqlite3.IntegrityError, "forced field failure"):
+                self.store.add_experience("run", payload)
+        finally:
+            with closing(self.store.connect()) as connection:
+                connection.execute("DROP TRIGGER fail_experience_field")
+                connection.commit()
+
+        with closing(self.store.connect()) as connection:
+            after = (
+                connection.execute("SELECT COUNT(*) FROM experiences").fetchone()[0],
+                connection.execute("SELECT COUNT(*) FROM experience_fields").fetchone()[0],
+            )
+        self.assertEqual(after, before)
 
     def test_extended_apis_validate_before_db_and_enforce_foreign_keys(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

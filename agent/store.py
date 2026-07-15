@@ -419,6 +419,10 @@ _MIGRATIONS = (
                 UNIQUE (run_id, command_fingerprint)
             )
             """,
+            """
+            CREATE INDEX idx_command_ledger_run_status
+            ON command_ledger(run_id, status)
+            """,
             f"""
             CREATE TABLE candidates (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

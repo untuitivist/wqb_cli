@@ -146,6 +146,23 @@ class AgentPolicyTests(unittest.TestCase):
                 with self.assertRaises(PolicyViolation):
                     self.policy.validate_operator_result(value)
 
+    def test_operator_result_enforces_total_characters_and_integer_bits(self) -> None:
+        from wqb_cli.agent.policy import (
+            MAX_POLICY_INTEGER_BITS,
+            MAX_POLICY_RESULT_CHARS,
+            PolicyViolation,
+        )
+
+        exact_text = "x" * (MAX_POLICY_RESULT_CHARS - len("value"))
+        self.policy.validate_operator_result({"value": exact_text})
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_operator_result({"value": exact_text + "x"})
+
+        exact_integer = 1 << (MAX_POLICY_INTEGER_BITS - 1)
+        self.policy.validate_operator_result({"value": exact_integer})
+        with self.assertRaises(PolicyViolation):
+            self.policy.validate_operator_result({"value": 10**5000})
+
     def test_simulation_capacity_validates_usage_and_allows_below_limit(self) -> None:
         from wqb_cli.agent.policy import PolicyViolation, UsageSnapshot
 
@@ -477,6 +494,121 @@ class ContextBuilderTests(unittest.TestCase):
             self.assertNotIn(secret, rendered)
         self.assertIn("[REDACTED]", rendered)
 
+    def test_planner_plan_aliases_are_canonical_and_conflicts_fail_before_resolve(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        calls: list[str] = []
+
+        def resolve(ref: str) -> dict[str, str]:
+            calls.append(ref)
+            return {"id": ref}
+
+        builder = ContextBuilder(resolve)
+        aliases = {
+            "id": "plan-1",
+            "plan_id": "plan-1",
+            "version": 2,
+            "plan_version": 2,
+            "hash": "plan-hash",
+            "plan_hash": "plan-hash",
+            "tasks": [],
+        }
+        context = builder.for_planner(
+            run_config={},
+            current_plan=aliases,
+            metrics={},
+            evidence_refs=[],
+            route_history=[],
+            experience_summaries=[],
+        )
+        self.assertEqual(
+            context["current_plan"],
+            {
+                "id": "plan-1",
+                "version": 2,
+                "hash": "plan-hash",
+                "tasks": [],
+            },
+        )
+        self.assertEqual(context["context_manifest"]["plan_id"], "plan-1")
+        self.assertEqual(context["context_manifest"]["plan_version"], 2)
+        self.assertEqual(context["context_manifest"]["plan_hash"], "plan-hash")
+
+        conflicts = (
+            {**aliases, "plan_id": "plan-2"},
+            {**aliases, "plan_version": 3},
+            {**aliases, "plan_version": True},
+            {**aliases, "plan_hash": "other-hash"},
+            {"id": "plan-1", "version": 0},
+        )
+        for plan in conflicts:
+            with self.subTest(plan=plan):
+                with self.assertRaises(ContextError):
+                    builder.for_planner(
+                        run_config={},
+                        current_plan=plan,
+                        metrics={},
+                        evidence_refs=["artifact:a"],
+                        route_history=[],
+                        experience_summaries=[],
+                    )
+        self.assertEqual(calls, [])
+
+    def test_context_budget_is_shared_and_has_explicit_boundaries(self) -> None:
+        from wqb_cli.agent.context import (
+            MAX_CONTEXT_CHARS,
+            MAX_CONTEXT_INTEGER_BITS,
+            MAX_EVIDENCE_REFS,
+            ContextBuilder,
+            ContextError,
+        )
+
+        defaults = {
+            "run_config": {},
+            "current_plan": {},
+            "metrics": {},
+            "route_history": [],
+            "experience_summaries": [],
+        }
+        refs = [f"artifact:{index}" for index in range(MAX_EVIDENCE_REFS)]
+        context = ContextBuilder(lambda ref: {"id": ref}).for_planner(
+            **defaults,
+            evidence_refs=refs,
+        )
+        self.assertEqual(len(context["context_manifest"]["artifact_ids"]), MAX_EVIDENCE_REFS)
+
+        calls: list[str] = []
+
+        def counted_resolve(ref: str) -> dict[str, str]:
+            calls.append(ref)
+            return {"id": ref}
+
+        with self.assertRaises(ContextError):
+            ContextBuilder(counted_resolve).for_planner(
+                **defaults,
+                evidence_refs=refs + ["artifact:overflow"],
+            )
+        self.assertEqual(calls, [])
+
+        exact_integer = 1 << (MAX_CONTEXT_INTEGER_BITS - 1)
+        integer_context = ContextBuilder(lambda ref: {"id": ref}).for_planner(
+            **{**defaults, "metrics": {"value": exact_integer}},
+            evidence_refs=[],
+        )
+        self.assertEqual(integer_context["metrics"]["value"], exact_integer)
+        with self.assertRaises(ContextError):
+            ContextBuilder(lambda ref: {"id": ref}).for_planner(
+                **{**defaults, "metrics": {"value": 1 << MAX_CONTEXT_INTEGER_BITS}},
+                evidence_refs=[],
+            )
+
+        artifact_text = "x" * (MAX_CONTEXT_CHARS // 2 + 1_000)
+        with self.assertRaises(ContextError):
+            ContextBuilder(lambda ref: {"id": ref, "text": artifact_text}).for_planner(
+                **defaults,
+                evidence_refs=["artifact:a", "artifact:b"],
+            )
+
     def test_operator_context_exposes_only_selected_execution_contract(self) -> None:
         from wqb_cli.agent.context import ContextBuilder
 
@@ -588,29 +720,89 @@ class ContextBuilderTests(unittest.TestCase):
                         evidence_refs=[],
                     )
 
-    def test_operator_explicit_contract_arguments_override_task_defaults(self) -> None:
-        from wqb_cli.agent.context import ContextBuilder
+    def test_operator_explicit_contract_must_match_authoritative_plan(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
 
-        builder = ContextBuilder(lambda ref: {"id": ref})
+        calls: list[str] = []
+
+        def resolve(ref: str) -> dict[str, str]:
+            calls.append(ref)
+            return {"id": ref}
+
+        builder = ContextBuilder(resolve)
         plan = {
             "version": 1,
             "hash": "override-plan",
             "tasks": [
-                {"id": "task-1", "instruction": "inspect", "required_fields": ["old"]}
+                {
+                    "id": "task-1",
+                    "instruction": "inspect",
+                    "required_fields": ["close"],
+                    "required_operators": ["rank"],
+                    "output_schema": {"type": "object"},
+                }
             ],
         }
         context = builder.for_operator(
             task={"id": "task-1"},
             plan=plan,
-            required_fields=["new"],
-            required_operators=["ts_mean"],
-            output_schema={"description": "result only"},
+            required_fields=["close"],
+            required_operators=["rank"],
+            output_schema={"type": "object"},
             evidence_refs=[],
         )
 
-        self.assertEqual(context["required_fields"], ["new"])
-        self.assertEqual(context["required_operators"], ["ts_mean"])
-        self.assertEqual(context["output_schema"], {"description": "result only"})
+        self.assertEqual(context["required_fields"], ["close"])
+        self.assertEqual(context["required_operators"], ["rank"])
+        self.assertEqual(context["output_schema"], {"type": "object"})
+
+        conflicts = (
+            {"required_fields": ["task-2"]},
+            {"required_operators": ["submit"]},
+            {"output_schema": {"description": "submit task-2"}},
+        )
+        for override in conflicts:
+            with self.subTest(override=override):
+                with self.assertRaises(ContextError):
+                    builder.for_operator(
+                        task="task-1",
+                        plan=plan,
+                        evidence_refs=["artifact:a"],
+                        **override,
+                    )
+        self.assertEqual(calls, [])
+
+    def test_operator_contract_values_are_strict_and_schema_is_valid(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        builder = ContextBuilder(lambda ref: {"id": ref})
+        base_task = {
+            "id": "task-1",
+            "instruction": "inspect",
+            "required_fields": ["close"],
+            "required_operators": ["rank"],
+            "output_schema": {"type": "object"},
+        }
+        invalid_contracts = (
+            {"required_fields": ["close", "close"]},
+            {"required_fields": [""]},
+            {"required_fields": [True]},
+            {"required_fields": [{}]},
+            {"required_operators": ["rank", "rank"]},
+            {"required_operators": ["   "]},
+            {"required_operators": [False]},
+            {"output_schema": []},
+            {"output_schema": {"type": "not-a-json-schema-type"}},
+        )
+        for invalid in invalid_contracts:
+            with self.subTest(invalid=invalid):
+                plan = {
+                    "version": 1,
+                    "hash": "strict-contract",
+                    "tasks": [{**base_task, **invalid}],
+                }
+                with self.assertRaises(ContextError):
+                    builder.for_operator(task="task-1", plan=plan, evidence_refs=[])
 
     def test_operator_requires_exact_locked_plan_version_and_hash(self) -> None:
         from wqb_cli.agent.context import ContextBuilder, ContextError
@@ -762,6 +954,46 @@ class ContextBuilderTests(unittest.TestCase):
         self.assertEqual(second["task"]["instruction"], "inspect")
         self.assertEqual(second["evidence"]["artifacts"][0]["nested"]["values"], [1])
 
+    def test_artifact_identity_aliases_are_validated_and_canonicalized(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder, ContextError
+
+        defaults = {
+            "run_config": {},
+            "current_plan": {"id": "plan"},
+            "metrics": {},
+            "evidence_refs": ["artifact:a"],
+            "route_history": [],
+            "experience_summaries": [],
+        }
+        valid_payloads = (
+            {"artifact_id": "artifact:a", "text": "alias-only"},
+            {"id": "artifact:a", "artifact_id": "artifact:a", "text": "both"},
+        )
+        for payload in valid_payloads:
+            with self.subTest(payload=payload):
+                context = ContextBuilder(lambda ref, value=payload: value).for_planner(
+                    **defaults
+                )
+                artifact = context["evidence"]["artifacts"][0]
+                self.assertEqual(artifact["id"], "artifact:a")
+                self.assertNotIn("artifact_id", artifact)
+                self.assertEqual(
+                    context["context_manifest"]["artifact_ids"], ["artifact:a"]
+                )
+
+        invalid_payloads = (
+            {},
+            {"id": "artifact:other"},
+            {"artifact_id": "artifact:other"},
+            {"id": "artifact:a", "artifact_id": "artifact:other"},
+        )
+        for payload in invalid_payloads:
+            with self.subTest(payload=payload):
+                with self.assertRaises(ContextError):
+                    ContextBuilder(lambda ref, value=payload: value).for_planner(
+                        **defaults
+                    )
+
     def test_secret_key_variants_are_redacted_but_tokenization_is_not(self) -> None:
         from wqb_cli.agent.context import ContextBuilder
 
@@ -787,8 +1019,21 @@ class ContextBuilderTests(unittest.TestCase):
             "contosoToken": "value-19",
             "token_key": "value-20",
             "token_secret": "value-21",
+            "pwd": "value-22",
+            "passwd": "value-23",
+            "basic_auth": "value-24",
+            "oauth_credentials": "value-25",
+            "private_key": "value-26",
+            "signingKey": "value-27",
+            "session_id": "value-28",
+            "auth": "value-29",
+            "cookie": "value-30",
+            "secret": "value-31",
             "tokenization": "ordinary-word",
             "token_bucket": "rate-limit-state",
+            "passwordless": "passkey-mode",
+            "cookiePolicy": "strict",
+            "secretary": "person-name",
         }
         builder = ContextBuilder(lambda ref: {"id": ref})
         context = builder.for_planner(
@@ -803,10 +1048,50 @@ class ContextBuilderTests(unittest.TestCase):
         for key in variants:
             expected = (
                 variants[key]
-                if key in {"tokenization", "token_bucket"}
+                if key
+                in {
+                    "tokenization",
+                    "token_bucket",
+                    "passwordless",
+                    "cookiePolicy",
+                    "secretary",
+                }
                 else "[REDACTED]"
             )
             self.assertEqual(context["run_config"][key], expected)
+
+    def test_dynamic_secret_pairs_redact_values_without_visiting_discarded_data(self) -> None:
+        from wqb_cli.agent.context import ContextBuilder
+
+        cyclic: list[object] = []
+        cyclic.append(cyclic)
+        huge = [None] * 10_001
+        run_config = {
+            "entries": [
+                {"name": "api_key", "value": "dynamic-api-secret"},
+                {"key": "password", "type": "text", "value": "dynamic-password"},
+                {"name": "region", "value": "USA"},
+            ],
+            "api_key": cyclic,
+            "password": huge,
+        }
+        context = ContextBuilder(lambda ref: {"id": ref}).for_planner(
+            run_config=run_config,
+            current_plan={"id": "plan"},
+            metrics={},
+            evidence_refs=[],
+            route_history=[],
+            experience_summaries=[],
+        )
+
+        entries = context["run_config"]["entries"]
+        self.assertEqual(entries[0]["value"], "[REDACTED]")
+        self.assertEqual(entries[1]["value"], "[REDACTED]")
+        self.assertEqual(entries[2]["value"], "USA")
+        self.assertEqual(context["run_config"]["api_key"], "[REDACTED]")
+        self.assertEqual(context["run_config"]["password"], "[REDACTED]")
+        self.assertNotIn("dynamic-api-secret", repr(context))
+        self.assertNotIn("dynamic-password", repr(context))
 
     def test_malformed_inputs_and_resolver_fail_without_leaking_values(self) -> None:
         from wqb_cli.agent.context import ContextBuilder, ContextError
@@ -824,7 +1109,7 @@ class ContextBuilderTests(unittest.TestCase):
             {"route_history": ("tuple",)},
             {"current_plan": cyclic},
             {"current_plan": deep},
-            {"run_config": {"secret": object()}},
+            {"run_config": {"ordinary": object()}},
         )
         defaults = {
             "run_config": {},

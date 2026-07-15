@@ -8,9 +8,10 @@ from typing import Any, Iterable, Mapping
 from .types import Budget, ModelRole, RunState, WorkflowNode
 
 
-_MAX_JSON_DEPTH = 64
-_MAX_JSON_NODES = 10_000
-_MAX_JSON_STRING_LENGTH = 1_000_000
+MAX_POLICY_RESULT_DEPTH = 64
+MAX_POLICY_RESULT_NODES = 10_000
+MAX_POLICY_RESULT_CHARS = 250_000
+MAX_POLICY_INTEGER_BITS = 4_096
 
 
 class PolicyViolation(ValueError):
@@ -194,13 +195,14 @@ class AgentPolicy:
         controls: set[str] = set()
         active: set[int] = set()
         nodes_seen = 0
+        characters_seen = 0
 
         def visit(item: Any, depth: int) -> None:
-            nonlocal nodes_seen
+            nonlocal characters_seen, nodes_seen
             nodes_seen += 1
-            if nodes_seen > _MAX_JSON_NODES:
+            if nodes_seen > MAX_POLICY_RESULT_NODES:
                 raise PolicyViolation("operator result exceeds the JSON size limit")
-            if depth > _MAX_JSON_DEPTH:
+            if depth > MAX_POLICY_RESULT_DEPTH:
                 raise PolicyViolation("operator result exceeds the JSON depth limit")
 
             if type(item) is dict:
@@ -211,8 +213,9 @@ class AgentPolicy:
                 for key, child in item.items():
                     if type(key) is not str:
                         raise PolicyViolation("operator result object keys must be strings")
-                    if len(key) > _MAX_JSON_STRING_LENGTH:
-                        raise PolicyViolation("operator result exceeds the JSON string limit")
+                    characters_seen += len(key)
+                    if characters_seen > MAX_POLICY_RESULT_CHARS:
+                        raise PolicyViolation("operator result exceeds the character limit")
                     normalized = key.strip().casefold()
                     if normalized in OPERATOR_CONTROL_KEYS:
                         controls.add(normalized)
@@ -226,14 +229,18 @@ class AgentPolicy:
                 for child in item:
                     visit(child, depth + 1)
                 active.remove(identity)
-            elif item is None or type(item) is bool or type(item) is int:
+            elif item is None or type(item) is bool:
                 return
+            elif type(item) is int:
+                if item.bit_length() > MAX_POLICY_INTEGER_BITS:
+                    raise PolicyViolation("operator result integer exceeds the bit-length limit")
             elif type(item) is float:
                 if not isfinite(item):
                     raise PolicyViolation("operator result numbers must be finite")
             elif type(item) is str:
-                if len(item) > _MAX_JSON_STRING_LENGTH:
-                    raise PolicyViolation("operator result exceeds the JSON string limit")
+                characters_seen += len(item)
+                if characters_seen > MAX_POLICY_RESULT_CHARS:
+                    raise PolicyViolation("operator result exceeds the character limit")
             else:
                 raise PolicyViolation("operator result must contain only JSON-native values")
 

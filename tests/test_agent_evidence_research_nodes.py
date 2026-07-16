@@ -75,12 +75,18 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         lessons = []
         for source_class, (argv, name) in sources.items():
             command = self.store.reserve_command("run-1", WorkflowNode.G, f"{source_class}-command", argv)
-            artifact = self.artifacts.write_json("run-1", WorkflowNode.G, name, {"source": source_class})
+            source_payload = (
+                {"ok": True, "text": f"{source_class} fact"}
+                if source_class == "official_docs"
+                else {"source": source_class}
+            )
+            artifact = self.artifacts.write_json("run-1", WorkflowNode.G, name, source_payload)
             self.store.complete_command(command.id, 0, artifact_id=artifact.id)
             lessons.append({"source_class": source_class, "source_id": f"artifact:{artifact.id}", "extracted_statement": f"{source_class} fact", "applicability": "liquidity"})
         bundle = self.artifacts.write_json(
             "run-1", WorkflowNode.G, "evidence_lessons.json",
             {
+                "mechanism_keywords": ["liquidity"],
                 "lessons": lessons,
                 "coverage": [],
                 "missing_sources": [],
@@ -478,6 +484,7 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         self.assertEqual(bundle["coverage"], ["paper"])
         self.assertEqual(bundle["missing_sources"], ["paper"])
         self.assertEqual(bundle["per_keyword"], expected_per_keyword)
+        self.assertEqual(bundle["mechanism_keywords"], ["liquidity", "momentum"])
 
     def test_g_returns_canonical_evidence_bundle_artifact_binding(self) -> None:
         runner = Mock()
@@ -529,7 +536,12 @@ class EvidenceResearchNodeTests(unittest.TestCase):
                 "run-1", WorkflowNode.G, f"{keyword}-{source_class}", argv,
             )
             artifact = self.artifacts.write_json(
-                "run-1", WorkflowNode.G, name, {"source": source_class},
+                "run-1", WorkflowNode.G, name,
+                (
+                    {"ok": True, "text": f"{source_class} fact"}
+                    if source_class == "official_docs"
+                    else {"source": source_class}
+                ),
             )
             self.store.complete_command(command.id, 0, artifact_id=artifact.id)
             lessons.append({
@@ -540,6 +552,7 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             })
         bundle_artifact = self.artifacts.write_json(
             "run-1", WorkflowNode.G, "evidence_lessons.json", {
+                "mechanism_keywords": ["liquidity", "momentum"],
                 "lessons": lessons,
                 "coverage": ["community", "official_docs", "platform", "paper"],
                 "missing_sources": ["community", "official_docs", "platform", "paper"],
@@ -564,6 +577,125 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             ).run_h(
                 "run-1", self.scope, "tower-1", [{"id": "vwap"}],
                 {"artifact_id": f"artifact:{bundle_artifact.id}", "sha256": bundle_artifact.sha256},
+            )
+
+        router.invoke.assert_not_called()
+
+    def test_h_rejects_renamed_mechanism_keyword_before_planner(self) -> None:
+        bundle = self.trusted_evidence_bundle()
+        record = self.store.get_artifact(int(bundle["artifact_id"].split(":")[1]))
+        payload = self.artifacts.read_json(record)
+        payload["mechanism_keywords"] = ["momentum"]
+        payload["per_keyword"] = {"momentum": payload["per_keyword"].pop("liquidity")}
+        for lesson in payload["lessons"]:
+            lesson["applicability"] = "momentum"
+        rewritten = self.artifacts.write_json(
+            "run-1", WorkflowNode.G, "evidence_lessons.json", payload,
+        )
+        router = Mock()
+
+        with self.assertRaisesRegex(
+            ResearchError, "mechanism keywords do not match command provenance",
+        ):
+            ResearchNodes(
+                runner=Mock(), router=router, store=self.store,
+                artifacts=self.artifacts,
+            ).run_h(
+                "run-1", self.scope, "tower-1", [{"id": "vwap"}],
+                {"artifact_id": f"artifact:{rewritten.id}", "sha256": rewritten.sha256},
+            )
+
+        router.invoke.assert_not_called()
+
+    def test_h_rejects_omitted_mechanism_keyword_before_planner(self) -> None:
+        bundle = self.trusted_evidence_bundle()
+        for source_class, argv, name in (
+            ("community", ("community", "search", "momentum"), "momentum_community_search.json"),
+            ("official_docs", ("docs", "show", "data/README.md"), "momentum_docs_show.json"),
+            ("platform", ("search", "momentum"), "momentum_platform_search.json"),
+            ("paper", ("arxiv", "search", "query", "momentum"), "momentum_papers.json"),
+        ):
+            command = self.store.reserve_command(
+                "run-1", WorkflowNode.G, f"momentum-{source_class}", argv,
+            )
+            source_payload = (
+                {"ok": True, "text": "official_docs momentum fact"}
+                if source_class == "official_docs"
+                else {"source": source_class}
+            )
+            artifact = self.artifacts.write_json(
+                "run-1", WorkflowNode.G, name, source_payload,
+            )
+            self.store.complete_command(command.id, 0, artifact_id=artifact.id)
+        router = Mock()
+
+        with self.assertRaisesRegex(
+            ResearchError, "mechanism keywords do not match command provenance",
+        ):
+            ResearchNodes(
+                runner=Mock(), router=router, store=self.store,
+                artifacts=self.artifacts,
+            ).run_h(
+                "run-1", self.scope, "tower-1", [{"id": "vwap"}], bundle,
+            )
+
+        router.invoke.assert_not_called()
+
+    def test_h_rejects_cross_keyword_evidence_reuse_before_planner(self) -> None:
+        bundle = self.trusted_evidence_bundle()
+        record = self.store.get_artifact(int(bundle["artifact_id"].split(":")[1]))
+        payload = self.artifacts.read_json(record)
+        payload["mechanism_keywords"] = ["liquidity", "momentum"]
+        payload["per_keyword"]["momentum"] = dict(payload["per_keyword"]["liquidity"])
+        momentum_command = self.store.reserve_command(
+            "run-1", WorkflowNode.G, "unused-momentum-query",
+            ("search", "momentum"),
+        )
+        momentum_source = self.artifacts.write_json(
+            "run-1", WorkflowNode.G, "unused_momentum_platform_search.json",
+            {"query": ["unused momentum fact"]},
+        )
+        self.store.complete_command(
+            momentum_command.id, 0, artifact_id=momentum_source.id,
+        )
+        copied_lessons = []
+        for index, lesson in enumerate(payload["lessons"]):
+            source = self.store.get_artifact(int(lesson["source_id"].split(":")[1]))
+            copied_name = {
+                "community": "momentum_community_search.json",
+                "official_docs": "momentum_docs_show.json",
+                "platform": "momentum_platform_search.json",
+                "paper": "momentum_papers.json",
+            }[lesson["source_class"]]
+            copied = self.artifacts.write_json(
+                "run-1", WorkflowNode.G, copied_name,
+                self.artifacts.read_json(source),
+            )
+            command = self.store.reserve_command(
+                "run-1", WorkflowNode.G, f"momentum-copy-{index}",
+                self.store.get_command_for_artifact(source.id).argv,
+            )
+            self.store.complete_command(command.id, 0, artifact_id=copied.id)
+            copied_lessons.append({
+                **lesson,
+                "source_id": f"artifact:{copied.id}",
+                "applicability": "momentum",
+            })
+        payload["lessons"].extend(copied_lessons)
+        rewritten = self.artifacts.write_json(
+            "run-1", WorkflowNode.G, "evidence_lessons.json", payload,
+        )
+        router = Mock()
+
+        with self.assertRaisesRegex(
+            ResearchError, "applicability does not match source command",
+        ):
+            ResearchNodes(
+                runner=Mock(), router=router, store=self.store,
+                artifacts=self.artifacts,
+            ).run_h(
+                "run-1", self.scope, "tower-1", [{"id": "vwap"}],
+                {"artifact_id": f"artifact:{rewritten.id}", "sha256": rewritten.sha256},
             )
 
         router.invoke.assert_not_called()
@@ -598,7 +730,8 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         bundle_record = self.store.get_artifact(int(bundle["artifact_id"].split(":")[1]))
         bundle_payload = self.artifacts.read_json(bundle_record)
         for lesson in bundle_payload["lessons"]:
-            lesson["extracted_statement"] = "y" * 10_000
+            if lesson["source_class"] != "official_docs":
+                lesson["extracted_statement"] = "y" * 10_000
         rewritten = self.artifacts.write_json("run-1", WorkflowNode.G, "evidence_lessons.json", bundle_payload)
         bundle = {"artifact_id": f"artifact:{rewritten.id}", "sha256": rewritten.sha256}
         source_ref = bundle_payload["lessons"][0]["source_id"]

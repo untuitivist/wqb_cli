@@ -430,6 +430,7 @@ class EvidenceNodes:
             "paper" in item["missing_sources"] for item in per_keyword.values()
         )
         bundle_value = {
+            "mechanism_keywords": list(keywords),
             "lessons": lessons,
             "coverage": missing_sources,
             "missing_sources": missing_sources,

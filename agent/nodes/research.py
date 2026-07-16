@@ -348,15 +348,24 @@ class ResearchNodes:
         if hashlib.sha256(_canonical(bundle).encode("utf-8")).hexdigest() != bound_hash:
             raise ResearchError("evidence bundle is not canonical")
         if type(bundle) is not dict or set(bundle) != {
-            "lessons", "coverage", "missing_sources", "per_keyword",
+            "mechanism_keywords", "lessons", "coverage", "missing_sources",
+            "per_keyword",
         }:
             raise ResearchError("evidence bundle content is invalid")
+        mechanism_keywords = _mechanism_keywords(bundle["mechanism_keywords"])
+        trusted_keywords = self._completed_evidence_keywords(run_id)
+        if set(mechanism_keywords) != trusted_keywords:
+            raise ResearchError(
+                "mechanism keywords do not match command provenance"
+            )
         raw_lessons = bundle.get("lessons")
         if type(raw_lessons) is not list:
             raise ResearchError("evidence bundle lessons are invalid")
         declared_per_keyword = bundle.get("per_keyword")
         if not isinstance(declared_per_keyword, Mapping):
             raise ResearchError("evidence bundle coverage is invalid")
+        if set(declared_per_keyword) != set(mechanism_keywords):
+            raise ResearchError("evidence bundle mechanism keywords do not match coverage")
         lessons: list[dict[str, Any]] = []
         references: set[str] = set()
         for lesson in raw_lessons:
@@ -384,12 +393,12 @@ class ResearchNodes:
                 or artifact.kind != "json"
             ):
                 raise ResearchError("evidence source belongs to another run or node")
-            self._verify_source_provenance(source_class, artifact)
+            self._verify_source_provenance(source_class, artifact, lesson)
             references.add(source_id)
             lessons.append(dict(lesson))
         try:
             per_keyword = keyword_evidence_coverage(
-                lessons, declared_per_keyword.keys()
+                lessons, mechanism_keywords
             )
         except (EvidenceError, TypeError):
             raise ResearchError("evidence bundle coverage is invalid") from None
@@ -410,7 +419,26 @@ class ResearchNodes:
             )
         return lessons, references
 
-    def _verify_source_provenance(self, source_class: str, artifact: Any) -> None:
+    def _completed_evidence_keywords(self, run_id: str) -> set[str]:
+        list_commands = getattr(self._store, "list_completed_commands", None)
+        if not callable(list_commands):
+            raise ResearchError("evidence command ledger is unavailable")
+        keywords: set[str] = set()
+        for command in list_commands(run_id, WorkflowNode.G):
+            argv = command.argv
+            if len(argv) == 3 and argv[:2] == ("community", "search"):
+                keywords.add(argv[2])
+            elif len(argv) == 2 and argv[:1] == ("search",):
+                keywords.add(argv[1])
+            elif len(argv) == 4 and argv[:3] == (
+                "arxiv", "search", "query"
+            ):
+                keywords.add(argv[3])
+        return keywords
+
+    def _verify_source_provenance(
+        self, source_class: str, artifact: Any, lesson: Mapping[str, Any]
+    ) -> None:
         expected: dict[str, tuple[str, tuple[str, ...]]] = {
             "community": ("_community_search.json", ("community", "search")),
             "official_docs": ("_docs_show.json", ("docs", "show")),
@@ -428,6 +456,34 @@ class ResearchNodes:
             raise ResearchError("evidence source command belongs to another run or node")
         if command.argv[: len(prefix)] != prefix:
             raise ResearchError("evidence source command does not match its source class")
+        applicability = lesson["applicability"]
+        expected_name = {
+            "community": f"{applicability}_community_search.json",
+            "official_docs": f"{applicability}_docs_show.json",
+            "platform": f"{applicability}_platform_search.json",
+            "paper": f"{applicability}_papers.json",
+        }[source_class]
+        if artifact.name != expected_name:
+            raise ResearchError("evidence source does not match lesson applicability")
+        query_index = {"community": 2, "platform": 1, "paper": 3}.get(
+            source_class
+        )
+        if query_index is not None:
+            if (
+                len(command.argv) <= query_index
+                or command.argv[query_index] != applicability
+            ):
+                raise ResearchError(
+                    "evidence applicability does not match source command"
+                )
+            return
+        try:
+            source_payload = self._artifacts.read_json(artifact)
+            statement = _official_docs_statement(source_payload)
+        except Exception:
+            raise ResearchError("official docs evidence content is invalid") from None
+        if statement != lesson["extracted_statement"]:
+            raise ResearchError("official docs lesson does not match source artifact")
 
     def _validated_tasks(self, value: object, version: int, plan_hash: str, mechanisms: dict[str, Mapping[str, Any]], operators: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
         if not isinstance(value, Mapping) or value.get("plan_version") != version or value.get("plan_hash") != plan_hash:
@@ -617,6 +673,39 @@ def _artifact_id(value: object, label: str) -> int:
     if not raw_id.isdigit() or int(raw_id) <= 0:
         raise ResearchError(f"{label} artifact reference is invalid")
     return int(raw_id)
+
+
+def _mechanism_keywords(value: object) -> tuple[str, ...]:
+    if type(value) is not list or not value or len(value) > 8:
+        raise ResearchError("evidence bundle mechanism keywords are invalid")
+    keywords: list[str] = []
+    for keyword in value:
+        if type(keyword) is not str or keyword != keyword.strip().lower():
+            raise ResearchError("evidence bundle mechanism keywords are invalid")
+        if not keyword or keyword in keywords:
+            raise ResearchError("evidence bundle mechanism keywords are invalid")
+        keywords.append(keyword)
+    return tuple(keywords)
+
+
+def _official_docs_statement(payload: object) -> str:
+    if not isinstance(payload, Mapping) or payload.get("ok") is not True:
+        raise ResearchError("official docs evidence content is invalid")
+    body = {key: value for key, value in payload.items() if key != "ok"}
+    rows: list[Mapping[str, Any]] = []
+    for key in ("results", "items", "alphas", "fields", "files", "documents"):
+        value = body.get(key)
+        if isinstance(value, list) and all(isinstance(item, Mapping) for item in value):
+            rows = list(value)
+            break
+    row = rows[0] if rows else body
+    statement = row.get(
+        "extracted_statement",
+        row.get("text", row.get("summary", row.get("title"))),
+    )
+    if type(statement) is not str or not statement.strip():
+        raise ResearchError("official docs evidence content is invalid")
+    return statement.strip()[:2_000]
 
 
 def _reject_expression_keys(value: object) -> None:

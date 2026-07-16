@@ -1458,6 +1458,20 @@ class AgentStore:
             )
         return _command_from_row(row)
 
+    def list_completed_commands(
+        self, run_id: str, node: WorkflowNode
+    ) -> list[CommandLedgerRecord]:
+        """Return completed commands for one run/node in ledger order."""
+        _validate_run_id(run_id)
+        _validate_workflow_node(node)
+        with closing(self.connect()) as connection:
+            rows = connection.execute(
+                "SELECT * FROM command_ledger WHERE run_id = ? AND node = ? "
+                "AND status = 'COMPLETED' ORDER BY id",
+                (run_id, node.value),
+            ).fetchall()
+        return [_command_from_row(row) for row in rows]
+
     def add_candidate(
         self,
         run_id: str,

@@ -1767,6 +1767,167 @@ class AgentStore:
             ).fetchone()
         return None if row is None else _approval_from_row(row)
 
+    def record_rejection(self, run_id: str, reason: str) -> RunRecord:
+        _validate_run_id(run_id)
+        _validate_reason(reason)
+        with self._transaction() as connection:
+            cursor = connection.execute(
+                f"UPDATE runs SET state = ?, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND state = ?",
+                (RunState.REJECTED.value, run_id, RunState.AWAITING_APPROVAL.value),
+            )
+            if cursor.rowcount != 1:
+                if connection.execute(
+                    "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
+                ).fetchone() is None:
+                    raise RunNotFound(run_id)
+                raise StoreConflict(
+                    f"run is not awaiting a rejection decision: {run_id}"
+                )
+            connection.execute(
+                "INSERT INTO state_transitions(run_id, from_state, to_state, reason) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    run_id,
+                    RunState.AWAITING_APPROVAL.value,
+                    RunState.REJECTED.value,
+                    reason,
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            return _run_from_row(row)
+
+    def begin_approved_submission(
+        self,
+        run_id: str,
+        approval_id: int,
+        alpha_id: str,
+        report_hash: str,
+    ) -> RunRecord:
+        _validate_run_id(run_id)
+        _validate_positive_integer(approval_id, "approval_id")
+        _validate_nonblank_string(alpha_id, "alpha_id")
+        _validate_nonblank_string(report_hash, "report_hash")
+        with self._transaction() as connection:
+            approval = connection.execute(
+                "SELECT 1 FROM approvals WHERE id = ? AND run_id = ? "
+                "AND alpha_id = ? AND report_hash = ? AND decision = 'APPROVED' "
+                "AND consumed_at IS NULL",
+                (approval_id, run_id, alpha_id, report_hash),
+            ).fetchone()
+            if approval is None:
+                raise StoreConflict("approval subject is missing, changed, or consumed")
+            cursor = connection.execute(
+                f"UPDATE runs SET state = ?, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND state = ?",
+                (RunState.RUNNING.value, run_id, RunState.AWAITING_APPROVAL.value),
+            )
+            if cursor.rowcount != 1:
+                if connection.execute(
+                    "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
+                ).fetchone() is None:
+                    raise RunNotFound(run_id)
+                raise StoreConflict(f"run is not awaiting approval: {run_id}")
+            connection.execute(
+                "INSERT INTO state_transitions(run_id, from_state, to_state, reason) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    run_id,
+                    RunState.AWAITING_APPROVAL.value,
+                    RunState.RUNNING.value,
+                    _canonical_json(
+                        {
+                            "event": "approved_submission_started",
+                            "approval_id": approval_id,
+                            "alpha_id": alpha_id,
+                            "report_hash": report_hash,
+                        }
+                    ),
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            return _run_from_row(row)
+
+    def consume_approval_and_finish_submission(
+        self,
+        run_id: str,
+        approval_id: int,
+        alpha_id: str,
+        report_hash: str,
+        submit_result: dict[str, Any],
+    ) -> RunRecord:
+        _validate_run_id(run_id)
+        _validate_positive_integer(approval_id, "approval_id")
+        _validate_nonblank_string(alpha_id, "alpha_id")
+        _validate_nonblank_string(report_hash, "report_hash")
+        result_json = _validated_json_object(submit_result, "submit_result")
+        begin_reason = _canonical_json(
+            {
+                "event": "approved_submission_started",
+                "approval_id": approval_id,
+                "alpha_id": alpha_id,
+                "report_hash": report_hash,
+            }
+        )
+        with self._transaction() as connection:
+            approval_cursor = connection.execute(
+                f"UPDATE approvals SET consumed_at = ({_NOW_SQL}) "
+                "WHERE id = ? AND run_id = ? AND alpha_id = ? AND report_hash = ? "
+                "AND decision = 'APPROVED' AND consumed_at IS NULL "
+                "AND EXISTS (SELECT 1 FROM runs WHERE run_id = ? AND state = ?) "
+                "AND EXISTS (SELECT 1 FROM state_transitions "
+                "WHERE run_id = ? AND from_state = ? AND to_state = ? AND reason = ?)",
+                (
+                    approval_id,
+                    run_id,
+                    alpha_id,
+                    report_hash,
+                    run_id,
+                    RunState.RUNNING.value,
+                    run_id,
+                    RunState.AWAITING_APPROVAL.value,
+                    RunState.RUNNING.value,
+                    begin_reason,
+                ),
+            )
+            if approval_cursor.rowcount != 1:
+                raise StoreConflict(
+                    "submission is not running or approval subject was already consumed"
+                )
+            run_cursor = connection.execute(
+                f"UPDATE runs SET state = ?, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND state = ?",
+                (RunState.SUBMITTED.value, run_id, RunState.RUNNING.value),
+            )
+            if run_cursor.rowcount != 1:
+                raise StoreConflict(f"submission run state changed concurrently: {run_id}")
+            connection.execute(
+                "INSERT INTO state_transitions(run_id, from_state, to_state, reason) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    run_id,
+                    RunState.RUNNING.value,
+                    RunState.SUBMITTED.value,
+                    _canonical_json(
+                        {
+                            "event": "submission_finished",
+                            "approval_id": approval_id,
+                            "alpha_id": alpha_id,
+                            "report_hash": report_hash,
+                            "submit_result": json.loads(result_json),
+                        }
+                    ),
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            return _run_from_row(row)
+
     def add_experience(
         self, run_id: str, payload: dict[str, Any]
     ) -> ExperienceRecord:

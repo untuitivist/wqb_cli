@@ -7,6 +7,7 @@ from typing import Any
 from .core.auth import resolve_login_payload, save_cookie_payload, session_from_cookies
 from .core.client import WqbClient
 from .commands.account import add_account_parser, handle_account
+from .commands.agent import add_agent_parser, handle_agent
 from .commands.alpha import add_alpha_parser, handle_alpha
 from .commands.competition import add_competition_parser, handle_competition
 from .commands.config import add_config_parser, handle_config
@@ -73,6 +74,7 @@ def build_parser() -> argparse.ArgumentParser:
     for name in ["brainlabs", "persona", "support", "workday"]:
         auth_sub.add_parser(name, help=f"GET /authentication/{name}")
     add_account_parser(sub)
+    add_agent_parser(sub)
     add_alpha_parser(sub)
     add_competition_parser(sub)
     add_config_parser(sub)
@@ -216,6 +218,8 @@ def main(argv: list[str] | None = None) -> None:
     try:
         if args.command == "api":
             code = handle_api(args)
+        elif args.command == "agent":
+            code = handle_agent(args)
         elif args.command == "account":
             code = handle_account(args, load_registry(args))
         elif args.command == "auth":

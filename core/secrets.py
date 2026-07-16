@@ -40,3 +40,15 @@ def get_named_secret(secret_name: str, service: str = "wqb-cli") -> str | None:
     if not service.strip():
         raise ValueError("service must be nonblank")
     return get_secret(service, secret_name)
+
+
+def set_named_secret(
+    secret_name: str, value: str, service: str = "wqb-cli"
+) -> dict[str, Any]:
+    if type(secret_name) is not str or not secret_name.strip():
+        raise ValueError("secret_name must be nonblank")
+    if type(value) is not str or not value:
+        raise ValueError("secret value must be nonblank")
+    if type(service) is not str or not service.strip():
+        raise ValueError("service must be nonblank")
+    return set_secret(service, secret_name, value)

@@ -31,6 +31,17 @@ def run_wqb(*args: str) -> subprocess.CompletedProcess[str]:
 
 
 class CliSmokeTests(unittest.TestCase):
+    def test_agent_help_exposes_safe_workflow_commands(self) -> None:
+        result = run_wqb("agent", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for name in ["run", "resume", "status", "approve", "reject", "history", "models", "eval"]:
+            self.assertIn(name, result.stdout)
+
+    def test_agent_models_set_key_has_no_secret_argument(self) -> None:
+        result = run_wqb("agent", "models", "set-key", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("--api-key", result.stdout)
+
     def test_top_level_help_smoke(self) -> None:
         result = run_wqb("--help")
         self.assertEqual(result.returncode, 0, result.stderr)

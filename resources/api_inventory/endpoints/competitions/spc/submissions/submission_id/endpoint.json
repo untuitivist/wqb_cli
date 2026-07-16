@@ -1,0 +1,119 @@
+{
+  "path": "/competitions/spc/submissions/{submission_id}",
+  "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions/{submission_id}",
+  "methods": [
+    "GET",
+    "PUT",
+    "PATCH"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "Read SPC submission weight history or replace/partially update a prompt submission.",
+  "safe_probe": false,
+  "params": {
+    "limit": "optional integer; weight-history pagination size",
+    "offset": "optional integer; weight-history pagination offset"
+  },
+  "request_body": {
+    "PUT": "Full submission object using the POST fields from /competitions/spc/submissions.",
+    "PATCH": {
+      "partial": true,
+      "frontend_observed_body": {
+        "weight": "decimal from 0 to 1"
+      }
+    }
+  },
+  "notes": [
+    "Authentication is required.",
+    "GET returns a paginated weight history with date and weight fields, not the collection's submission object.",
+    "PUT and PATCH mutate remote state and were not executed during inventory validation.",
+    "DELETE is not advertised by the current Allow header."
+  ],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/competitions/spc/submissions/{redacted}?limit=1&offset=0",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "null",
+      "previous": "null",
+      "results": [
+        {
+          "date": "str",
+          "weight": "float"
+        }
+      ]
+    },
+    "response_sample": null,
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 240
+  },
+  "test_results": [
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "GET",
+      "resolved_path": "/competitions/spc/submissions/{redacted}",
+      "url": "https://api.worldquantbrain.com/competitions/spc/submissions/{redacted}?limit=1&offset=0",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 240,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "date": "str",
+            "weight": "float"
+          }
+        ]
+      },
+      "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "PUT",
+      "resolved_path": "/competitions/spc/submissions/{redacted}",
+      "url": "https://api.worldquantbrain.com/competitions/spc/submissions/{redacted}",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "PUT replaces a remote SPC submission; not executed during inventory validation."
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "PATCH",
+      "resolved_path": "/competitions/spc/submissions/{redacted}",
+      "url": "https://api.worldquantbrain.com/competitions/spc/submissions/{redacted}",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "PATCH updates a remote SPC submission; not executed during inventory validation."
+    }
+  ]
+}

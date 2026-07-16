@@ -1,7 +1,7 @@
 # Endpoint CLI Examples
 
-- Generated at: `2026-05-19T19:25:00.337597+00:00`
-- Method cases: `126`
+- Generated at: `2026-07-16T08:57:52+00:00`
+- Method cases: `134`
 - Failures: `0`
 
 每个 endpoint method 的示例产物位于对应 `api_inventory/endpoints/.../examples/<METHOD>/` 目录。
@@ -45,8 +45,14 @@
 | `GET` | `/competition-levels/{competition_level_id}/icon` | `api_inventory\endpoints\competition-levels\competition_level_id\icon\examples\GET` | `ok` |
 | `GET` | `/competitions` | `api_inventory\endpoints\competitions\examples\GET` | `ok` |
 | `GET` | `/competitions/{competition_id}` | `api_inventory\endpoints\competitions\competition_id\examples\GET` | `ok` |
+| `GET` | `/competitions/{competition_id}/boards/{board_type}` | `api_inventory\endpoints\competitions\competition_id\boards\board_type\examples\GET` | `ok` |
 | `GET` | `/competitions/{competition_id}/agreement` | `api_inventory\endpoints\competitions\competition_id\agreement\examples\GET` | `ok` |
 | `POST` | `/competitions/{competition_id}/agreement` | `api_inventory\endpoints\competitions\competition_id\agreement\examples\POST` | `ok` |
+| `GET` | `/competitions/spc/submissions` | `api_inventory\endpoints\competitions\spc\submissions\examples\GET` | `ok` |
+| `POST` | `/competitions/spc/submissions` | `api_inventory\endpoints\competitions\spc\submissions\examples\POST` | `ok` |
+| `GET` | `/competitions/spc/submissions/{submission_id}` | `api_inventory\endpoints\competitions\spc\submissions\submission_id\examples\GET` | `ok` |
+| `PATCH` | `/competitions/spc/submissions/{submission_id}` | `api_inventory\endpoints\competitions\spc\submissions\submission_id\examples\PATCH` | `ok` |
+| `PUT` | `/competitions/spc/submissions/{submission_id}` | `api_inventory\endpoints\competitions\spc\submissions\submission_id\examples\PUT` | `ok` |
 | `GET` | `/configuration` | `api_inventory\endpoints\configuration\examples\GET` | `ok` |
 | `GET` | `/consultant` | `api_inventory\endpoints\consultant\examples\GET` | `ok` |
 | `GET` | `/consultant-datasets` | `api_inventory\endpoints\consultant-datasets\examples\GET` | `ok` |
@@ -58,6 +64,8 @@
 | `GET` | `/consultant-program/{language}` | `api_inventory\endpoints\consultant-program\language\examples\GET` | `ok` |
 | `GET` | `/consultant/boards` | `api_inventory\endpoints\consultant\boards\examples\GET` | `ok` |
 | `GET` | `/consultant/boards/leader` | `api_inventory\endpoints\consultant\boards\leader\examples\GET` | `ok` |
+| `GET` | `/consultant/boards/spc` | `api_inventory\endpoints\consultant\boards\spc\examples\GET` | `ok` |
+| `GET` | `/consultant/boards/{board_type}` | `api_inventory\endpoints\consultant\boards\board_type\examples\GET` | `ok` |
 | `GET` | `/consultant/summary` | `api_inventory\endpoints\consultant\summary\examples\GET` | `ok` |
 | `GET` | `/data-categories` | `api_inventory\endpoints\data-categories\examples\GET` | `ok` |
 | `GET` | `/data-fields` | `api_inventory\endpoints\data-fields\examples\GET` | `ok` |

@@ -1,10 +1,10 @@
 # Endpoint Test Results
 
-- Generated at: `2026-05-18T16:59:08.029823+00:00`
-- Endpoint count: `104`
-- Method cases: `126`
-- Executed safe cases: `105`
-- Skipped mutating cases: `21`
+- Generated at: `2026-07-16T08:57:52+00:00`
+- Endpoint count: `109`
+- Method cases: `134`
+- Executed safe cases: `110`
+- Skipped mutating cases: `24`
 - Skipped missing-sample cases: `0`
 - Errors: `0`
 
@@ -45,6 +45,101 @@
   }
 ]
 ```
+
+### `GET /competitions/{competition_id}/boards/{board_type}`
+
+- Status: `tested`
+- Tested path: `/competitions/PAC2026/boards/leader`
+- HTTP: `200 OK`
+- Elapsed: `416 ms`
+- Content-Type: `application/json`
+- Allow: `GET, HEAD, OPTIONS`
+
+```json
+{
+  "count": "int",
+  "next": "str",
+  "previous": "null",
+  "results": [
+    {
+      "rank": "int",
+      "user": "str",
+      "alphas": "int",
+      "score": "float",
+      "isScore": "float",
+      "osScore": "float",
+      "university": "str",
+      "country": "str"
+    }
+  ]
+}
+```
+
+### `GET /competitions/spc/submissions`
+
+- Status: `tested`
+- Tested path: `/competitions/spc/submissions?limit=1&offset=0`
+- HTTP: `200 OK`
+- Elapsed: `243 ms`
+- Content-Type: `application/json`
+- Allow: `GET, POST, HEAD, OPTIONS`
+- Response sample omitted because it contains user-authored prompts.
+
+### `POST /competitions/spc/submissions`
+
+- Status: `skipped_mutating`
+- Reason: creates a remote SPC submission
+
+### `GET /competitions/spc/submissions/{submission_id}`
+
+- Status: `tested`
+- Tested path: `/competitions/spc/submissions/{redacted}?limit=1&offset=0`
+- HTTP: `200 OK`
+- Elapsed: `240 ms`
+- Content-Type: `application/json`
+- Allow: `GET, PUT, PATCH, HEAD, OPTIONS`
+
+```json
+{
+  "count": "int",
+  "next": "null",
+  "previous": "null",
+  "results": [
+    {
+      "date": "str",
+      "weight": "float"
+    }
+  ]
+}
+```
+
+### `PUT /competitions/spc/submissions/{submission_id}`
+
+- Status: `skipped_mutating`
+- Reason: replaces a remote SPC submission
+
+### `PATCH /competitions/spc/submissions/{submission_id}`
+
+- Status: `skipped_mutating`
+- Reason: updates a remote SPC submission
+
+### `GET /consultant/boards/{board_type}`
+
+- Status: `tested`
+- Tested path: `/consultant/boards/spc?limit=1&offset=0`
+- HTTP: `200 OK`
+- Elapsed: `693 ms`
+- Content-Type: `application/json`
+- Allow: `GET, HEAD, OPTIONS`
+
+### `GET /consultant/boards/spc`
+
+- Status: `tested`
+- Tested path: `/consultant/boards/spc?limit=1&offset=0`
+- HTTP: `200 OK`
+- Elapsed: `693 ms`
+- Content-Type: `application/json`
+- Allow: `GET, HEAD, OPTIONS`
 
 ### `GET /achievements/{achievement_id}/icon`
 

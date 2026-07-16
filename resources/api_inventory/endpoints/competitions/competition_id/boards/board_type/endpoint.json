@@ -1,0 +1,105 @@
+{
+  "path": "/competitions/{competition_id}/boards/{board_type}",
+  "url_template": "https://api.worldquantbrain.com/competitions/{competition_id}/boards/{board_type}",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "Generic competition leaderboard. Use OPTIONS to discover the fields, filters, and aggregations available for a competition and board type.",
+  "safe_probe": false,
+  "params": {
+    "limit": "optional integer; pagination size",
+    "offset": "optional integer; pagination offset",
+    "aggregate": "optional choice returned by OPTIONS, commonly user or team",
+    "order": "optional field name; prefix with - for descending order",
+    "property": "optional field selected for prefix filtering",
+    "<property>~": "optional prefix filter; supported properties are returned by OPTIONS",
+    "board": "optional board period or region where advertised by OPTIONS"
+  },
+  "request_body": null,
+  "notes": [
+    "Authentication is required.",
+    "Common frontend board types are leader, university, prize, referral, and power-pool; availability varies by competition.",
+    "Consultant leaderboards use the separate generic path /consultant/boards/{board_type}."
+  ],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/competitions/PAC2026/boards/leader?limit=1&offset=0",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "null",
+      "results": [
+        {
+          "rank": "int",
+          "user": "str",
+          "alphas": "int",
+          "score": "float",
+          "isScore": "float",
+          "osScore": "float",
+          "university": "str",
+          "country": "str"
+        }
+      ]
+    },
+    "response_sample": null,
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 416
+  },
+  "test_results": [
+    {
+      "path": "/competitions/{competition_id}/boards/{board_type}",
+      "method": "GET",
+      "resolved_path": "/competitions/PAC2026/boards/leader",
+      "url": "https://api.worldquantbrain.com/competitions/PAC2026/boards/leader?limit=1&offset=0",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 416,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "rank": "int",
+            "user": "str",
+            "alphas": "int",
+            "score": "float",
+            "isScore": "float",
+            "osScore": "float",
+            "university": "str",
+            "country": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

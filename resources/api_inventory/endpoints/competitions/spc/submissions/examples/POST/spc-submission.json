@@ -1,0 +1,9 @@
+{
+  "name": "Example prompt",
+  "prompt": "Return the required JSON prediction object.",
+  "sampleOutput": "{\"prediction\": 0.0}",
+  "model": "gpt",
+  "modelVersion": "replace-with-exact-version",
+  "weight": 0.25,
+  "updateFrequency": "weekly"
+}

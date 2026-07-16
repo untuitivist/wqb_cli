@@ -1,7 +1,7 @@
 # WQB CLI API 使用文档
 
 - Generated at: `2026-05-18T17:45:12.523838+00:00`
-- Endpoint count: `104`
+- Endpoint count: `109`
 - 所有 endpoint 都支持 `api show` 和 `api call`。
 - `GET/HEAD/OPTIONS/POST/PATCH/PUT/DELETE` 都会直接发送请求。
 - 参数既可命令行传入，也可用 `--input request.json` 传入。
@@ -64,7 +64,10 @@ python -m wqb_cli auth status
 - `/competition-levels/{competition_level_id}/icon` -> `cli_docs/competition-levels/competition_level_id/icon/usage.md`
 - `/competitions` -> `cli_docs/competitions/usage.md`
 - `/competitions/{competition_id}` -> `cli_docs/competitions/competition_id/usage.md`
+- `/competitions/{competition_id}/boards/{board_type}` -> `cli_docs/competitions/competition_id/boards/board_type/usage.md`
 - `/competitions/{competition_id}/agreement` -> `cli_docs/competitions/competition_id/agreement/usage.md`
+- `/competitions/spc/submissions` -> `cli_docs/competitions/spc/submissions/usage.md`
+- `/competitions/spc/submissions/{submission_id}` -> `cli_docs/competitions/spc/submissions/submission_id/usage.md`
 - `/configuration` -> `cli_docs/configuration/usage.md`
 - `/consultant` -> `cli_docs/consultant/usage.md`
 - `/consultant-datasets` -> `cli_docs/consultant-datasets/usage.md`
@@ -76,6 +79,8 @@ python -m wqb_cli auth status
 - `/consultant-program/{language}` -> `cli_docs/consultant-program/language/usage.md`
 - `/consultant/boards` -> `cli_docs/consultant/boards/usage.md`
 - `/consultant/boards/leader` -> `cli_docs/consultant/boards/leader/usage.md`
+- `/consultant/boards/spc` -> `cli_docs/consultant/boards/spc/usage.md`
+- `/consultant/boards/{board_type}` -> `cli_docs/consultant/boards/board_type/usage.md`
 - `/consultant/summary` -> `cli_docs/consultant/summary/usage.md`
 - `/data-categories` -> `cli_docs/data-categories/usage.md`
 - `/data-fields` -> `cli_docs/data-fields/usage.md`

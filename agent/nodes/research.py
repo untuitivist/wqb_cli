@@ -54,7 +54,9 @@ def validate_mechanism_fields(
         unresolved = sorted(references - evidence)
         if unresolved:
             raise ResearchError(f"mechanism evidence is not resolvable: {unresolved[0]}")
-        tower_id = item.get("tower_id", current_tower)
+        tower_id = item.get("tower_id")
+        if type(tower_id) is not str or not tower_id.strip():
+            raise ResearchError("mechanism must explicitly reference the current tower")
         if tower_id != current_tower:
             raise ResearchError("mechanism references a different current tower")
         record = dict(item)
@@ -88,7 +90,6 @@ class ResearchNodes:
         lessons: list[Mapping[str, Any]],
     ) -> NodeResult:
         normalized_scope = _scope(scope)
-        field_records, field_artifacts = self._field_metadata(run_id, candidate_fields)
         coverage = evidence_coverage(lessons)
         if not coverage.complete:
             raise ResearchError(f"research plan requires evidence coverage: {', '.join(coverage.missing_sources)}")
@@ -96,7 +97,8 @@ class ResearchNodes:
             for key in ("source_id", "extracted_statement", "applicability"):
                 if type(lesson.get(key)) is not str or not lesson[key].strip():
                     raise ResearchError(f"evidence lesson has invalid {key}")
-        evidence_refs = {str(lesson.get("source_id")) for lesson in lessons}
+        evidence_refs = self._verified_evidence_refs(run_id, lessons)
+        field_records, field_artifacts = self._field_metadata(run_id, candidate_fields)
         field_ids = {record["id"] for record in field_records}
         planner = self._invoke(
             ModelRole.PLANNER, WorkflowNode.H,
@@ -135,17 +137,67 @@ class ResearchNodes:
         )
         candidate_plan = planner.get("candidate_plan")
         tasks = self._validated_tasks(candidate_plan, plan_record.plan_version, plan_record.plan_hash, mechanisms, operators)
+        accepted: list[dict[str, Any]] = []
+        rejected: list[dict[str, Any]] = []
+        task_ids: list[str] = []
         for task in tasks:
-            self._store.record_operator_task(run_id, task["task_id"], plan_record.plan_version, task)
-        task = tasks[0]
+            task_id = task["task_id"]
+            task_ids.append(task_id)
+            self._store.record_operator_task(
+                run_id, task_id, plan_record.plan_version, task
+            )
+            try:
+                task_accepted, task_rejected = self._run_operator_task(
+                    run_id,
+                    normalized_scope,
+                    plan_record.plan_version,
+                    plan_record.plan_hash,
+                    task,
+                    operators,
+                    allow_revalidation,
+                )
+            except Exception as error:
+                self._store.complete_operator_task(
+                    run_id, task_id, "FAILED", {"error": type(error).__name__}
+                )
+                raise
+            accepted.extend(task_accepted)
+            rejected.extend(task_rejected)
+            self._store.complete_operator_task(
+                run_id,
+                task_id,
+                "COMPLETED",
+                {"accepted": task_accepted, "rejected": task_rejected},
+            )
+        artifacts = self._write_json(run_id, WorkflowNode.I, "candidate_materialization.json", {"plan_version": plan_record.plan_version, "plan_hash": plan_record.plan_hash, "task_ids": task_ids, "accepted": accepted, "rejected": rejected})
+        new_fingerprints = [
+            item["fingerprint"]
+            for item in accepted
+            if not item.get("current_run_existing")
+        ]
+        return NodeResult(WorkflowNode.I, {"accepted": len(accepted), "rejected": len(rejected), "task_ids": task_ids}, artifacts, next_node=WorkflowNode.J, payload={"accepted": accepted, "rejected": rejected, "new_fingerprints": new_fingerprints, "plan_version": plan_record.plan_version, "plan_hash": plan_record.plan_hash})
+
+    def _run_operator_task(
+        self,
+        run_id: str,
+        scope: dict[str, Any],
+        plan_version: int,
+        plan_hash: str,
+        task: dict[str, Any],
+        operators: Mapping[str, Mapping[str, object]],
+        allow_revalidation: bool,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         operator = self._invoke(
-            ModelRole.OPERATOR, WorkflowNode.I,
+            ModelRole.OPERATOR,
+            WorkflowNode.I,
             "Materialize FASTEXPR candidates for exactly this one task. Return no plan, scope, settings, commands, or additional task.",
-            {"plan_version": plan_record.plan_version, "plan_hash": plan_record.plan_hash, "task": task},
+            {"plan_version": plan_version, "plan_hash": plan_hash, "task": task},
         )
         payload = operator.get("task_result")
-        if not isinstance(payload, Mapping) or payload.get("status") != "COMPLETED" or not isinstance(payload.get("payload"), Mapping):
+        if not isinstance(payload, Mapping) or not isinstance(payload.get("payload"), Mapping):
             raise ResearchError("operator candidate task is invalid")
+        if payload.get("status") != "COMPLETED":
+            raise ResearchError("operator candidate task did not complete")
         content = payload["payload"]
         if any(key in content for key in ("plan_version", "plan_hash", "scope", "settings", "commands")):
             raise ResearchError("operator cannot modify the locked plan or scope")
@@ -155,11 +207,17 @@ class ResearchNodes:
         accepted: list[dict[str, Any]] = []
         rejected: list[dict[str, Any]] = []
         for raw in raw_candidates:
-            self._materialize_candidate(run_id, normalized_scope, task, raw, operators, allow_revalidation, accepted, rejected)
-        self._store.complete_operator_task(run_id, task["task_id"], "COMPLETED", {"accepted": accepted, "rejected": rejected})
-        artifacts = self._write_json(run_id, WorkflowNode.I, "candidate_materialization.json", {"plan_version": plan_record.plan_version, "plan_hash": plan_record.plan_hash, "task_id": task["task_id"], "accepted": accepted, "rejected": rejected})
-        new_fingerprints = [item["fingerprint"] for item in accepted if not item.get("revalidated")]
-        return NodeResult(WorkflowNode.I, {"accepted": len(accepted), "rejected": len(rejected), "task_id": task["task_id"]}, artifacts, next_node=WorkflowNode.J, payload={"accepted": accepted, "rejected": rejected, "new_fingerprints": new_fingerprints, "plan_version": plan_record.plan_version, "plan_hash": plan_record.plan_hash})
+            self._materialize_candidate(
+                run_id,
+                scope,
+                task,
+                raw,
+                operators,
+                allow_revalidation,
+                accepted,
+                rejected,
+            )
+        return accepted, rejected
 
     def _field_metadata(self, run_id: str, fields: list[Mapping[str, Any]] | list[str]) -> tuple[list[dict[str, Any]], tuple[str, ...]]:
         result: list[dict[str, Any]] = []
@@ -194,6 +252,26 @@ class ResearchNodes:
             raise ResearchError("candidate field metadata is empty")
         return result, tuple(artifact_ids)
 
+    def _verified_evidence_refs(
+        self, run_id: str, lessons: list[Mapping[str, Any]]
+    ) -> set[str]:
+        references: set[str] = set()
+        for lesson in lessons:
+            source_id = lesson["source_id"]
+            if not source_id.startswith("artifact:"):
+                raise ResearchError("evidence artifact reference is invalid")
+            raw_id = source_id.removeprefix("artifact:")
+            if not raw_id.isdigit() or int(raw_id) <= 0:
+                raise ResearchError("evidence artifact reference is invalid")
+            try:
+                artifact = self._store.get_artifact(int(raw_id))
+            except StoreRecordNotFound:
+                raise ResearchError("evidence artifact is missing") from None
+            if artifact.run_id != run_id or artifact.node is not WorkflowNode.G:
+                raise ResearchError("evidence artifact belongs to another run or node")
+            references.add(source_id)
+        return references
+
     def _validated_tasks(self, value: object, version: int, plan_hash: str, mechanisms: dict[str, Mapping[str, Any]], operators: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
         if not isinstance(value, Mapping) or value.get("plan_version") != version or value.get("plan_hash") != plan_hash:
             raise ResearchError("candidate plan does not match locked plan version/hash")
@@ -201,6 +279,7 @@ class ResearchNodes:
         if not isinstance(raw_tasks, list) or not raw_tasks:
             raise ResearchError("candidate plan requires tasks")
         tasks: list[dict[str, Any]] = []
+        total_count = 0
         seen: set[str] = set()
         for raw in raw_tasks:
             if not isinstance(raw, Mapping):
@@ -215,6 +294,9 @@ class ResearchNodes:
                 raise ResearchError("candidate task mechanism is invalid")
             if type(count) is not int or not 1 <= count <= 8:
                 raise ResearchError("candidate task count is invalid")
+            total_count += count
+            if total_count > 8:
+                raise ResearchError("candidate plan exceeds the per-round candidate budget")
             permitted = _names(raw.get("permitted_fields"), "permitted_fields")
             allowed = _names(mechanisms[mechanism_id].get("field_ids"), "mechanism field_ids")
             if not permitted or not permitted <= allowed:
@@ -246,16 +328,18 @@ class ResearchNodes:
             self._reject(run_id, raw, str(error), rejected)
             return
         fingerprint = validated.fingerprint
-        duplicate = self._existing_fingerprint(run_id, fingerprint) or self._experience_fingerprint(scope, fingerprint)
-        if duplicate and not allow_revalidation:
+        current_duplicate = self._existing_fingerprint(run_id, fingerprint)
+        experience_duplicate = self._experience_fingerprint(scope, fingerprint)
+        if (current_duplicate or experience_duplicate) and not allow_revalidation:
             self._reject(run_id, raw, "duplicate_fingerprint", rejected, fingerprint=fingerprint)
             return
-        if duplicate:
-            accepted.append({"fingerprint": fingerprint, "candidate": dict(raw), "revalidated": True})
+        if current_duplicate:
+            accepted.append({"fingerprint": fingerprint, "candidate": dict(raw), "revalidated": True, "current_run_existing": True})
             return
         record = {"expression": validated.canonical_expression, "field_id": raw["field_id"], "single_mechanism": True, "plan_version": task["plan_version"], "plan_hash": task["plan_hash"], "mechanism_id": task["mechanism_id"]}
-        self._store.add_candidate(run_id, fingerprint, record, status="ACCEPTED")
-        accepted.append({"fingerprint": fingerprint, "candidate": record})
+        status = "REVALIDATED" if experience_duplicate else "ACCEPTED"
+        self._store.add_candidate(run_id, fingerprint, record, status=status)
+        accepted.append({"fingerprint": fingerprint, "candidate": record, "revalidated": experience_duplicate})
 
     def _existing_fingerprint(self, run_id: str, fingerprint: str) -> bool:
         try:

@@ -14,6 +14,7 @@ from wqb_cli.agent.nodes.evidence import (
     screen_fields,
 )
 from wqb_cli.agent.nodes.research import ResearchNodes, validate_mechanism_fields
+from wqb_cli.agent.expressions import fingerprint_expression
 from wqb_cli.agent.store import AgentStore
 from wqb_cli.agent.types import RunConfig, WorkflowNode
 
@@ -60,6 +61,13 @@ class EvidenceResearchNodeTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
+    def register_evidence(self, *, run_id: str = "run-1", node: WorkflowNode = WorkflowNode.G) -> None:
+        for index in range(1, 5):
+            self.store.add_artifact(
+                run_id, node, f"evidence-{index}.json",
+                Path(self.temp.name) / f"evidence-{index}.json", f"{index:064x}",
+            )
+
     def test_f_bans_fields_already_used_in_target_tower(self) -> None:
         result = screen_fields(
             platform_fields=[
@@ -98,6 +106,10 @@ class EvidenceResearchNodeTests(unittest.TestCase):
 
     def test_f_missing_local_data_returns_typed_failure_without_model(self) -> None:
         runner = Mock()
+        runner.run.return_value = SimpleNamespace(
+            payload=local_payload(info_data={"exists": False}, all_data={"exists": False}),
+            artifact=SimpleNamespace(id=1),
+        )
         router = Mock()
         result = EvidenceNodes(runner=runner, router=router, store=self.store).run_f(
             "run-1", self.scope, {"alpha_id": "tower-1", "code": "rank(volume)"},
@@ -106,18 +118,20 @@ class EvidenceResearchNodeTests(unittest.TestCase):
 
         self.assertEqual(result.summary["failure_class"], DATA_SOURCE_MISSING)
         self.assertTrue(result.summary["setup_paths"])
-        runner.run.assert_not_called()
+        runner.run.assert_called_once_with(
+            "run-1", WorkflowNode.F, ("scope", "files"), "scope_files.json"
+        )
         router.invoke.assert_not_called()
 
     def test_f_collects_authoritative_field_pool_before_models(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
             SimpleNamespace(payload=local_payload(info_data={"exists": True}, all_data={"exists": True}), artifact=SimpleNamespace(id=1)),
-            SimpleNamespace(payload=local_payload(scopes=["USA_1"]), artifact=SimpleNamespace(id=2)),
+            SimpleNamespace(payload=local_payload(scopes=[{"scope": "USA_1", "region": "USA", "delay": 1}]), artifact=SimpleNamespace(id=2)),
             SimpleNamespace(payload=local_payload(scope="USA_1", summary={}), artifact=SimpleNamespace(id=3)),
             SimpleNamespace(payload=local_payload(scope="USA_1", results=[]), artifact=SimpleNamespace(id=4)),
-            SimpleNamespace(payload=envelope({"count": 2, "results": [{"id": "volume", "dataset": {"id": "pv"}}, {"id": "vwap", "dataset": {"id": "pv"}}]}), artifact=SimpleNamespace(id=5)),
-            SimpleNamespace(payload=envelope({"count": 1, "results": [{"id": "pv"}]}), artifact=SimpleNamespace(id=6)),
+            SimpleNamespace(payload=envelope({"count": 2, "results": [{"id": "volume", "dataset": {"id": "base-price"}}, {"id": "vwap", "dataset": {"id": "pv"}}]}), artifact=SimpleNamespace(id=5)),
+            SimpleNamespace(payload=envelope({"count": 2, "results": [{"id": "base-price"}, {"id": "pv"}]}), artifact=SimpleNamespace(id=6)),
             SimpleNamespace(payload=envelope({"results": []}), artifact=SimpleNamespace(id=7)),
             SimpleNamespace(payload=envelope({"results": []}), artifact=SimpleNamespace(id=8)),
         ]
@@ -134,21 +148,20 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         self.assertEqual(result.next_node, WorkflowNode.G)
         self.assertEqual(result.payload["candidate_fields"], ["vwap"])
         self.assertIn("volume", result.payload["banned_fields"])
+        self.assertEqual(result.payload["base_price_volume_fields"], ["volume"])
+        self.assertEqual(result.payload["used_dataset_ids"], ["base-price"])
         self.assertEqual(router.invoke.call_args_list[0].args[0].role.value, "operator")
         self.assertEqual(router.invoke.call_args_list[1].args[0].role.value, "planner")
         self.assertEqual(runner.run.call_args_list[2].args[2], ("scope", "show", "USA_1"))
         self.assertEqual(
             runner.run.call_args_list[3].args[2],
-            ("scope", "top", "USA_1", "--group", "datafield", "--metric", "fitness_ratio", "--ascending"),
+            ("scope", "top", "USA_1", "--group", "datafield", "--min-count", "5", "--limit", "100"),
         )
 
     def test_f_scope_without_data_all_returns_typed_failure_before_model(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
             SimpleNamespace(payload=local_payload(info_data={"exists": False}, all_data={"exists": False}), artifact=SimpleNamespace(id=1)),
-            SimpleNamespace(payload=local_payload(scopes=[]), artifact=SimpleNamespace(id=2)),
-            SimpleNamespace(payload=local_payload(scope="USA_1", summary={}), artifact=SimpleNamespace(id=3)),
-            SimpleNamespace(payload=local_payload(scope="USA_1", results=[]), artifact=SimpleNamespace(id=4)),
         ]
         router = Mock()
 
@@ -157,15 +170,31 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         )
 
         self.assertEqual(result.summary["failure_class"], DATA_SOURCE_MISSING)
-        self.assertIn("local/data_all", result.summary["setup_paths"])
-        self.assertEqual(runner.run.call_count, 4)
+        self.assertIn("local/data_all/info_data.bin", result.summary["setup_paths"])
+        self.assertEqual(runner.run.call_count, 1)
+        router.invoke.assert_not_called()
+
+    def test_f_file_not_found_payload_returns_typed_failure_immediately(self) -> None:
+        runner = Mock()
+        runner.run.return_value = SimpleNamespace(
+            payload={"ok": False, "reason": "scope_info_file_not_found", "path": "local/data_all/info_data.bin"},
+            artifact=SimpleNamespace(id=1),
+        )
+        router = Mock()
+
+        result = EvidenceNodes(runner=runner, router=router, store=self.store).run_f(
+            "run-1", self.scope, {"alpha_id": "tower-1", "regular": {"code": "rank(volume)"}},
+        )
+
+        self.assertEqual(result.summary["failure_class"], DATA_SOURCE_MISSING)
+        runner.run.assert_called_once()
         router.invoke.assert_not_called()
 
     def test_f_uses_paginated_scope_fallback_only_after_empty_tag_search(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
             SimpleNamespace(payload=local_payload(info_data={"exists": True}, all_data={"exists": True}), artifact=SimpleNamespace(id=1)),
-            SimpleNamespace(payload=local_payload(scopes=["USA_1"]), artifact=SimpleNamespace(id=2)),
+            SimpleNamespace(payload=local_payload(scopes=[{"scope": "USA_1", "region": "USA", "delay": 1}]), artifact=SimpleNamespace(id=2)),
             SimpleNamespace(payload=local_payload(scope="USA_1", summary={}), artifact=SimpleNamespace(id=3)),
             SimpleNamespace(payload=local_payload(scope="USA_1", results=[]), artifact=SimpleNamespace(id=4)),
             SimpleNamespace(payload=envelope({"results": [{"id": "vwap", "dataset": {"id": "pv"}}]}), artifact=SimpleNamespace(id=5)),
@@ -186,9 +215,37 @@ class EvidenceResearchNodeTests(unittest.TestCase):
 
         fallback_calls = [
             call.args[2] for call in runner.run.call_args_list
-            if call.args[2][:2] == ("alpha", "list") and "--settings-region" in call.args[2]
+            if call.args[2][:2] == ("alpha", "list")
+            and "--settings-region" in call.args[2]
+            and "--tag" not in call.args[2]
         ]
         self.assertEqual([argv[argv.index("--offset") + 1] for argv in fallback_calls], ["0", "100"])
+
+    def test_f_uses_real_alpha_rows_to_ban_poor_os_fields(self) -> None:
+        runner = Mock()
+        runner.run.side_effect = [
+            SimpleNamespace(payload=local_payload(info_data={"exists": True}, all_data={"exists": True}), artifact=SimpleNamespace(id=1)),
+            SimpleNamespace(payload=local_payload(scopes=[{"scope": "USA_1", "region": "USA", "delay": 1}]), artifact=SimpleNamespace(id=2)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", dimensions={"datafield": 2}), artifact=SimpleNamespace(id=3)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", group="datafield", metric="fitness_ratio", results=[{"name": "weak_field", "count": 5, "fitness_ratio": 0.1}]), artifact=SimpleNamespace(id=4)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "weak_field", "dataset": {"id": "weak-ds"}}, {"id": "vwap", "dataset": {"id": "pv"}}]}), artifact=SimpleNamespace(id=5)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "weak-ds"}, {"id": "pv"}]}), artifact=SimpleNamespace(id=6)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "A1"}]}), artifact=SimpleNamespace(id=7)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", table="os", total=1, offset=0, limit=20, filters={"datafield": "weak_field", "dataset": None}, columns=["id", "sharpe", "fitness", "turnover", "margin"], rows=[{"id": "A1", "sharpe": 0.2, "fitness": 0.1, "turnover": 0.2, "margin": 0.0001}]), artifact=SimpleNamespace(id=8)),
+        ]
+        router = Mock()
+        router.invoke.side_effect = [
+            model_value("task_result", {"status": "COMPLETED", "payload": {}}),
+            model_value("evidence_requirements", {"keywords": ["liquidity"]}),
+        ]
+
+        result = EvidenceNodes(runner=runner, router=router, store=self.store).run_f(
+            "run-1", self.scope, {"alpha_id": "tower-1", "regular": {"code": "rank(volume)"}},
+        )
+
+        self.assertIn("weak_field", result.payload["banned_fields"])
+        alpha_rows_call = runner.run.call_args_list[-1].args[2]
+        self.assertEqual(alpha_rows_call[:5], ("scope", "alpha-rows", "USA_1", "--table", "os"))
 
     def test_g_records_gap_when_paper_source_is_unavailable(self) -> None:
         runner = Mock()
@@ -196,7 +253,7 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             SimpleNamespace(payload=local_payload(forum_topics=[{"title": "community lesson"}], forum_comments=[], docs_articles=[]), artifact=SimpleNamespace(id=10)),
             SimpleNamespace(payload=local_payload(nodes=[{"node": "data", "readme": "data/README.md", "examples": []}]), artifact=SimpleNamespace(id=11)),
             SimpleNamespace(payload=local_payload(path="data/README.md", text="official lesson"), artifact=SimpleNamespace(id=12)),
-            SimpleNamespace(payload=envelope({"results": [{"text": "platform lesson"}]}), artifact=SimpleNamespace(id=13)),
+            SimpleNamespace(payload=envelope({"query": ["platform lesson"]}), artifact=SimpleNamespace(id=13)),
         ]
         result = EvidenceNodes(runner=runner, router=Mock(), store=self.store).run_g(
             "run-1", ["liquidity"], arxiv_available=False,
@@ -214,7 +271,7 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             SimpleNamespace(payload=local_payload(forum_topics=[{"title": "community lesson"}], forum_comments=[], docs_articles=[]), artifact=SimpleNamespace(id=10)),
             SimpleNamespace(payload=local_payload(nodes=[{"node": "data", "readme": "data/README.md", "examples": []}]), artifact=SimpleNamespace(id=11)),
             SimpleNamespace(payload=local_payload(text="official lesson"), artifact=SimpleNamespace(id=12)),
-            SimpleNamespace(payload=envelope({"results": [{"text": "platform lesson"}]}), artifact=SimpleNamespace(id=13)),
+            SimpleNamespace(payload=envelope({"query": ["platform lesson"]}), artifact=SimpleNamespace(id=13)),
         ]
         runner.run_external.return_value = SimpleNamespace(
             payload=local_payload(papers=[{"title": "Liquidity and returns"}]),
@@ -229,7 +286,22 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         self.assertFalse(result.summary["paper_source_unavailable"])
         runner.run_external.assert_called_once()
 
+    def test_g_extracts_real_platform_search_inventory_strings(self) -> None:
+        coverage = evidence_coverage([
+            {"source_class": "community", "source_id": "artifact:1"},
+            {"source_class": "official_docs", "source_id": "artifact:2"},
+            {"source_class": "platform", "source_id": "artifact:3"},
+            {"source_class": "paper", "source_id": "artifact:4"},
+        ])
+        self.assertTrue(coverage.complete)
+        from wqb_cli.agent.nodes.evidence import platform_search_lesson
+        lesson = platform_search_lesson(
+            {"query": ["Liquidity inventory statement"]}, "artifact:3", "liquidity"
+        )
+        self.assertEqual(lesson["extracted_statement"], "Liquidity inventory statement")
+
     def test_h_stores_canonical_plan_with_validated_tower_and_evidence(self) -> None:
+        self.register_evidence()
         router = Mock()
         runner = Mock()
         runner.run.return_value = SimpleNamespace(
@@ -257,6 +329,7 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         )
 
     def test_h_bounds_untrusted_metadata_before_planner(self) -> None:
+        self.register_evidence()
         router = Mock()
         router.invoke.return_value = model_value(
             "research_plan",
@@ -279,6 +352,33 @@ class EvidenceResearchNodeTests(unittest.TestCase):
 
         context = router.invoke.call_args.args[0].context
         self.assertLessEqual(len(json.dumps(context, sort_keys=True, separators=(",", ":"))), 20_000)
+
+    def test_h_rejects_missing_foreign_or_wrong_node_evidence_before_planner(self) -> None:
+        router = Mock()
+        runner = Mock()
+        runner.run.return_value = SimpleNamespace(payload=envelope({"id": "vwap"}), artifact=SimpleNamespace(id=20))
+        self.store.create_run("foreign", RunConfig.from_dict({"scope_mode": "auto"}))
+        wrong = self.store.add_artifact("run-1", WorkflowNode.F, "wrong.json", Path(self.temp.name) / "wrong.json", "a" * 64)
+        foreign = self.store.add_artifact("foreign", WorkflowNode.G, "foreign.json", Path(self.temp.name) / "foreign.json", "b" * 64)
+
+        for reference in ("artifact:999", f"artifact:{foreign.id}", f"artifact:{wrong.id}"):
+            with self.subTest(reference=reference), self.assertRaisesRegex(ValueError, "evidence artifact"):
+                lessons = [
+                    {"source_class": source, "source_id": reference, "extracted_statement": "fact", "applicability": "PV"}
+                    for source in ("community", "official_docs", "platform", "paper")
+                ]
+                ResearchNodes(runner=runner, router=router, store=self.store).run_h(
+                    "run-1", self.scope, "tower-1", [{"id": "vwap"}], lessons,
+                )
+        router.invoke.assert_not_called()
+        self.assertIsNone(self.store.get_latest_research_plan("run-1"))
+
+    def test_h_requires_explicit_current_tower_on_every_mechanism(self) -> None:
+        with self.assertRaisesRegex(ValueError, "tower"):
+            validate_mechanism_fields(
+                {"mechanisms": [{"mechanism_id": "m1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]}]},
+                candidate_fields={"vwap"}, resolvable_evidence={"artifact:1"}, current_tower="tower-1",
+            )
 
     def test_i_rejects_duplicate_fingerprint_unless_revalidation_allowed(self) -> None:
         plan = {"mechanisms": [{"mechanism_id": "m1", "tower_id": "tower-1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]}]}
@@ -314,6 +414,70 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         )
 
         self.assertEqual(len(result.payload["accepted"]), 1)
+
+    def test_i_processes_every_task_with_one_operator_call_each(self) -> None:
+        plan = {"mechanisms": [
+            {"mechanism_id": "m1", "tower_id": "tower-1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]},
+            {"mechanism_id": "m2", "tower_id": "tower-1", "field_ids": ["close"], "evidence_refs": ["artifact:2"]},
+        ]}
+        self.store.record_research_plan("run-1", 1, "plan-hash", plan)
+        router = Mock()
+        router.invoke.side_effect = [
+            model_value("candidate_plan", {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [
+                {"task_id": "t1", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1},
+                {"task_id": "t2", "mechanism_id": "m2", "permitted_fields": ["close"], "transform_families": ["rank"], "count": 1},
+            ]}),
+            model_value("task_result", {"status": "COMPLETED", "payload": {"candidates": [{"expression": "rank(vwap)", "field_id": "vwap", "single_mechanism": True}]}}),
+            model_value("task_result", {"status": "COMPLETED", "payload": {"candidates": [{"expression": "rank(close)", "field_id": "close", "single_mechanism": True}]}}),
+        ]
+
+        result = ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
+            "run-1", self.scope, {"rank": {"arity": 1}},
+        )
+
+        self.assertEqual(len(result.payload["accepted"]), 2)
+        self.assertEqual(self.store.get_operator_task("run-1", "t1").status, "COMPLETED")
+        self.assertEqual(self.store.get_operator_task("run-1", "t2").status, "COMPLETED")
+        self.assertEqual([call.args[0].role.value for call in router.invoke.call_args_list], ["planner", "operator", "operator"])
+
+    def test_i_experience_revalidation_persists_current_run_candidate(self) -> None:
+        fingerprint = fingerprint_expression("rank(vwap)")
+        self.store.add_experience("run-1", {
+            "region": "USA", "delay": 1, "category": "PV",
+            "expression_fingerprint": fingerprint, "field_ids": ["vwap"],
+            "failure_class": "LOW_SHARPE", "hypothesis": {"idea": "liquidity"},
+            "record": {"round": 1}, "metrics": {"sharpe": 0.2},
+            "final_decision": "RETRY",
+        })
+        plan = {"mechanisms": [{"mechanism_id": "m1", "tower_id": "tower-1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]}]}
+        self.store.record_research_plan("run-1", 1, "plan-hash", plan)
+        router = Mock()
+        router.invoke.side_effect = [
+            model_value("candidate_plan", {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [{"task_id": "t1", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1}]}),
+            model_value("task_result", {"status": "COMPLETED", "payload": {"candidates": [{"expression": "rank(vwap)", "field_id": "vwap", "single_mechanism": True}]}}),
+        ]
+
+        result = ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
+            "run-1", self.scope, {"rank": {"arity": 1}}, allow_revalidation=True,
+        )
+
+        self.assertEqual(result.payload["new_fingerprints"], [fingerprint])
+        self.assertEqual(self.store.get_candidate_by_fingerprint("run-1", fingerprint).status, "REVALIDATED")
+
+    def test_i_blocked_operator_task_is_terminal_and_does_not_route_to_j(self) -> None:
+        plan = {"mechanisms": [{"mechanism_id": "m1", "tower_id": "tower-1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]}]}
+        self.store.record_research_plan("run-1", 1, "plan-hash", plan)
+        router = Mock()
+        router.invoke.side_effect = [
+            model_value("candidate_plan", {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [{"task_id": "blocked", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1}]}),
+            model_value("task_result", {"status": "BLOCKED", "payload": {}}),
+        ]
+
+        with self.assertRaisesRegex(ValueError, "did not complete"):
+            ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
+                "run-1", self.scope, {"rank": {"arity": 1}},
+            )
+        self.assertEqual(self.store.get_operator_task("run-1", "blocked").status, "FAILED")
 
 
 if __name__ == "__main__":

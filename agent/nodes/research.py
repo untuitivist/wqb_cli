@@ -96,23 +96,18 @@ class ResearchNodes:
         scope: Mapping[str, Any],
         current_tower: str,
         candidate_fields: list[Mapping[str, Any]] | list[str],
-        lessons: list[Mapping[str, Any]],
+        evidence_bundle: Mapping[str, Any],
     ) -> NodeResult:
         normalized_scope = _scope(scope)
-        coverage = evidence_coverage(lessons)
-        if not coverage.complete:
-            raise ResearchError(f"research plan requires evidence coverage: {', '.join(coverage.missing_sources)}")
-        for lesson in lessons:
-            for key in ("source_id", "extracted_statement", "applicability"):
-                if type(lesson.get(key)) is not str or not lesson[key].strip():
-                    raise ResearchError(f"evidence lesson has invalid {key}")
-        evidence_refs = self._verified_evidence_refs(run_id, lessons)
+        lessons, evidence_refs = self._verified_evidence_bundle(
+            run_id, evidence_bundle
+        )
         field_records, field_artifacts = self._field_metadata(run_id, candidate_fields)
         field_ids = {record["id"] for record in field_records}
         planner = self._invoke(
             ModelRole.PLANNER, WorkflowNode.H,
             "Create a research plan only. Each mechanism must use supplied field IDs, current tower ID, and artifact evidence. Never produce expressions or simulation settings.",
-            {"scope": normalized_scope, "current_tower": current_tower, "field_metadata": field_records, "evidence": [dict(lesson) for lesson in lessons]},
+            {"scope": normalized_scope, "current_tower": current_tower, "field_metadata": field_records, "evidence": lessons},
         )
         raw_plan = planner.get("research_plan")
         plan = validate_mechanism_fields(raw_plan, candidate_fields=field_ids, resolvable_evidence=evidence_refs, current_tower=current_tower)
@@ -205,7 +200,11 @@ class ResearchNodes:
                         "reason": blocked_result["reason"],
                         "accepted": accepted,
                         "rejected": rejected,
-                        "new_fingerprints": [],
+                        "new_fingerprints": [
+                            item["fingerprint"]
+                            for item in accepted
+                            if not item.get("current_run_existing")
+                        ],
                         "plan_version": plan_record.plan_version,
                         "plan_hash": plan_record.plan_hash,
                     },
@@ -314,25 +313,102 @@ class ResearchNodes:
             raise ResearchError("candidate field metadata is empty")
         return result, tuple(artifact_ids)
 
-    def _verified_evidence_refs(
-        self, run_id: str, lessons: list[Mapping[str, Any]]
-    ) -> set[str]:
+    def _verified_evidence_bundle(
+        self, run_id: str, binding: Mapping[str, Any]
+    ) -> tuple[list[dict[str, Any]], set[str]]:
+        if not isinstance(binding, Mapping) or set(binding) != {"artifact_id", "sha256"}:
+            raise ResearchError("evidence bundle binding is invalid")
+        artifact_ref = binding.get("artifact_id")
+        bound_hash = binding.get("sha256")
+        artifact_id = _artifact_id(artifact_ref, "evidence bundle")
+        if (
+            type(bound_hash) is not str
+            or len(bound_hash) != 64
+            or any(character not in "0123456789abcdef" for character in bound_hash)
+        ):
+            raise ResearchError("evidence bundle hash is invalid")
+        try:
+            bundle_artifact = self._store.get_artifact(artifact_id)
+        except StoreRecordNotFound:
+            raise ResearchError("evidence bundle artifact is missing") from None
+        if (
+            bundle_artifact.run_id != run_id
+            or bundle_artifact.node is not WorkflowNode.G
+            or bundle_artifact.name != "evidence_lessons.json"
+            or bundle_artifact.kind != "json"
+            or bundle_artifact.sha256 != bound_hash
+        ):
+            raise ResearchError("evidence bundle binding does not match its artifact")
+        if not callable(getattr(self._artifacts, "read_json", None)):
+            raise ResearchError("evidence bundle reader is unavailable")
+        try:
+            bundle = self._artifacts.read_json(bundle_artifact)
+        except Exception:
+            raise ResearchError("evidence bundle content is invalid") from None
+        if hashlib.sha256(_canonical(bundle).encode("utf-8")).hexdigest() != bound_hash:
+            raise ResearchError("evidence bundle is not canonical")
+        if type(bundle) is not dict or set(bundle) != {"lessons", "coverage"}:
+            raise ResearchError("evidence bundle content is invalid")
+        raw_lessons = bundle.get("lessons")
+        if type(raw_lessons) is not list:
+            raise ResearchError("evidence bundle lessons are invalid")
+        lessons: list[dict[str, Any]] = []
         references: set[str] = set()
-        for lesson in lessons:
+        for lesson in raw_lessons:
+            if not isinstance(lesson, Mapping):
+                raise ResearchError("evidence lesson is invalid")
+            source_class = lesson.get("source_class")
+            if source_class not in {
+                "community", "official_docs", "platform", "paper"
+            }:
+                raise ResearchError("evidence lesson has invalid source class")
+            for key in ("source_id", "extracted_statement", "applicability"):
+                if type(lesson.get(key)) is not str or not lesson[key].strip():
+                    raise ResearchError(f"evidence lesson has invalid {key}")
             source_id = lesson["source_id"]
-            if not source_id.startswith("artifact:"):
-                raise ResearchError("evidence artifact reference is invalid")
-            raw_id = source_id.removeprefix("artifact:")
-            if not raw_id.isdigit() or int(raw_id) <= 0:
-                raise ResearchError("evidence artifact reference is invalid")
+            source_artifact_id = _artifact_id(source_id, "evidence source")
+            if source_id in references:
+                raise ResearchError("evidence source cannot be reused across lessons")
             try:
-                artifact = self._store.get_artifact(int(raw_id))
+                artifact = self._store.get_artifact(source_artifact_id)
             except StoreRecordNotFound:
-                raise ResearchError("evidence artifact is missing") from None
-            if artifact.run_id != run_id or artifact.node is not WorkflowNode.G:
-                raise ResearchError("evidence artifact belongs to another run or node")
+                raise ResearchError("evidence source artifact is missing") from None
+            if (
+                artifact.run_id != run_id
+                or artifact.node is not WorkflowNode.G
+                or artifact.kind != "json"
+            ):
+                raise ResearchError("evidence source belongs to another run or node")
+            self._verify_source_provenance(source_class, artifact)
             references.add(source_id)
-        return references
+            lessons.append(dict(lesson))
+        coverage = evidence_coverage(lessons)
+        if not coverage.complete:
+            raise ResearchError(
+                f"research plan requires evidence coverage: {', '.join(coverage.missing_sources)}"
+            )
+        if bundle["coverage"] != list(coverage.missing_sources):
+            raise ResearchError("evidence bundle coverage does not match its lessons")
+        return lessons, references
+
+    def _verify_source_provenance(self, source_class: str, artifact: Any) -> None:
+        expected: dict[str, tuple[str, tuple[str, ...]]] = {
+            "community": ("_community_search.json", ("community", "search")),
+            "official_docs": ("_docs_show.json", ("docs", "show")),
+            "platform": ("_platform_search.json", ("search",)),
+            "paper": ("_papers.json", ("arxiv", "search", "query")),
+        }
+        suffix, prefix = expected[source_class]
+        if not artifact.name.endswith(suffix):
+            raise ResearchError("evidence source name does not match its source class")
+        try:
+            command = self._store.get_command_for_artifact(artifact.id)
+        except StoreRecordNotFound:
+            raise ResearchError("evidence source has no completed command provenance") from None
+        if command.run_id != artifact.run_id or command.node is not WorkflowNode.G:
+            raise ResearchError("evidence source command belongs to another run or node")
+        if command.argv[: len(prefix)] != prefix:
+            raise ResearchError("evidence source command does not match its source class")
 
     def _validated_tasks(self, value: object, version: int, plan_hash: str, mechanisms: dict[str, Mapping[str, Any]], operators: Mapping[str, Mapping[str, object]]) -> list[dict[str, Any]]:
         if not isinstance(value, Mapping) or value.get("plan_version") != version or value.get("plan_hash") != plan_hash:
@@ -411,22 +487,38 @@ class ResearchNodes:
         return True
 
     def _experience_fingerprint(self, scope: dict[str, Any], fingerprint: str) -> bool:
-        records = self._store.search_experience(scope["region"], scope["delay"], scope["category"], limit=100)
-        return any(getattr(record, "expression_fingerprint", None) == fingerprint for record in records)
+        return self._store.has_experience_fingerprint(
+            scope["region"], scope["delay"], scope["category"], fingerprint
+        )
 
     def _reject(self, run_id: str, raw: object, reason: str, rejected: list[dict[str, Any]], *, fingerprint: str | None = None) -> None:
-        rendered = _canonical(raw if isinstance(raw, Mapping) else {"raw": repr(raw)})
-        key = fingerprint or hashlib.sha256(rendered.encode("utf-8")).hexdigest()
-        persistence_key = f"rejected:{key}"
-        record = {"raw_candidate": dict(raw) if isinstance(raw, Mapping) else {"raw": repr(raw)}, "rejection_fingerprint": key}
+        raw_candidate = dict(raw) if isinstance(raw, Mapping) else {"raw": repr(raw)}
+        rendered = _canonical(raw_candidate)
+        diagnostic_fingerprint = fingerprint or hashlib.sha256(
+            rendered.encode("utf-8")
+        ).hexdigest()
+        normalized_reason = reason[:512]
+        rejection_identity = hashlib.sha256(
+            _canonical(
+                {"raw_candidate": raw_candidate, "reason": normalized_reason}
+            ).encode("utf-8")
+        ).hexdigest()
+        persistence_key = f"rejected:{rejection_identity}"
+        record = {
+            "raw_candidate": raw_candidate,
+            "expression_fingerprint": diagnostic_fingerprint,
+            "rejection_identity": rejection_identity,
+        }
         self._store.add_candidate(
             run_id,
             persistence_key,
             record,
             status="REJECTED",
-            reason=reason[:512],
+            reason=normalized_reason,
         )
-        rejected.append({"fingerprint": key, "reason": reason[:512]})
+        rejected.append(
+            {"fingerprint": diagnostic_fingerprint, "reason": normalized_reason}
+        )
 
     def _invoke(self, role: ModelRole, node: WorkflowNode, instructions: str, context: dict[str, Any]) -> dict[str, Any]:
         response = self._router.invoke(
@@ -493,6 +585,15 @@ def _evidence_refs(values: object) -> set[str]:
     if any(not value.startswith("artifact:") for value in names):
         raise ResearchError("evidence_refs must be artifact references")
     return names
+
+
+def _artifact_id(value: object, label: str) -> int:
+    if type(value) is not str or not value.startswith("artifact:"):
+        raise ResearchError(f"{label} artifact reference is invalid")
+    raw_id = value.removeprefix("artifact:")
+    if not raw_id.isdigit() or int(raw_id) <= 0:
+        raise ResearchError(f"{label} artifact reference is invalid")
+    return int(raw_id)
 
 
 def _reject_expression_keys(value: object) -> None:

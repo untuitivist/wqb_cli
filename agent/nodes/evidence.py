@@ -391,13 +391,50 @@ class EvidenceNodes:
             else:
                 lessons.append(lesson)
         coverage = evidence_coverage(lessons)
-        evidence_artifacts = self._write_json(run_id, WorkflowNode.G, "evidence_lessons.json", {"lessons": lessons, "coverage": list(coverage.missing_sources)})
+        bundle_value = {
+            "lessons": lessons,
+            "coverage": list(coverage.missing_sources),
+        }
+        evidence_artifacts: tuple[str, ...] = ()
+        evidence_bundle: dict[str, str] | None = None
+        if callable(getattr(self._artifacts, "write_json", None)):
+            artifact = self._artifacts.write_json(
+                run_id, WorkflowNode.G, "evidence_lessons.json", bundle_value
+            )
+            identifier = getattr(artifact, "id", None)
+            digest = getattr(artifact, "sha256", None)
+            if type(identifier) is int and identifier > 0:
+                evidence_artifacts = (f"artifact:{identifier}",)
+            if (
+                type(identifier) is int
+                and identifier > 0
+                and type(digest) is str
+                and re.fullmatch(r"[0-9a-f]{64}", digest)
+            ):
+                evidence_bundle = {
+                    "artifact_id": f"artifact:{identifier}",
+                    "sha256": digest,
+                }
         artifacts.extend(evidence_artifacts)
         summary = {"lesson_count": len(lessons), "missing_sources": list(coverage.missing_sources), "paper_source_unavailable": paper_unavailable}
         return NodeResult(
             WorkflowNode.G, summary, tuple(artifacts),
-            next_node=WorkflowNode.H if coverage.complete else WorkflowNode.G,
-            payload={"lessons": lessons, "missing_sources": list(coverage.missing_sources), "paper_source_unavailable": paper_unavailable},
+            next_node=(
+                WorkflowNode.H
+                if coverage.complete and evidence_bundle is not None
+                else WorkflowNode.G
+            ),
+            payload={
+                "evidence_bundle": evidence_bundle,
+                "evidence_bundle_artifact_id": (
+                    None if evidence_bundle is None else evidence_bundle["artifact_id"]
+                ),
+                "evidence_bundle_sha256": (
+                    None if evidence_bundle is None else evidence_bundle["sha256"]
+                ),
+                "missing_sources": list(coverage.missing_sources),
+                "paper_source_unavailable": paper_unavailable,
+            },
         )
 
     def _run(self, run_id: str, node: WorkflowNode, argv: tuple[str, ...], name: str) -> Any:

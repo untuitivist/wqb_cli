@@ -61,10 +61,18 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 "SELECT sql FROM sqlite_master WHERE type = 'index' "
                 "AND name = 'idx_command_ledger_run_status'"
             ).fetchone()
-        self.assertEqual(versions, [1, 2, 3])
+            experience_fingerprint_index = connection.execute(
+                "SELECT sql FROM sqlite_master WHERE type = 'index' "
+                "AND name = 'idx_experiences_scope_fingerprint'"
+            ).fetchone()
+        self.assertEqual(versions, [1, 2, 3, 4])
         self.assertTrue(expected_tables <= tables)
         self.assertIsNotNone(ledger_index_sql)
         self.assertIn("command_ledger(run_id, status)", ledger_index_sql[0])
+        self.assertIn(
+            "experiences(region, delay, category, expression_fingerprint)",
+            experience_fingerprint_index[0],
+        )
 
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "v2.sqlite3"
@@ -103,7 +111,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
                     "AND name = 'idx_command_ledger_run_status'"
                 ).fetchone()
             self.assertEqual(after, before)
-            self.assertEqual(upgraded_versions, [1, 2, 3])
+            self.assertEqual(upgraded_versions, [1, 2, 3, 4])
             self.assertIsNotNone(upgraded_ledger_index)
             self.assertIn(
                 "command_ledger(run_id, status)", upgraded_ledger_index[0]

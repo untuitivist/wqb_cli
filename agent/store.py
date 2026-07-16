@@ -545,6 +545,15 @@ _MIGRATIONS = (
             "CREATE INDEX idx_experience_fields_field ON experience_fields(field_id)",
         ),
     ),
+    _Migration(
+        version=4,
+        statements=(
+            "CREATE INDEX idx_experiences_scope_fingerprint "
+            "ON experiences(region, delay, category, expression_fingerprint)",
+            "CREATE INDEX idx_command_ledger_artifact "
+            "ON command_ledger(artifact_id)",
+        ),
+    ),
 )
 LATEST_SCHEMA_VERSION = _MIGRATIONS[-1].version
 
@@ -1434,6 +1443,21 @@ class AgentStore:
             raise StoreRecordNotFound(f"command not found: {command_id}")
         return _command_from_row(row)
 
+    def get_command_for_artifact(self, artifact_id: int) -> CommandLedgerRecord:
+        """Return the completed command that produced one registered artifact."""
+        _validate_positive_integer(artifact_id, "artifact_id")
+        with closing(self.connect()) as connection:
+            row = connection.execute(
+                "SELECT * FROM command_ledger WHERE artifact_id = ? "
+                "AND status = 'COMPLETED' ORDER BY id DESC LIMIT 1",
+                (artifact_id,),
+            ).fetchone()
+        if row is None:
+            raise StoreRecordNotFound(
+                f"completed command not found for artifact: {artifact_id}"
+            )
+        return _command_from_row(row)
+
     def add_candidate(
         self,
         run_id: str,
@@ -1819,6 +1843,24 @@ class AgentStore:
             return [
                 self._experience_with_fields(connection, row) for row in rows
             ]
+
+    def has_experience_fingerprint(
+        self, region: str, delay: int, category: str, fingerprint: str
+    ) -> bool:
+        _validate_nonblank_string(region, "region")
+        if type(delay) is not int:
+            raise TypeError("delay must be an integer")
+        if delay not in {0, 1}:
+            raise ValueError("delay must be 0 or 1")
+        _validate_nonblank_string(category, "category")
+        _validate_nonblank_string(fingerprint, "fingerprint")
+        with closing(self.connect()) as connection:
+            row = connection.execute(
+                "SELECT EXISTS(SELECT 1 FROM experiences WHERE region = ? "
+                "AND delay = ? AND category = ? AND expression_fingerprint = ?)",
+                (region.strip(), delay, category.strip(), fingerprint.strip()),
+            ).fetchone()
+        return bool(row[0])
 
     @staticmethod
     def _experience_with_fields(

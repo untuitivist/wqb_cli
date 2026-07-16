@@ -8,9 +8,44 @@ from unittest.mock import Mock, patch
 
 from wqb_cli.cli import build_parser
 from wqb_cli.commands.agent import handle_agent
+from wqb_cli.commands.agent_runtime import RuntimeBundle, _Dispatcher
 
 
 class AgentCliTests(unittest.TestCase):
+    def test_runtime_approve_records_exact_report_subject_before_submit(self) -> None:
+        bundle = object.__new__(RuntimeBundle)
+        bundle.run_id = "run-1"
+        bundle.store = Mock()
+        bundle.artifacts = Mock()
+        bundle.submission = Mock()
+        report = {"run_id": "run-1", "terminal_recommendation": {"alpha_id": "ALPHA1"}}
+        bundle._final_report_artifact = Mock(return_value=Mock())
+        bundle.artifacts.read_json.return_value = report
+        bundle.submission.submit.return_value = Mock(run_state=__import__("wqb_cli.agent.types", fromlist=["RunState"]).RunState.SUBMITTED)
+        result = bundle.approve("run-1")
+        from wqb_cli.agent.reporting import canonical_report_hash
+        bundle.store.record_approval.assert_called_once_with("run-1", "ALPHA1", canonical_report_hash(report))
+        bundle.submission.submit.assert_called_once_with("run-1", "ALPHA1", report)
+        self.assertEqual(result["state"], "SUBMITTED")
+
+    def test_runtime_manual_d_supplies_locked_scope_as_quarter_tower(self) -> None:
+        from wqb_cli.agent.types import RunConfig
+        dispatcher = object.__new__(_Dispatcher)
+        dispatcher.runner = Mock()
+        dispatcher.runner.run.side_effect = [Mock(payload={"ok": True}), Mock(payload={"ok": True})]
+        dispatcher.artifacts = Mock()
+        dispatcher.artifacts.write_json.side_effect = [Mock(id=1), Mock(id=2)]
+        dispatcher.store = Mock()
+        config = RunConfig.from_dict({"scope_mode": "manual", "region": "USA", "delay": 1, "universe": "TOP3000", "neutralization": "SUBINDUSTRY"})
+        dispatcher.store.get_run.return_value = Mock(config=config)
+        dispatcher.discovery = Mock()
+        dispatcher.discovery.run_d.return_value = Mock()
+        dispatcher._user_id = Mock(return_value="user-1")
+        dispatcher._run_d("run-1", {})
+        candidates = dispatcher.discovery.run_d.call_args.args[2]
+        self.assertEqual(candidates["quarter_towers"][0]["region"], "USA")
+        self.assertNotIn("candidates", candidates)
+
     def test_quant_agent_skill_is_present_and_forbids_direct_submit(self) -> None:
         skill = Path(__file__).resolve().parents[1] / "skills" / "wqb-quant-agent" / "SKILL.md"
         self.assertTrue(skill.exists())

@@ -15,6 +15,7 @@ from ..agent.nodes.evidence import EvidenceNodes
 from ..agent.nodes.research import ResearchNodes
 from ..agent.nodes.submission import SubmissionNode
 from ..agent.policy import AgentPolicy
+from ..agent.reporting import canonical_report_hash
 from ..agent.runner import AgentRunner
 from ..agent.store import AgentStore
 from ..agent.types import ModelRole, NodeResult, WorkflowNode
@@ -36,12 +37,14 @@ class RuntimeBundle:
         return self.coordinator.run_auto(**kwargs)
 
     def approve(self, run_id: str) -> dict[str, object]:
-        approval = self.store.find_unconsumed_approval(run_id)
-        if approval is None:
-            raise ValueError("run has no pending approval")
         artifact = self._final_report_artifact(run_id)
         report = self.artifacts.read_json(artifact)
-        result = self.submission.submit(run_id, approval.alpha_id, report)
+        recommendation = report.get("terminal_recommendation")
+        alpha_id = recommendation.get("alpha_id") if isinstance(recommendation, Mapping) else None
+        if type(alpha_id) is not str or not alpha_id.strip():
+            raise ValueError("final report has no recommended alpha")
+        self.store.record_approval(run_id, alpha_id, canonical_report_hash(report))
+        result = self.submission.submit(run_id, alpha_id, report)
         return {"ok": True, "run_id": run_id, "state": result.run_state.value}
 
     def _final_report_artifact(self, run_id: str) -> Any:
@@ -156,7 +159,7 @@ class _Dispatcher:
         run = self.store.get_run(run_id)
         candidates = None
         if run.config.scope_mode.value == "manual":
-            candidates = {"quarter": {}, "consultant_summary": {}, "candidates": [{
+            candidates = {"quarter": {}, "consultant_summary": {}, "quarter_towers": [{
                 "candidate_id": "manual-scope", "region": run.config.region, "delay": run.config.delay,
                 "universe": run.config.universe, "neutralization": run.config.neutralization,
                 "category": "PV", "alphaCount": 0, "neededToLight": 0, "multiplier": 1,

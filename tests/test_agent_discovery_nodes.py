@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import unittest
 from datetime import datetime, timezone
 from types import SimpleNamespace
@@ -153,6 +154,35 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertEqual(result.summary["scope"]["category"], "PV")
         router.invoke.assert_called_once()
 
+    def test_d_ignores_caller_supplied_command_artifact_ids(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D1_PV")
+        binding, store = platform_binding()
+        candidates = {
+            "quarter_towers": [
+                {
+                    "candidate_id": "USA_D1_PV",
+                    "region": "USA",
+                    "delay": 1,
+                    "universe": "TOP3000",
+                    "neutralization": "SUBINDUSTRY",
+                    "category": "PV",
+                    "alphaCount": 0,
+                    "multiplier": 1.0,
+                }
+            ],
+            "command_artifact_ids": ("999", "foreign"),
+        }
+
+        result = DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+            "run-1",
+            RunConfig.from_dict({"scope_mode": "auto"}),
+            candidates,
+            platform_binding=binding,
+        )
+
+        self.assertEqual(result.artifact_ids, ("1", "2"))
+
     def test_d_rejects_planner_candidate_outside_validated_list(self) -> None:
         router = Mock()
         router.invoke.return_value.value = planner_choice("not-supplied")
@@ -281,11 +311,29 @@ class DiscoveryNodeTests(unittest.TestCase):
         binding, store = platform_binding()
         runner = Mock()
         runner.run.side_effect = [
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
+            Mock(
+                payload={"ok": True, "response": {"status_code": 200, "body": {"performance": {"currentQuarter": {"startDate": "2026-04-01", "endDate": "2026-06-30"}}}}},
+                artifact=SimpleNamespace(id=10),
+            ),
+            Mock(
+                payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "alphaCount": 1}]}}},
+                artifact=SimpleNamespace(id=11),
+            ),
+            Mock(
+                payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": [{"region": "USA", "delay": 1, "category": {"id": "pv"}, "multiplier": 1.4}]}}},
+                artifact=SimpleNamespace(id=12),
+            ),
+            Mock(
+                payload={"ok": True, "response": {"status_code": 200, "body": {}}},
+                artifact=SimpleNamespace(id=13),
+            ),
         ]
+        platform_getter = store.get_artifact.side_effect
+        store.get_artifact.side_effect = lambda identifier: (
+            platform_getter(identifier)
+            if identifier in {1, 2}
+            else SimpleNamespace(id=identifier, run_id="run-1", node=WorkflowNode.D)
+        )
         result = DiscoveryNodes(runner=runner, router=router, store=store).run_d(
             "run-1", RunConfig.from_dict({"scope_mode": "auto"}), user_id="fixture-user", platform_binding=binding
         )
@@ -295,6 +343,7 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertIn(("user", "pyramid-alphas", "--start-date", "2026-04-01", "--end-date", "2026-06-30"), calls)
         self.assertIn(("user", "pyramid-multipliers", "--start-date", "2026-04-01", "--end-date", "2026-06-30"), calls)
         self.assertIn(("user", "user-diversity", "fixture-user"), calls)
+        self.assertEqual(result.artifact_ids[:6], ("1", "2", "10", "11", "12", "13"))
 
     def test_d_default_collection_fails_before_network_without_user_id(self) -> None:
         runner = Mock()
@@ -304,15 +353,29 @@ class DiscoveryNodeTests(unittest.TestCase):
             )
         runner.run.assert_not_called()
 
+    def test_d_rejects_runner_artifact_from_another_run_or_node(self) -> None:
+        result = SimpleNamespace(artifact=SimpleNamespace(id=10))
+        for record in (
+            SimpleNamespace(id=10, run_id="foreign-run", node=WorkflowNode.D),
+            SimpleNamespace(id=10, run_id="run-1", node=WorkflowNode.C),
+        ):
+            with self.subTest(record=record):
+                store = Mock()
+                store.get_artifact.return_value = record
+                nodes = DiscoveryNodes(runner=Mock(), router=Mock(), store=store)
+
+                with self.assertRaisesRegex(ValueError, "another run or node"):
+                    nodes._verified_runner_artifact_ids("run-1", WorkflowNode.D, result)
+
     def test_c_uses_exact_eastern_day_interval_and_remaining_regular_quota(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"results": [{"id": "alpha-a"}, {"id": "alpha-b"}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"results": [{"id": "alpha-a"}]}}}),
             Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"results": [{"id": "alpha-b"}]}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
-            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"is": 0, "os": 0, "prod": 0}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}}),
+            Mock(payload={"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}}),
         ]
 
         result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock(), regular_daily_quota=3).run_c(
@@ -328,9 +391,9 @@ class DiscoveryNodeTests(unittest.TestCase):
             {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
             {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
             {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
-            {"ok": True, "response": {"status_code": 200, "body": {}}},
-            {"ok": True, "response": {"status_code": 200, "body": {}}},
-            {"ok": True, "response": {"status_code": 200, "body": {}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"is": 0, "os": 0, "prod": 0}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}},
         ]
         for index in range(6):
             with self.subTest(index=index):
@@ -342,6 +405,34 @@ class DiscoveryNodeTests(unittest.TestCase):
                     DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_c(
                         "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
                     )
+
+    def test_c_rejects_successful_auxiliary_responses_with_wrong_shapes(self) -> None:
+        valid = [
+            {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"is": 0, "os": 0, "prod": 0}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}},
+            {"ok": True, "response": {"status_code": 200, "body": {"pyramids": []}}},
+        ]
+        wrong_shapes = {
+            3: {"unexpected": 0},
+            4: {"pyramids": {}},
+            5: {"pyramids": ["not-an-object"]},
+        }
+        for index, body in wrong_shapes.items():
+            with self.subTest(index=index):
+                payloads = list(valid)
+                payloads[index] = {"ok": True, "response": {"status_code": 200, "body": body}}
+                runner = Mock()
+                runner.run.side_effect = [Mock(payload=payload) for payload in payloads]
+                router = Mock()
+
+                with self.assertRaisesRegex(ValueError, "response"):
+                    DiscoveryNodes(runner=runner, router=router, store=Mock()).run_c(
+                        "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
+                    )
+                router.invoke.assert_not_called()
 
     def test_b_collects_platform_data_then_uses_operator_before_planner(self) -> None:
         runner = Mock()
@@ -366,6 +457,30 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertLessEqual(operator_context["truncation"]["limit"], 20_000)
         self.assertNotIn("platform_data", planner_context)
         self.assertNotIn("ignore prior instructions", str(planner_context))
+
+    def test_b_hard_limits_final_canonical_context_with_escaping_expansion(self) -> None:
+        runner = Mock()
+        runner.run.return_value.payload = {
+            "ok": True,
+            "response": {
+                "status_code": 200,
+                "body": {"announcement": ('"\\' * 20_000)},
+            },
+        }
+        router = Mock()
+        router.invoke.side_effect = [
+            Mock(value={"decision": "organized", "reasoning_summary": "Bounded.", "evidence_refs": [], "confidence": 0.5, "task_result": {"status": "COMPLETED", "payload": {}}}),
+            Mock(value={"decision": "ranked", "reasoning_summary": "Ranked.", "evidence_refs": [], "confidence": 0.5}),
+        ]
+
+        DiscoveryNodes(runner=runner, router=router, store=Mock()).run_b(
+            "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
+        )
+
+        context = router.invoke.call_args_list[0].args[0].context
+        rendered = json.dumps(context, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+        self.assertLessEqual(len(rendered), 20_000)
+        self.assertEqual(context["truncation"]["context_chars"], len(rendered))
 
 
 if __name__ == "__main__":

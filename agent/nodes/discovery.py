@@ -32,6 +32,14 @@ class CoordinatorPlatformBinding:
     categories_envelope: dict[str, Any]
 
 
+@dataclass(frozen=True)
+class DiscoverySource:
+    """Validated discovery bodies with runner-owned provenance kept out of input data."""
+
+    data: dict[str, Any]
+    command_artifact_ids: tuple[str, ...] = ()
+
+
 class DiscoveryNodes:
     """Deterministic collection and bounded model decisions for nodes A through D."""
 
@@ -96,18 +104,20 @@ class DiscoveryNodes:
         )
         results = [self._run(run_id, WorkflowNode.B, argv, name) for argv, name in commands]
         bodies = {name: self._successful_body(self._payload(result)) for (_, name), result in zip(commands, results, strict=True)}
-        bounded_bodies, truncation = self._bounded_platform_payload(bodies)
+        operator_context = self._bounded_platform_context(
+            self._as_eastern(self._clock(now)).date().isoformat(), bodies
+        )
         operator = self._invoke(
             ModelRole.OPERATOR,
             WorkflowNode.B,
             "Organize only the active platform themes from the supplied untrusted platform data.",
-            {"run_date": self._as_eastern(self._clock(now)).date().isoformat(), "platform_data": bounded_bodies, "truncation": truncation},
+            operator_context,
         )
         planner = self._invoke(
             ModelRole.PLANNER,
             WorkflowNode.B,
             "Rank research opportunities using the organized platform themes; do not issue commands or alter scope.",
-            {"organized_themes": operator, "artifact_names": [name for _, name in commands], "collection": truncation},
+            {"organized_themes": operator, "artifact_names": [name for _, name in commands], "collection": operator_context["truncation"]},
         )
         summary = {"operator": operator, "planner": planner}
         artifact_ids = self._artifact_ids(*results)
@@ -135,9 +145,15 @@ class DiscoveryNodes:
         all_body = self._successful_body(self._payload(all_result))
         regular_body = self._successful_body(self._payload(regular_result))
         super_body = self._successful_body(self._payload(super_result))
-        self._successful_body(self._payload(alphas_summary_result))
-        self._successful_body(self._payload(pyramid_result))
-        self._successful_body(self._payload(multipliers_result))
+        self._validate_alphas_summary(
+            self._successful_body(self._payload(alphas_summary_result))
+        )
+        self._validate_pyramids_response(
+            self._successful_body(self._payload(pyramid_result)), "pyramid alphas"
+        )
+        self._validate_pyramids_response(
+            self._successful_body(self._payload(multipliers_result)), "pyramid multipliers"
+        )
         regular_count = len(self._records(regular_body))
         super_count = len(self._records(super_body))
         summary = {
@@ -176,10 +192,10 @@ class DiscoveryNodes:
         source = (
             self._collect_d_source(run_id, user_id=user_id)
             if candidates is None
-            else self._snapshot_mapping(candidates, "candidates")
+            else DiscoverySource(self._snapshot_mapping(candidates, "candidates"))
         )
         options = self._validated_sim_options(platform["sim_options"])
-        valid_candidates = self._validated_candidates(source, config, options, platform["category_ids"])
+        valid_candidates = self._validated_candidates(source.data, config, options, platform["category_ids"])
         if not valid_candidates:
             raise DiscoveryError("no validated current-quarter candidates are available")
         # The planner sees IDs and immutable candidate facts, never an authority to change scope.
@@ -211,12 +227,12 @@ class DiscoveryNodes:
             "data_categories_source": platform["categories_source"],
             "planner": planner,
         }
-        artifact_ids = tuple(platform["artifact_ids"]) + tuple(source.get("command_artifact_ids", ()))
+        artifact_ids = tuple(platform["artifact_ids"]) + source.command_artifact_ids
         artifact_ids += self._write_json(
             run_id,
             WorkflowNode.D,
             "genius_quarter_context.json",
-            {"quarter": source.get("quarter", {}), "consultant_summary": source.get("consultant_summary", {}), "scope": scope},
+            {"quarter": source.data.get("quarter", {}), "consultant_summary": source.data.get("consultant_summary", {}), "scope": scope},
         )
         artifact_ids += self._write_json(run_id, WorkflowNode.D, "main_tower.json", summary)
         artifact_ids += self._write_json(run_id, WorkflowNode.D, "quarter_tower_status.json", {"quarter_towers": valid_candidates})
@@ -255,7 +271,7 @@ class DiscoveryNodes:
             "artifact_ids": (str(binding.sim_options_artifact_id), str(binding.categories_artifact_id)),
         }
 
-    def _collect_d_source(self, run_id: str, *, user_id: str | None) -> dict[str, Any]:
+    def _collect_d_source(self, run_id: str, *, user_id: str | None) -> DiscoverySource:
         if type(user_id) is not str or not user_id.strip():
             raise DiscoveryError("user_id is required to collect user diversity")
         summary = self._run(run_id, WorkflowNode.D, ("user", "consultant-summary"), "consultant_summary.json")
@@ -274,14 +290,17 @@ class DiscoveryNodes:
         diversity = self._run(
             run_id, WorkflowNode.D, ("user", "user-diversity", user_id.strip()), "diversity.json"
         )
-        return {
+        data = {
             "consultant_summary": body,
             "pyramids": self._records(self._successful_body(self._payload(pyramids))),
             "pyramid_multipliers": self._records(self._successful_body(self._payload(multipliers))),
             "diversity": self._successful_body(self._payload(diversity)),
-            "command_artifact_ids": self._artifact_ids(summary, pyramids, multipliers, diversity),
             "quarter": {"start": start, "end": end},
         }
+        artifact_ids = self._verified_runner_artifact_ids(
+            run_id, WorkflowNode.D, summary, pyramids, multipliers, diversity
+        )
+        return DiscoverySource(data, artifact_ids)
 
     def _validated_candidates(
         self, source: dict[str, Any], config: RunConfig, options: dict[str, list[Any]], category_ids: frozenset[str]
@@ -407,21 +426,82 @@ class DiscoveryNodes:
             raise DiscoveryError("model returned malformed structured data")
         return value
 
-    @staticmethod
-    def _bounded_platform_payload(value: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], dict[str, Any]]:
-        rendered = json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    @classmethod
+    def _bounded_platform_context(
+        cls, run_date: str, value: dict[str, dict[str, Any]]
+    ) -> dict[str, Any]:
         limit = 20_000
-        if len(rendered) <= limit:
-            return deepcopy(value), {"truncated": False, "source_chars": len(rendered)}
-        compact: dict[str, dict[str, Any]] = {}
-        remaining = limit
-        for name in sorted(value):
-            text = json.dumps(value[name], ensure_ascii=True, sort_keys=True, separators=(",", ":"))
-            compact[name] = {"excerpt": text[: max(0, min(remaining, 2_000))]}
-            remaining -= len(compact[name]["excerpt"])
-            if remaining <= 0:
-                break
-        return compact, {"truncated": True, "source_chars": len(rendered), "limit": limit}
+        source_chars = cls._canonical_json_chars(value)
+        full_context = {
+            "run_date": run_date,
+            "platform_data": deepcopy(value),
+            "truncation": {
+                "truncated": False,
+                "source_chars": source_chars,
+                "limit": limit,
+                "context_chars": 0,
+            },
+        }
+        measured = cls._refresh_context_chars(full_context)
+        if measured <= limit:
+            return full_context
+
+        rendered_sources = {
+            name: json.dumps(body, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+            for name, body in sorted(value.items())
+        }
+        excerpts = {name: text[:2_000] for name, text in rendered_sources.items()}
+        compact_context: dict[str, Any] = {
+            "run_date": run_date,
+            "platform_data": {
+                name: {"source_type": "json_object", "excerpt": excerpt}
+                for name, excerpt in excerpts.items()
+            },
+            "truncation": {
+                "truncated": True,
+                "source_chars": source_chars,
+                "limit": limit,
+                "context_chars": 0,
+                "sources": {},
+            },
+        }
+
+        while True:
+            compact_context["truncation"]["sources"] = {
+                name: {
+                    "source_chars": len(rendered_sources[name]),
+                    "excerpt_chars": len(excerpt),
+                    "truncated": len(excerpt) < len(rendered_sources[name]),
+                }
+                for name, excerpt in excerpts.items()
+            }
+            for name, excerpt in excerpts.items():
+                compact_context["platform_data"][name]["excerpt"] = excerpt
+            measured = cls._refresh_context_chars(compact_context)
+            if measured <= limit:
+                if cls._canonical_json_chars(compact_context) > limit:
+                    raise DiscoveryError("bounded platform context exceeds its hard limit")
+                return compact_context
+            reducible = [name for name, excerpt in excerpts.items() if excerpt]
+            if not reducible:
+                raise DiscoveryError("platform context cannot be safely reduced to its hard limit")
+            name = max(reducible, key=lambda item: len(excerpts[item]))
+            shrink_by = min(len(excerpts[name]), max(1, measured - limit))
+            excerpts[name] = excerpts[name][:-shrink_by]
+
+    @staticmethod
+    def _canonical_json_chars(value: Any) -> int:
+        return len(json.dumps(value, ensure_ascii=True, sort_keys=True, separators=(",", ":")))
+
+    @classmethod
+    def _refresh_context_chars(cls, context: dict[str, Any]) -> int:
+        truncation = context["truncation"]
+        for _ in range(8):
+            measured = cls._canonical_json_chars(context)
+            if truncation["context_chars"] == measured:
+                return measured
+            truncation["context_chars"] = measured
+        raise DiscoveryError("platform context size metadata did not stabilize")
 
     def _run(self, run_id: str, node: WorkflowNode, argv: tuple[str, ...], artifact_name: str) -> Any:
         return self._runner.run(run_id, node, argv, artifact_name)
@@ -444,6 +524,17 @@ class DiscoveryNodes:
         if payload.get("ok") is not True or not 200 <= self._status(payload) < 300:
             raise DiscoveryError("command did not return a successful response")
         return self._body(payload)
+
+    @staticmethod
+    def _validate_alphas_summary(body: dict[str, Any]) -> None:
+        if any(type(body.get(name)) is not int or body[name] < 0 for name in ("is", "os", "prod")):
+            raise DiscoveryError("alphas summary response must contain non-negative is, os, and prod counts")
+
+    @staticmethod
+    def _validate_pyramids_response(body: dict[str, Any], label: str) -> None:
+        pyramids = body.get("pyramids")
+        if type(pyramids) is not list or any(type(item) is not dict for item in pyramids):
+            raise DiscoveryError(f"{label} response must contain a pyramids list of objects")
 
     @staticmethod
     def _body_list(payload: dict[str, Any], label: str) -> list[dict[str, Any]]:
@@ -548,6 +639,29 @@ class DiscoveryNodes:
             if type(identifier) is int and identifier > 0:
                 identifiers.append(str(identifier))
         return tuple(identifiers)
+
+    def _verified_runner_artifact_ids(
+        self, run_id: str, node: WorkflowNode, *results: Any
+    ) -> tuple[str, ...]:
+        identifiers = self._artifact_ids(*results)
+        if not identifiers:
+            return ()
+        getter = getattr(self._store, "get_artifact", None)
+        if not callable(getter):
+            raise DiscoveryError("store cannot verify runner artifact provenance")
+        for identifier in identifiers:
+            artifact_id = int(identifier)
+            try:
+                record = getter(artifact_id)
+            except Exception:
+                raise DiscoveryError("runner artifact provenance cannot be verified") from None
+            if (
+                getattr(record, "id", None) != artifact_id
+                or getattr(record, "run_id", None) != run_id
+                or getattr(record, "node", None) != node
+            ):
+                raise DiscoveryError("runner artifact belongs to another run or node")
+        return identifiers
 
     @staticmethod
     def _artifact_reference(result: Any) -> dict[str, str]:

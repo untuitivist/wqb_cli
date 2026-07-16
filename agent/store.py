@@ -1965,6 +1965,49 @@ class AgentStore:
             ).fetchone()
             return _experience_from_row(row, values["field_ids"])
 
+    def finalize_run_experiences(
+        self,
+        run_id: str,
+        *,
+        final_decision: str,
+        approval_outcome: str,
+        terminal_artifact_ids: list[str],
+    ) -> int:
+        """Attach one terminal decision snapshot to every experience in a run."""
+        _validate_run_id(run_id)
+        _validate_nonblank_string(final_decision, "final_decision")
+        _validate_nonblank_string(approval_outcome, "approval_outcome")
+        if type(terminal_artifact_ids) is not list:
+            raise TypeError("terminal_artifact_ids must be a list")
+        for index, artifact_id in enumerate(terminal_artifact_ids):
+            _validate_nonblank_string(
+                artifact_id, f"terminal_artifact_ids[{index}]"
+            )
+        normalized_ids = list(dict.fromkeys(terminal_artifact_ids))
+        with self._transaction() as connection:
+            if connection.execute(
+                "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone() is None:
+                raise RunNotFound(run_id)
+            rows = connection.execute(
+                "SELECT id, record_json FROM experiences WHERE run_id = ?",
+                (run_id,),
+            ).fetchall()
+            for row in rows:
+                record = json.loads(row["record_json"]) if row["record_json"] else {}
+                record["terminal_artifact_ids"] = normalized_ids
+                record["approval_outcome"] = approval_outcome
+                connection.execute(
+                    f"UPDATE experiences SET final_decision = ?, record_json = ?, "
+                    f"updated_at = ({_NOW_SQL}) WHERE id = ?",
+                    (
+                        final_decision.strip(),
+                        _validated_json_object(record, "experience record"),
+                        row["id"],
+                    ),
+                )
+            return len(rows)
+
     def search_experience(
         self,
         region: str,

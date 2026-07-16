@@ -35,6 +35,35 @@ class EvidenceCoverage:
     missing_sources: tuple[str, ...]
 
 
+def keyword_evidence_coverage(
+    lessons: object, keywords: Iterable[str]
+) -> dict[str, dict[str, list[str]]]:
+    if not isinstance(lessons, (list, tuple)):
+        raise TypeError("lessons must be a list")
+    normalized_keywords = _keywords(keywords)
+    present = {keyword: set() for keyword in normalized_keywords}
+    for lesson in lessons:
+        if not isinstance(lesson, Mapping):
+            raise EvidenceError("evidence lesson must be an object")
+        source_class = lesson.get("source_class")
+        source_id = lesson.get("source_id", lesson.get("artifact_id"))
+        applicability = lesson.get("applicability")
+        if source_class not in _EVIDENCE_CLASSES:
+            raise EvidenceError("evidence lesson has invalid source_class")
+        if type(source_id) is not str or not source_id.startswith("artifact:"):
+            raise EvidenceError("evidence lesson must reference an artifact")
+        if applicability not in present:
+            raise EvidenceError("evidence lesson has invalid applicability")
+        present[applicability].add(source_class)
+    return {
+        keyword: {
+            "coverage": [name for name in _EVIDENCE_CLASSES if name in present[keyword]],
+            "missing_sources": [name for name in _EVIDENCE_CLASSES if name not in present[keyword]],
+        }
+        for keyword in normalized_keywords
+    }
+
+
 class EvidenceError(ValueError):
     """Raised when collected evidence is not a trustworthy command result."""
 
@@ -390,10 +419,21 @@ class EvidenceNodes:
                 paper_unavailable = True
             else:
                 lessons.append(lesson)
-        coverage = evidence_coverage(lessons)
+        per_keyword = keyword_evidence_coverage(lessons, keywords)
+        missing_sources = [
+            source
+            for source in _EVIDENCE_CLASSES
+            if any(source in item["missing_sources"] for item in per_keyword.values())
+        ]
+        complete = not missing_sources
+        paper_unavailable = any(
+            "paper" in item["missing_sources"] for item in per_keyword.values()
+        )
         bundle_value = {
             "lessons": lessons,
-            "coverage": list(coverage.missing_sources),
+            "coverage": missing_sources,
+            "missing_sources": missing_sources,
+            "per_keyword": per_keyword,
         }
         evidence_artifacts: tuple[str, ...] = ()
         evidence_bundle: dict[str, str] | None = None
@@ -416,12 +456,17 @@ class EvidenceNodes:
                     "sha256": digest,
                 }
         artifacts.extend(evidence_artifacts)
-        summary = {"lesson_count": len(lessons), "missing_sources": list(coverage.missing_sources), "paper_source_unavailable": paper_unavailable}
+        summary = {
+            "lesson_count": len(lessons),
+            "missing_sources": missing_sources,
+            "per_keyword": per_keyword,
+            "paper_source_unavailable": paper_unavailable,
+        }
         return NodeResult(
             WorkflowNode.G, summary, tuple(artifacts),
             next_node=(
                 WorkflowNode.H
-                if coverage.complete and evidence_bundle is not None
+                if complete and evidence_bundle is not None
                 else WorkflowNode.G
             ),
             payload={
@@ -432,7 +477,8 @@ class EvidenceNodes:
                 "evidence_bundle_sha256": (
                     None if evidence_bundle is None else evidence_bundle["sha256"]
                 ),
-                "missing_sources": list(coverage.missing_sources),
+                "missing_sources": missing_sources,
+                "per_keyword": per_keyword,
                 "paper_source_unavailable": paper_unavailable,
             },
         )

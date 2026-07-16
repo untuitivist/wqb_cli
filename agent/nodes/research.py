@@ -11,7 +11,7 @@ from ..models.base import ModelRequest
 from ..schemas import validate_model_output
 from ..store import StoreRecordNotFound
 from ..types import ModelRole, NodeResult, WorkflowNode
-from .evidence import EvidenceError, evidence_coverage
+from .evidence import EvidenceError, keyword_evidence_coverage
 
 
 class ResearchError(ValueError):
@@ -347,11 +347,16 @@ class ResearchNodes:
             raise ResearchError("evidence bundle content is invalid") from None
         if hashlib.sha256(_canonical(bundle).encode("utf-8")).hexdigest() != bound_hash:
             raise ResearchError("evidence bundle is not canonical")
-        if type(bundle) is not dict or set(bundle) != {"lessons", "coverage"}:
+        if type(bundle) is not dict or set(bundle) != {
+            "lessons", "coverage", "missing_sources", "per_keyword",
+        }:
             raise ResearchError("evidence bundle content is invalid")
         raw_lessons = bundle.get("lessons")
         if type(raw_lessons) is not list:
             raise ResearchError("evidence bundle lessons are invalid")
+        declared_per_keyword = bundle.get("per_keyword")
+        if not isinstance(declared_per_keyword, Mapping):
+            raise ResearchError("evidence bundle coverage is invalid")
         lessons: list[dict[str, Any]] = []
         references: set[str] = set()
         for lesson in raw_lessons:
@@ -382,13 +387,27 @@ class ResearchNodes:
             self._verify_source_provenance(source_class, artifact)
             references.add(source_id)
             lessons.append(dict(lesson))
-        coverage = evidence_coverage(lessons)
-        if not coverage.complete:
-            raise ResearchError(
-                f"research plan requires evidence coverage: {', '.join(coverage.missing_sources)}"
+        try:
+            per_keyword = keyword_evidence_coverage(
+                lessons, declared_per_keyword.keys()
             )
-        if bundle["coverage"] != list(coverage.missing_sources):
+        except (EvidenceError, TypeError):
+            raise ResearchError("evidence bundle coverage is invalid") from None
+        missing_sources = [
+            source
+            for source in ("community", "official_docs", "platform", "paper")
+            if any(source in item["missing_sources"] for item in per_keyword.values())
+        ]
+        if (
+            declared_per_keyword != per_keyword
+            or bundle["coverage"] != missing_sources
+            or bundle["missing_sources"] != missing_sources
+        ):
             raise ResearchError("evidence bundle coverage does not match its lessons")
+        if missing_sources:
+            raise ResearchError(
+                f"research plan requires evidence coverage: {', '.join(missing_sources)}"
+            )
         return lessons, references
 
     def _verify_source_provenance(self, source_class: str, artifact: Any) -> None:

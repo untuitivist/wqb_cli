@@ -77,10 +77,20 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             command = self.store.reserve_command("run-1", WorkflowNode.G, f"{source_class}-command", argv)
             artifact = self.artifacts.write_json("run-1", WorkflowNode.G, name, {"source": source_class})
             self.store.complete_command(command.id, 0, artifact_id=artifact.id)
-            lessons.append({"source_class": source_class, "source_id": f"artifact:{artifact.id}", "extracted_statement": f"{source_class} fact", "applicability": "PV"})
+            lessons.append({"source_class": source_class, "source_id": f"artifact:{artifact.id}", "extracted_statement": f"{source_class} fact", "applicability": "liquidity"})
         bundle = self.artifacts.write_json(
             "run-1", WorkflowNode.G, "evidence_lessons.json",
-            {"lessons": lessons, "coverage": []},
+            {
+                "lessons": lessons,
+                "coverage": [],
+                "missing_sources": [],
+                "per_keyword": {
+                    "liquidity": {
+                        "coverage": ["community", "official_docs", "platform", "paper"],
+                        "missing_sources": [],
+                    },
+                },
+            },
         )
         return {"artifact_id": f"artifact:{bundle.id}", "sha256": bundle.sha256}
 
@@ -421,6 +431,54 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         self.assertFalse(result.summary["paper_source_unavailable"])
         runner.run_external.assert_called_once()
 
+    def test_g_requires_complete_source_coverage_for_each_keyword(self) -> None:
+        runner = Mock()
+        runner.run.side_effect = [
+            SimpleNamespace(payload=local_payload(forum_topics=[{"title": "liquidity community"}], forum_comments=[], docs_articles=[]), artifact=SimpleNamespace(id=10)),
+            SimpleNamespace(payload=local_payload(nodes=[{"node": "data", "readme": "data/README.md", "examples": []}]), artifact=SimpleNamespace(id=11)),
+            SimpleNamespace(payload=local_payload(text="liquidity docs"), artifact=SimpleNamespace(id=12)),
+            SimpleNamespace(payload=envelope({"query": ["liquidity platform"]}), artifact=SimpleNamespace(id=13)),
+            SimpleNamespace(payload=local_payload(forum_topics=[{"title": "momentum community"}], forum_comments=[], docs_articles=[]), artifact=SimpleNamespace(id=20)),
+            SimpleNamespace(payload=local_payload(nodes=[{"node": "data", "readme": "data/README.md", "examples": []}]), artifact=SimpleNamespace(id=21)),
+            SimpleNamespace(payload=local_payload(text="momentum docs"), artifact=SimpleNamespace(id=22)),
+            SimpleNamespace(payload=envelope({"query": ["momentum platform"]}), artifact=SimpleNamespace(id=23)),
+        ]
+        runner.run_external.side_effect = [
+            SimpleNamespace(
+                payload=local_payload(papers=[{"title": "Liquidity and returns"}]),
+                artifact=SimpleNamespace(id=14),
+            ),
+            SimpleNamespace(payload=local_payload(papers=[]), artifact=SimpleNamespace(id=24)),
+        ]
+
+        result = EvidenceNodes(
+            runner=runner, router=Mock(), store=self.store,
+            artifacts=self.artifacts,
+        ).run_g("run-1", ["liquidity", "momentum"])
+
+        expected_per_keyword = {
+            "liquidity": {
+                "coverage": ["community", "official_docs", "platform", "paper"],
+                "missing_sources": [],
+            },
+            "momentum": {
+                "coverage": ["community", "official_docs", "platform"],
+                "missing_sources": ["paper"],
+            },
+        }
+        self.assertEqual(result.next_node, WorkflowNode.G)
+        self.assertEqual(result.summary["missing_sources"], ["paper"])
+        self.assertEqual(result.summary["per_keyword"], expected_per_keyword)
+        self.assertTrue(result.summary["paper_source_unavailable"])
+        self.assertEqual(result.payload["missing_sources"], ["paper"])
+        self.assertEqual(result.payload["per_keyword"], expected_per_keyword)
+        binding = result.payload["evidence_bundle"]
+        artifact = self.store.get_artifact(int(binding["artifact_id"].split(":")[1]))
+        bundle = self.artifacts.read_json(artifact)
+        self.assertEqual(bundle["coverage"], ["paper"])
+        self.assertEqual(bundle["missing_sources"], ["paper"])
+        self.assertEqual(bundle["per_keyword"], expected_per_keyword)
+
     def test_g_returns_canonical_evidence_bundle_artifact_binding(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
@@ -457,6 +515,58 @@ class EvidenceResearchNodeTests(unittest.TestCase):
             {"query": ["Liquidity inventory statement"]}, "artifact:3", "liquidity"
         )
         self.assertEqual(lesson["extracted_statement"], "Liquidity inventory statement")
+
+    def test_h_rejects_bundle_with_only_global_source_coverage(self) -> None:
+        sources = (
+            ("community", "liquidity", ("community", "search", "liquidity"), "liquidity_community_search.json"),
+            ("paper", "liquidity", ("arxiv", "search", "query", "liquidity"), "liquidity_papers.json"),
+            ("official_docs", "momentum", ("docs", "show", "data/README.md"), "momentum_docs_show.json"),
+            ("platform", "momentum", ("search", "momentum"), "momentum_platform_search.json"),
+        )
+        lessons = []
+        for source_class, keyword, argv, name in sources:
+            command = self.store.reserve_command(
+                "run-1", WorkflowNode.G, f"{keyword}-{source_class}", argv,
+            )
+            artifact = self.artifacts.write_json(
+                "run-1", WorkflowNode.G, name, {"source": source_class},
+            )
+            self.store.complete_command(command.id, 0, artifact_id=artifact.id)
+            lessons.append({
+                "source_class": source_class,
+                "source_id": f"artifact:{artifact.id}",
+                "extracted_statement": f"{source_class} fact",
+                "applicability": keyword,
+            })
+        bundle_artifact = self.artifacts.write_json(
+            "run-1", WorkflowNode.G, "evidence_lessons.json", {
+                "lessons": lessons,
+                "coverage": ["community", "official_docs", "platform", "paper"],
+                "missing_sources": ["community", "official_docs", "platform", "paper"],
+                "per_keyword": {
+                    "liquidity": {
+                        "coverage": ["community", "paper"],
+                        "missing_sources": ["official_docs", "platform"],
+                    },
+                    "momentum": {
+                        "coverage": ["official_docs", "platform"],
+                        "missing_sources": ["community", "paper"],
+                    },
+                },
+            },
+        )
+        router = Mock()
+
+        with self.assertRaisesRegex(ResearchError, "research plan requires evidence coverage"):
+            ResearchNodes(
+                runner=Mock(), router=router, store=self.store,
+                artifacts=self.artifacts,
+            ).run_h(
+                "run-1", self.scope, "tower-1", [{"id": "vwap"}],
+                {"artifact_id": f"artifact:{bundle_artifact.id}", "sha256": bundle_artifact.sha256},
+            )
+
+        router.invoke.assert_not_called()
 
     def test_h_stores_canonical_plan_with_validated_tower_and_evidence(self) -> None:
         bundle = self.trusted_evidence_bundle()

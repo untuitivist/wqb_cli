@@ -132,15 +132,21 @@ class DiscoveryNodes:
         alphas_summary_result = self._run(run_id, WorkflowNode.C, ("user", "alphas-summary"), "alphas_summary.json")
         pyramid_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-alphas"), "pyramid_alphas.json")
         multipliers_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-multipliers"), "pyramid_multipliers.json")
-        regular_count = len(self._records(self._successful_body(self._payload(regular_result))))
-        super_count = len(self._records(self._successful_body(self._payload(super_result))))
+        all_body = self._successful_body(self._payload(all_result))
+        regular_body = self._successful_body(self._payload(regular_result))
+        super_body = self._successful_body(self._payload(super_result))
+        self._successful_body(self._payload(alphas_summary_result))
+        self._successful_body(self._payload(pyramid_result))
+        self._successful_body(self._payload(multipliers_result))
+        regular_count = len(self._records(regular_body))
+        super_count = len(self._records(super_body))
         summary = {
             "submission_day": start.date().isoformat(),
             "interval": {"start": interval[0], "end": interval[1], "timezone": "America/New_York"},
             "regular_submitted": regular_count,
             "regular_remaining": max(0, self._regular_daily_quota - regular_count),
             "super_submitted": super_count,
-            "all_submitted": len(self._records(self._successful_body(self._payload(all_result)))),
+            "all_submitted": len(self._records(all_body)),
         }
         artifact_ids = self._artifact_ids(
             all_result, regular_result, super_result, alphas_summary_result, pyramid_result, multipliers_result

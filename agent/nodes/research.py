@@ -425,9 +425,13 @@ class ResearchNodes:
             task_id = raw.get("task_id")
             mechanism_id = raw.get("mechanism_id")
             count = raw.get("count")
-            if type(task_id) is not str or not task_id.strip() or task_id in seen:
+            if type(task_id) is not str:
                 raise ResearchError("candidate task_id is invalid")
             task_id = task_id.strip()
+            if not task_id:
+                raise ResearchError("candidate task_id is invalid")
+            if task_id in seen:
+                raise ResearchError(f"duplicate task id: {task_id}")
             if type(mechanism_id) is not str or mechanism_id not in mechanisms:
                 raise ResearchError("candidate task mechanism is invalid")
             if type(count) is not int or not 1 <= count <= 8:

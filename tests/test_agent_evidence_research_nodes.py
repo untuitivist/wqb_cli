@@ -14,7 +14,11 @@ from wqb_cli.agent.nodes.evidence import (
     evidence_coverage,
     screen_fields,
 )
-from wqb_cli.agent.nodes.research import ResearchNodes, validate_mechanism_fields
+from wqb_cli.agent.nodes.research import (
+    ResearchError,
+    ResearchNodes,
+    validate_mechanism_fields,
+)
 from wqb_cli.agent.expressions import fingerprint_expression
 from wqb_cli.agent.artifacts import ArtifactWriter
 from wqb_cli.agent.store import AgentStore
@@ -552,6 +556,32 @@ class EvidenceResearchNodeTests(unittest.TestCase):
 
         self.assertEqual(second.payload["new_fingerprints"], [])
         self.assertEqual(second.payload["rejected"][0]["reason"], "duplicate_fingerprint")
+
+    def test_i_rejects_task_ids_that_duplicate_after_normalization_before_operator(self) -> None:
+        plan = {"mechanisms": [{"mechanism_id": "m1", "tower_id": "tower-1", "field_ids": ["vwap"], "evidence_refs": ["artifact:1"]}]}
+        self.store.record_research_plan("run-1", 1, "plan-hash", plan)
+        router = Mock()
+        router.invoke.return_value = model_value(
+            "candidate_plan",
+            {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [
+                {"task_id": "t1", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1},
+                {"task_id": " t1", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1},
+            ]},
+        )
+
+        with self.assertRaisesRegex(ResearchError, "duplicate task id"):
+            ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
+                "run-1", self.scope, {"rank": {"arity": 1}},
+            )
+
+        self.assertEqual(router.invoke.call_count, 1)
+        with closing(self.store.connect()) as connection:
+            self.assertEqual(
+                connection.execute(
+                    "SELECT COUNT(*) FROM operator_tasks WHERE run_id = ?", ("run-1",)
+                ).fetchone()[0],
+                0,
+            )
 
     def test_i_persists_equivalent_rejections_by_raw_candidate_and_reason(self) -> None:
         fingerprint = fingerprint_expression("rank(vwap)")

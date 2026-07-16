@@ -1,0 +1,9 @@
+{
+  "id": "ALPHA123",
+  "sharpe": 1.9,
+  "fitness": 1.2,
+  "turnover": 0.2,
+  "margin": 0.0013,
+  "checks": [{"name": "LOW_SHARPE", "result": "PASS"}],
+  "visualizations": {"pnl": [{"date": "2026-01-01", "value": 1.0}]}
+}

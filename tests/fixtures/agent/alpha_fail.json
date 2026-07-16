@@ -1,0 +1,8 @@
+{
+  "id": "ALPHA124",
+  "sharpe": 1.58,
+  "fitness": 1.0,
+  "turnover": 0.01,
+  "margin": 0.001,
+  "checks": [{"name": "LOW_SHARPE", "result": "FAIL"}]
+}

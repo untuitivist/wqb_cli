@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "simulation_id": "SIM-PARENT-1",
+  "children": [
+    {
+      "simulation_id": "SIM-CHILD-1",
+      "classification": {"ok": true, "status": "COMPLETE"},
+      "result": {
+        "ok": true,
+        "response": {
+          "status_code": 200,
+          "body": {"status": "COMPLETE", "alpha": "ALPHA123"}
+        }
+      }
+    }
+  ]
+}

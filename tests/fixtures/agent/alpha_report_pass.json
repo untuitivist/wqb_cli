@@ -1,0 +1,7 @@
+{
+  "alpha": {"id": "ALPHA123"},
+  "checks": {"checks": [{"name": "LOW_SHARPE", "result": "PASS"}]},
+  "self_correlation": {"max": 0.42, "limit": 0.7},
+  "prod_correlation": {"max": 0.48, "limit": 0.7},
+  "performance_comparison": {"passed": true, "checks": [{"result": "PASS"}]}
+}

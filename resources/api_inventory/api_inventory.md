@@ -1,10 +1,10 @@
 # WorldQuant BRAIN API Inventory
 
 - Base URL: `https://api.worldquantbrain.com`
-- Generated at: `2026-05-18T16:48:35.770130+00:00`
-- Endpoint count: `102`
-- Probed GET count: `56`
-- Usable GET count: `26`
+- Generated at: `2026-07-16T08:57:52+00:00`
+- Endpoint count: `107`
+- Probed GET count: `61`
+- Usable GET count: `31`
 - 自动探测只执行 `GET`，不会自动执行 `POST/PATCH/PUT/DELETE`。
 - 社区内容不在远端 API 中爬取，后续继续使用本地 SQLite 搜索。
 
@@ -359,6 +359,27 @@
 - Safe probe: `False`
 - Probe: skipped
 
+### `/competitions/{competition_id}/boards/{board_type}`
+
+- Methods: `GET`
+- Sources: `observed_platform, platform_frontend`
+- Description: Generic competition leaderboard; use `OPTIONS` to discover board-specific fields, filters, and aggregations.
+- Probe: `200 OK` using `PAC2026/boards/leader`
+
+### `/competitions/spc/submissions`
+
+- Methods: `GET, POST`
+- Sources: `observed_platform, platform_frontend`
+- Description: List or create SPC prompt submissions.
+- Probe: `200 OK`; mutating `POST` was not executed.
+
+### `/competitions/spc/submissions/{submission_id}`
+
+- Methods: `GET, PUT, PATCH`
+- Sources: `observed_platform, platform_frontend`
+- Description: Read submission weight history or replace/partially update an SPC prompt submission.
+- Probe: `200 OK`; mutating `PUT/PATCH` were not executed.
+
 ### `/competitions/{competition_id}/agreement`
 
 - Methods: `GET, POST`
@@ -498,6 +519,20 @@
 - Probe status: `200 OK`
 - Usable GET: `True`
 - Response shape: `{"count": "int", "next": "str", "previous": "NoneType", "results": [{"user": "str", "weightFactor": "float", "valueFactor": "float", "dailyOsmosisRank": "float", "dataFieldsUsed": "int", "submissionsCount": "int", "meanProdCorrelation": "float", "meanSelfCorrelation": "float", "superAlphaSubmissionsCount": "int", "superAlphaMeanProdCorrelation": "float", "superAlphaMeanSelfCorrelation": "float", "university": "str", "country": "str"}]}`
+
+### `/consultant/boards/{board_type}`
+
+- Methods: `GET`
+- Sources: `observed_platform, platform_frontend`
+- Description: Generic consultant leaderboard for board types such as `leader`, `spc`, `power-pool`, and `referral`.
+- Probe: `200 OK` for live `GET` and `OPTIONS` checks.
+
+### `/consultant/boards/spc`
+
+- Methods: `GET`
+- Sources: `observed_platform, platform_frontend`
+- Description: Static SPC instance retained alongside the generic consultant-board template.
+- Probe: `200 OK`
 
 ### `/consultant/summary`
 

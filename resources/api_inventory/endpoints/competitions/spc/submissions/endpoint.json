@@ -1,0 +1,135 @@
+{
+  "path": "/competitions/spc/submissions",
+  "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "List or create Systematic Predictions Challenge prompt submissions.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional integer; pagination size",
+    "offset": "optional integer; pagination offset"
+  },
+  "request_body": {
+    "POST": {
+      "required": [
+        "name",
+        "prompt",
+        "sampleOutput",
+        "model",
+        "modelVersion",
+        "weight",
+        "updateFrequency"
+      ],
+      "properties": {
+        "name": "string, max 200",
+        "prompt": "string, max 10000",
+        "sampleOutput": "string, max 10000",
+        "model": "choice returned by OPTIONS",
+        "modelVersion": "string, max 100",
+        "weight": "decimal from 0 to 1, rounded to 2 places",
+        "updateFrequency": "quarterly, monthly, weekly, or daily"
+      }
+    }
+  },
+  "notes": [
+    "Authentication is required.",
+    "POST creates a remote submission and was documented from OPTIONS and frontend code but not executed during inventory validation."
+  ],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/competitions/spc/submissions?limit=1&offset=0",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "null",
+      "previous": "null",
+      "results": [
+        {
+          "id": "str",
+          "name": "str",
+          "prompt": "str",
+          "sampleOutput": "str",
+          "model": "str",
+          "modelVersion": "str",
+          "weight": "str",
+          "updateFrequency": "str",
+          "lastModified": "str",
+          "status": "str"
+        }
+      ]
+    },
+    "response_sample": null,
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, POST, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 243
+  },
+  "test_results": [
+    {
+      "path": "/competitions/spc/submissions",
+      "method": "GET",
+      "resolved_path": "/competitions/spc/submissions",
+      "url": "https://api.worldquantbrain.com/competitions/spc/submissions?limit=1&offset=0",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 243,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "null",
+        "previous": "null",
+        "results": [
+          {
+            "id": "str",
+            "name": "str",
+            "prompt": "str",
+            "sampleOutput": "str",
+            "model": "str",
+            "modelVersion": "str",
+            "weight": "str",
+            "updateFrequency": "str",
+            "lastModified": "str",
+            "status": "str"
+          }
+        ]
+      },
+      "allow": "GET, POST, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    },
+    {
+      "path": "/competitions/spc/submissions",
+      "method": "POST",
+      "resolved_path": "/competitions/spc/submissions",
+      "url": "https://api.worldquantbrain.com/competitions/spc/submissions",
+      "executed": false,
+      "status": "skipped_mutating",
+      "reason": "POST creates a remote SPC submission; not executed during inventory validation."
+    }
+  ]
+}

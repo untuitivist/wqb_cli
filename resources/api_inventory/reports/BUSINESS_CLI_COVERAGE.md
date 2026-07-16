@@ -1,7 +1,7 @@
 # Business CLI Coverage
 
-- Endpoint count: `104`
-- Method cases: `126`
+- Endpoint count: `109`
+- Method cases: `134`
 - Missing: `0`
 
 ## Commands
@@ -43,8 +43,14 @@
 - `GET /competition-levels/{competition_level_id}/icon` -> `wqb platform competition-level-icon none`
 - `GET /competitions` -> `wqb competition list --limit 1`
 - `GET /competitions/{competition_id}` -> `wqb competition get challenge`
+- `GET /competitions/{competition_id}/boards/{board_type}` -> `wqb competition leaderboard PAC2026 --board-type leader --limit 1`
 - `GET /competitions/{competition_id}/agreement` -> `wqb competition agreement challenge --method GET`
 - `POST /competitions/{competition_id}/agreement` -> `wqb competition agreement challenge --method POST`
+- `GET /competitions/spc/submissions` -> `wqb competition spc submissions --limit 1`
+- `POST /competitions/spc/submissions` -> `wqb competition spc create-submission --input spc-submission.json`
+- `GET /competitions/spc/submissions/{submission_id}` -> `wqb competition spc submission-history SUBMISSION_ID --limit 1`
+- `PUT /competitions/spc/submissions/{submission_id}` -> `wqb competition spc update-submission SUBMISSION_ID --method PUT --input spc-submission.json`
+- `PATCH /competitions/spc/submissions/{submission_id}` -> `wqb competition spc update-submission SUBMISSION_ID --method PATCH --input weight.json`
 - `GET /configuration` -> `wqb config get`
 - `GET /consultant` -> `wqb consultant get`
 - `GET /consultant-datasets` -> `wqb consultant datasets`
@@ -56,6 +62,8 @@
 - `GET /consultant-program/{language}` -> `wqb consultant program-language en`
 - `GET /consultant/boards` -> `wqb consultant boards leader`
 - `GET /consultant/boards/leader` -> `wqb consultant boards leader`
+- `GET /consultant/boards/spc` -> `wqb competition leaderboard spc --scope consultant --board BOARD_FROM_OPTIONS --limit 1`
+- `GET /consultant/boards/{board_type}` -> `wqb competition leaderboard spc --scope consultant --limit 1`
 - `GET /consultant/summary` -> `wqb consultant summary`
 - `GET /data-categories` -> `wqb data categories`
 - `GET /data-fields` -> `wqb data fields --dataset analyst10 --limit 1`

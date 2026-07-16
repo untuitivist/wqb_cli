@@ -1,12 +1,12 @@
 # CLI Validation Results
 
-- Generated at: `2026-05-18T17:45:12.249392+00:00`
-- Endpoint count: `104`
-- Method cases: `126`
-- Show checks: `104`
-- Command checks: `126`
-- Safe calls executed: `105`
-- Mutating requests: `21`
+- Generated at: `2026-07-16T08:57:52+00:00`
+- Endpoint count: `109`
+- Method cases: `134`
+- Show checks: `109`
+- Command checks: `134`
+- Safe calls executed: `110`
+- Mutating requests: `24`
 - CLI errors: `0`
 
 ## Results
@@ -887,6 +887,62 @@
 - HTTP: `200 OK`
 
 ### `GET /video-courses`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `True`
+- HTTP: `200 OK`
+
+### `GET /competitions/{competition_id}/boards/{board_type}`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `True`
+- HTTP: `200 OK`
+
+### `GET /competitions/spc/submissions`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `True`
+- HTTP: `200 OK`
+
+### `POST /competitions/spc/submissions`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `False`
+- Reason: mutating method not executed during validation
+
+### `GET /competitions/spc/submissions/{submission_id}`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `True`
+- HTTP: `200 OK`
+
+### `PUT /competitions/spc/submissions/{submission_id}`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `False`
+- Reason: mutating method not executed during validation
+
+### `PATCH /competitions/spc/submissions/{submission_id}`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `False`
+- Reason: mutating method not executed during validation
+
+### `GET /consultant/boards/{board_type}`
+
+- Show OK: `True`
+- Check OK: `True`
+- Executed: `True`
+- HTTP: `200 OK`
+
+### `GET /consultant/boards/spc`
 
 - Show OK: `True`
 - Check OK: `True`

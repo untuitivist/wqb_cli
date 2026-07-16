@@ -141,6 +141,16 @@ class AgentStoreExtendedTests(unittest.TestCase):
         with self.assertRaises(store_module.StoreConflict):
             self.store.complete_operator_task("run", "task-1", "FAILED", {})
 
+        blocked_task = self.store.record_operator_task(
+            "run", "task-blocked", 2, {"kind": "bounded"}
+        )
+        blocked = self.store.complete_operator_task(
+            "run", "task-blocked", "BLOCKED", {"reason": "insufficient evidence"}
+        )
+        self.assertEqual(blocked.status, "BLOCKED")
+        self.assertEqual(blocked.result, {"reason": "insufficient evidence"})
+        self.assertEqual(self.store.get_operator_task("run", "task-blocked"), blocked)
+
         with closing(self.store.connect()) as connection:
             stored_plan = connection.execute(
                 "SELECT plan_json FROM research_plans WHERE id = ?", (plan.id,)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import dataclass
 import hashlib
 import json
 from typing import Any
@@ -15,6 +16,14 @@ from .evidence import EvidenceError, evidence_coverage
 
 class ResearchError(ValueError):
     """Raised for a plan or candidate that cannot enter the durable workflow."""
+
+
+@dataclass(frozen=True)
+class _OperatorTaskOutcome:
+    status: str
+    accepted: tuple[dict[str, Any], ...] = ()
+    rejected: tuple[dict[str, Any], ...] = ()
+    result: dict[str, Any] | None = None
 
 
 def validate_mechanism_fields(
@@ -147,7 +156,7 @@ class ResearchNodes:
                 run_id, task_id, plan_record.plan_version, task
             )
             try:
-                task_accepted, task_rejected = self._run_operator_task(
+                outcome = self._run_operator_task(
                     run_id,
                     normalized_scope,
                     plan_record.plan_version,
@@ -161,6 +170,48 @@ class ResearchNodes:
                     run_id, task_id, "FAILED", {"error": type(error).__name__}
                 )
                 raise
+            if outcome.status == "BLOCKED":
+                blocked_result = outcome.result or {
+                    "status": "BLOCKED",
+                    "reason": "operator task blocked",
+                }
+                self._store.complete_operator_task(
+                    run_id, task_id, "BLOCKED", blocked_result
+                )
+                artifacts = self._write_json(
+                    run_id,
+                    WorkflowNode.I,
+                    "candidate_materialization_blocked.json",
+                    {
+                        "plan_version": plan_record.plan_version,
+                        "plan_hash": plan_record.plan_hash,
+                        "task_id": task_id,
+                        "status": "BLOCKED",
+                        "reason": blocked_result["reason"],
+                    },
+                )
+                return NodeResult(
+                    WorkflowNode.I,
+                    {
+                        "status": "BLOCKED",
+                        "task_id": task_id,
+                        "reason": blocked_result["reason"],
+                    },
+                    artifacts,
+                    next_node=WorkflowNode.I,
+                    payload={
+                        "status": "BLOCKED",
+                        "task_id": task_id,
+                        "reason": blocked_result["reason"],
+                        "accepted": accepted,
+                        "rejected": rejected,
+                        "new_fingerprints": [],
+                        "plan_version": plan_record.plan_version,
+                        "plan_hash": plan_record.plan_hash,
+                    },
+                )
+            task_accepted = list(outcome.accepted)
+            task_rejected = list(outcome.rejected)
             accepted.extend(task_accepted)
             rejected.extend(task_rejected)
             self._store.complete_operator_task(
@@ -186,7 +237,7 @@ class ResearchNodes:
         task: dict[str, Any],
         operators: Mapping[str, Mapping[str, object]],
         allow_revalidation: bool,
-    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    ) -> _OperatorTaskOutcome:
         operator = self._invoke(
             ModelRole.OPERATOR,
             WorkflowNode.I,
@@ -196,7 +247,16 @@ class ResearchNodes:
         payload = operator.get("task_result")
         if not isinstance(payload, Mapping) or not isinstance(payload.get("payload"), Mapping):
             raise ResearchError("operator candidate task is invalid")
-        if payload.get("status") != "COMPLETED":
+        status = payload.get("status")
+        if status == "BLOCKED":
+            reason = payload["payload"].get("reason", "operator task blocked")
+            if type(reason) is not str or not reason.strip():
+                raise ResearchError("blocked operator task has invalid reason")
+            return _OperatorTaskOutcome(
+                "BLOCKED",
+                result={"status": "BLOCKED", "reason": reason.strip()[:512]},
+            )
+        if status != "COMPLETED":
             raise ResearchError("operator candidate task did not complete")
         content = payload["payload"]
         if any(key in content for key in ("plan_version", "plan_hash", "scope", "settings", "commands")):
@@ -217,7 +277,9 @@ class ResearchNodes:
                 accepted,
                 rejected,
             )
-        return accepted, rejected
+        return _OperatorTaskOutcome(
+            "COMPLETED", tuple(accepted), tuple(rejected), {"status": "COMPLETED"}
+        )
 
     def _field_metadata(self, run_id: str, fields: list[Mapping[str, Any]] | list[str]) -> tuple[list[dict[str, Any]], tuple[str, ...]]:
         result: list[dict[str, Any]] = []

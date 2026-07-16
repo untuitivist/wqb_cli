@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from contextlib import closing
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -247,6 +248,37 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         alpha_rows_call = runner.run.call_args_list[-1].args[2]
         self.assertEqual(alpha_rows_call[:5], ("scope", "alpha-rows", "USA_1", "--table", "os"))
 
+    def test_f_paginates_all_os_rows_before_deterministic_field_decision(self) -> None:
+        failing_rows = [
+            {"id": f"A{index}", "sharpe": 0.2, "fitness": 0.1, "turnover": 0.2, "margin": 0.0001}
+            for index in range(20)
+        ]
+        runner = Mock()
+        runner.run.side_effect = [
+            SimpleNamespace(payload=local_payload(info_data={"exists": True}, all_data={"exists": True}), artifact=SimpleNamespace(id=1)),
+            SimpleNamespace(payload=local_payload(scopes=[{"scope": "USA_1", "region": "USA", "delay": 1}]), artifact=SimpleNamespace(id=2)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", dimensions={"datafield": 1}), artifact=SimpleNamespace(id=3)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", group="datafield", metric="sharpe_ratio", results=[{"name": "late_weak", "count": 21, "sharpe_ratio": 1.5}]), artifact=SimpleNamespace(id=4)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "late_weak", "dataset": {"id": "ds"}}]}), artifact=SimpleNamespace(id=5)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "ds"}]}), artifact=SimpleNamespace(id=6)),
+            SimpleNamespace(payload=envelope({"results": [{"id": "A1"}]}), artifact=SimpleNamespace(id=7)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", table="os", total=21, offset=0, limit=20, filters={"datafield": "late_weak", "dataset": None}, columns=["id", "sharpe", "fitness", "turnover", "margin"], rows=failing_rows), artifact=SimpleNamespace(id=8)),
+            SimpleNamespace(payload=local_payload(scope="USA_1", table="os", total=21, offset=20, limit=20, filters={"datafield": "late_weak", "dataset": None}, columns=["id", "sharpe", "fitness", "turnover", "margin"], rows=[{"id": "A20", "sharpe": 2.0, "fitness": 1.2, "turnover": 0.2, "margin": 0.002}]), artifact=SimpleNamespace(id=9)),
+        ]
+        router = Mock()
+        router.invoke.side_effect = [
+            model_value("task_result", {"status": "COMPLETED", "payload": {}}),
+            model_value("evidence_requirements", {"keywords": ["liquidity"]}),
+        ]
+
+        result = EvidenceNodes(runner=runner, router=router, store=self.store).run_f(
+            "run-1", self.scope, {"alpha_id": "tower-1", "regular": {"code": "rank(volume)"}},
+        )
+
+        self.assertNotIn("late_weak", result.payload["poor_os_fields"])
+        os_calls = [call.args[2] for call in runner.run.call_args_list if call.args[2][:2] == ("scope", "alpha-rows")]
+        self.assertEqual([argv[argv.index("--offset") + 1] for argv in os_calls], ["0", "20"])
+
     def test_g_records_gap_when_paper_source_is_unavailable(self) -> None:
         runner = Mock()
         runner.run.side_effect = [
@@ -469,15 +501,25 @@ class EvidenceResearchNodeTests(unittest.TestCase):
         self.store.record_research_plan("run-1", 1, "plan-hash", plan)
         router = Mock()
         router.invoke.side_effect = [
-            model_value("candidate_plan", {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [{"task_id": "blocked", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1}]}),
-            model_value("task_result", {"status": "BLOCKED", "payload": {}}),
+            model_value("candidate_plan", {"plan_version": 1, "plan_hash": "plan-hash", "tasks": [
+                {"task_id": "blocked", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1},
+                {"task_id": "later", "mechanism_id": "m1", "permitted_fields": ["vwap"], "transform_families": ["rank"], "count": 1},
+            ]}),
+            model_value("task_result", {"status": "BLOCKED", "payload": {"reason": "insufficient evidence"}}),
         ]
 
-        with self.assertRaisesRegex(ValueError, "did not complete"):
-            ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
-                "run-1", self.scope, {"rank": {"arity": 1}},
-            )
-        self.assertEqual(self.store.get_operator_task("run-1", "blocked").status, "FAILED")
+        result = ResearchNodes(runner=Mock(), router=router, store=self.store).run_i(
+            "run-1", self.scope, {"rank": {"arity": 1}},
+        )
+
+        self.assertEqual(result.next_node, WorkflowNode.I)
+        self.assertEqual(result.payload["status"], "BLOCKED")
+        self.assertEqual(self.store.get_operator_task("run-1", "blocked").status, "BLOCKED")
+        with self.assertRaisesRegex(KeyError, "operator task not found"):
+            self.store.get_operator_task("run-1", "later")
+        self.assertEqual(router.invoke.call_count, 2)
+        with closing(self.store.connect()) as connection:
+            self.assertEqual(connection.execute("SELECT COUNT(*) FROM candidates WHERE run_id='run-1'").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

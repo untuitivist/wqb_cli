@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import json
 from pathlib import Path
 import re
+from math import isfinite
 from typing import Any
 
 from ..models.base import ModelRequest
@@ -193,22 +194,14 @@ class EvidenceNodes:
         alpha_row_results: list[Any] = []
         poor_os: set[str] = set()
         for field_id in [row["name"] for row in top_rows]:
-            result = self._run(
-                run_id,
-                WorkflowNode.F,
-                (
-                    "scope", "alpha-rows", scope_key, "--table", "os",
-                    "--datafield", field_id, "--limit", "20", "--columns",
-                    "id,sharpe,fitness,turnover,margin",
-                ),
-                f"field_os_rows__{field_id}.json",
+            rows, page_results = self._collect_os_rows(
+                run_id, scope_key, field_id
             )
-            body = self._body(
-                self._payload(result), f"OS rows for {field_id}", local=True
-            )
-            if _is_poor_os_page(body, field_id, scope_key):
+            # Preserve the prior authoritative meaning: a field is poor only
+            # when it has OS rows and none of them meets the required metrics.
+            if rows and not any(_os_row_passes(row) for row in rows):
                 poor_os.add(field_id.lower())
-            alpha_row_results.append(result)
+            alpha_row_results.extend(page_results)
 
         results = [*local_results, *remote_results, *alpha_results, *alpha_row_results]
         fields = _field_rows(remote_bodies[0])
@@ -252,6 +245,47 @@ class EvidenceNodes:
         artifact_ids += self._write_json(run_id, WorkflowNode.F, "screened_fields.json", authoritative)
         summary = {"candidate_field_count": len(candidate_ids), "banned_fields": list(screened.banned_fields), "planner": _model_summary(planner)}
         return NodeResult(WorkflowNode.F, summary, artifact_ids, next_node=WorkflowNode.G, payload={**authoritative, "evidence_requirements": dict(planner.get("evidence_requirements", {}))})
+
+    def _collect_os_rows(
+        self, run_id: str, scope_key: str, field_id: str
+    ) -> tuple[list[dict[str, Any]], list[Any]]:
+        rows: list[dict[str, Any]] = []
+        results: list[Any] = []
+        expected_offset = 0
+        expected_total: int | None = None
+        for page in range(20):
+            result = self._run(
+                run_id,
+                WorkflowNode.F,
+                (
+                    "scope", "alpha-rows", scope_key, "--table", "os",
+                    "--datafield", field_id, "--limit", "20", "--offset",
+                    str(expected_offset), "--columns",
+                    "id,sharpe,fitness,turnover,margin",
+                ),
+                f"field_os_rows__{field_id}__page{page + 1}.json",
+            )
+            body = self._body(
+                self._payload(result), f"OS rows for {field_id}", local=True
+            )
+            page_rows, total = _validated_os_page(
+                body,
+                field_id,
+                scope_key,
+                expected_offset=expected_offset,
+                expected_total=expected_total,
+            )
+            if expected_total is None:
+                expected_total = total
+            results.append(result)
+            rows.extend(page_rows)
+            next_offset = expected_offset + len(page_rows)
+            if next_offset == total:
+                return rows, results
+            if not page_rows or next_offset <= expected_offset or next_offset > total:
+                raise EvidenceError("scope alpha-rows pagination is inconsistent")
+            expected_offset = next_offset
+        raise EvidenceError("scope alpha-rows pagination exceeds the page limit")
 
     def _data_source_missing(
         self, run_id: str, results: tuple[Any, ...], scope_key: str
@@ -548,26 +582,62 @@ def _top_field_rows(body: dict[str, Any], scope_key: str) -> list[dict[str, Any]
     return copied
 
 
-def _is_poor_os_page(body: dict[str, Any], field_id: str, scope_key: str) -> bool:
+def _validated_os_page(
+    body: dict[str, Any],
+    field_id: str,
+    scope_key: str,
+    *,
+    expected_offset: int,
+    expected_total: int | None,
+) -> tuple[list[dict[str, Any]], int]:
     filters = body.get("filters")
     rows = body.get("rows")
+    total = body.get("total")
+    offset = body.get("offset")
+    limit = body.get("limit")
+    columns = body.get("columns")
     if (
         body.get("scope") != scope_key
         or body.get("table") != "os"
         or not isinstance(filters, Mapping)
         or filters.get("datafield") != field_id
+        or type(total) is not int
+        or total < 0
+        or type(offset) is not int
+        or offset != expected_offset
+        or type(limit) is not int
+        or limit <= 0
+        or not isinstance(columns, list)
+        or not all(type(column) is str for column in columns)
+        or not {"id", "sharpe", "fitness", "turnover", "margin"}.issubset(columns)
         or not isinstance(rows, list)
         or not all(isinstance(row, Mapping) for row in rows)
     ):
         raise EvidenceError("scope alpha-rows response identity or shape is invalid")
-    if not rows:
-        return False
-    return not any(
-        _finite_metric(row.get("sharpe"), 1.58)
-        and _finite_metric(row.get("fitness"), 1.0)
-        and _bounded_metric(row.get("turnover"), 0.01, 0.70)
-        and _finite_metric(row.get("margin"), 0.001)
-        for row in rows
+    if expected_total is not None and total != expected_total:
+        raise EvidenceError("scope alpha-rows total changed during pagination")
+    if offset + len(rows) > total or len(rows) > limit:
+        raise EvidenceError("scope alpha-rows page exceeds declared bounds")
+    copied: list[dict[str, Any]] = []
+    for row in rows:
+        identifier = row.get("id")
+        metrics = tuple(row.get(name) for name in ("sharpe", "fitness", "turnover", "margin"))
+        if (
+            type(identifier) is not str
+            or not identifier.strip()
+            or any(type(value) not in {int, float} or not isfinite(value) for value in metrics)
+        ):
+            raise EvidenceError("scope alpha-rows row has invalid metrics")
+        copied.append(dict(row))
+    return copied, total
+
+
+def _os_row_passes(row: Mapping[str, Any]) -> bool:
+    return (
+        _finite_metric(row["sharpe"], 1.58)
+        and _finite_metric(row["fitness"], 1.0)
+        and _bounded_metric(row["turnover"], 0.01, 0.70)
+        and _finite_metric(row["margin"], 0.001)
     )
 
 

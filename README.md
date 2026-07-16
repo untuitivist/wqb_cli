@@ -47,6 +47,32 @@ It is built for coding agents and long-running research agents first, not as a t
 
 ## Requirements
 
+## Multi-Model Quant Agent
+
+Planner uses the stronger model for research direction and diagnosis; Operator uses a smaller model for bounded evidence and FASTEXPR transformations. Configure the roles independently. Keys are entered through keyring prompts and are never accepted as CLI arguments.
+
+```powershell
+wqb agent models set planner --provider openai --api-style responses --model YOUR_PLANNER_MODEL --base-url https://api.openai.com/v1
+wqb agent models set-key planner
+wqb agent models set operator --provider openai-compatible --api-style chat_completions --model YOUR_SMALL_MODEL --base-url https://your-gateway.example/v1
+wqb agent models set-key operator
+wqb agent models list
+```
+
+`run` performs real simulations within its limits, but never authorizes formal submission. Per-run model overrides retain the role's provider, endpoint, API style, and secret reference.
+
+```powershell
+wqb agent run --scope-mode manual --region USA --delay 1 --universe TOP3000 --neutralization SUBINDUSTRY
+wqb agent run --scope-mode auto --planner-model YOUR_BEST_MODEL --operator-model YOUR_SMALL_MODEL
+wqb agent status RUN_ID
+wqb agent resume RUN_ID
+```
+
+At `AWAITING_APPROVAL`, inspect the exact final report. Approval binds the run ID, Alpha ID, and report SHA-256. Use `wqb agent approve RUN_ID` or `wqb agent reject RUN_ID --reason TEXT`. Run `wqb agent eval` for the offline, no-network safety suite.
+
+The OpenAI Responses adapter uses [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Compatible endpoints must support the configured API style and may use local schema repair when strict Structured Outputs are unavailable.
+
+
 - Python 3.11 or newer.
 - A WorldQuant BRAIN account.
 - Windows PowerShell is the primary tested shell.

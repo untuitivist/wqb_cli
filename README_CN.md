@@ -1,5 +1,28 @@
 # wqb-cli
 
+## 多模型量化 Agent
+
+Planner 使用能力较强的模型负责研究方向、机制、计划和诊断；Operator 使用普通小模型完成受限的证据整理和 FASTEXPR 候选生成。两个角色可以配置不同 provider、endpoint、API style 和模型，密钥只通过 keyring 提示输入。
+
+```powershell
+wqb agent models set planner --provider openai --api-style responses --model YOUR_PLANNER_MODEL --base-url https://api.openai.com/v1
+wqb agent models set-key planner
+wqb agent models set operator --provider openai-compatible --api-style chat_completions --model YOUR_SMALL_MODEL --base-url https://your-gateway.example/v1
+wqb agent models set-key operator
+wqb agent models list
+```
+
+运行会在预算内执行真实回测，但不会自动正式提交 Alpha。手动模式必须提供 region、delay、universe、neutralization；自动模式必须显式选择。
+
+```powershell
+wqb agent run --scope-mode manual --region USA --delay 1 --universe TOP3000 --neutralization SUBINDUSTRY
+wqb agent run --scope-mode auto --planner-model YOUR_BEST_MODEL --operator-model YOUR_SMALL_MODEL
+wqb agent status RUN_ID
+wqb agent resume RUN_ID
+```
+
+达到 `AWAITING_APPROVAL` 后，审批会绑定 run ID、推荐 Alpha ID 和最终报告 SHA-256。报告变化会让旧审批失效。只能使用 `wqb agent approve RUN_ID` 或 `wqb agent reject RUN_ID --reason TEXT`。`wqb agent eval` 运行离线、无网络安全评估。
+
 <p align="center">
   <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
 </p>

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0
+
+- Added a resumable REGULAR FASTEXPR quantitative research agent with bounded A-M workflow execution.
+- Added independent Planner and Operator model routing, usage accounting, and role isolation.
+- Added durable simulation recovery, structured experience, evidence provenance, and candidate deduplication.
+- Added report-hash-bound human approval and offline safety evaluation.
+
 ## Unreleased
 
 - Added package-local runtime defaults under `wqb_cli/local/`.

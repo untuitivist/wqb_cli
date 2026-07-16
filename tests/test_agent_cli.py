@@ -11,6 +11,15 @@ from wqb_cli.commands.agent import handle_agent
 
 
 class AgentCliTests(unittest.TestCase):
+    def test_quant_agent_skill_is_present_and_forbids_direct_submit(self) -> None:
+        skill = Path(__file__).resolve().parents[1] / "skills" / "wqb-quant-agent" / "SKILL.md"
+        self.assertTrue(skill.exists())
+        text = skill.read_text(encoding="utf-8")
+        self.assertIn("wqb agent approve", text)
+        self.assertIn("Never call `wqb alpha submit` directly", text)
+        self.assertIn("planner", text.lower())
+        self.assertIn("operator", text.lower())
+
     def test_manual_run_parser_keeps_handler_validation(self) -> None:
         args = build_parser().parse_args(["agent", "run", "--scope-mode", "manual", "--region", "USA"])
         self.assertEqual(args.agent_command, "run")

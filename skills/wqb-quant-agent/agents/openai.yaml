@@ -1,0 +1,4 @@
+interface:
+  display_name: "WQB Quant Agent"
+  short_description: "Run bounded multi-model WorldQuant research"
+  default_prompt: "Use wqb agent to start, inspect, resume, approve, or reject a bounded quantitative research run."

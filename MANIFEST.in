@@ -1,4 +1,6 @@
 recursive-include resources/api_inventory *.json *.md *.txt *.html
+recursive-exclude resources/api_inventory/_raw *
 recursive-include resources/docs *.md *.json
+recursive-include skills *.md *.yaml
 recursive-exclude local *
 prune local

@@ -63,14 +63,40 @@ wqb agent models list
 
 ```powershell
 wqb agent run --scope-mode manual --region USA --delay 1 --universe TOP3000 --neutralization SUBINDUSTRY
+wqb agent run --scope-mode manual --region USA --delay 1 --universe TOP3000 --neutralization SUBINDUSTRY --max-simulations 80 --max-rounds 6
 wqb agent run --scope-mode auto --planner-model YOUR_BEST_MODEL --operator-model YOUR_SMALL_MODEL
 wqb agent status RUN_ID
 wqb agent resume RUN_ID
 ```
 
+Run termination has exactly two configurable conditions: `--max-simulations`
+counts candidate child backtests (not parent batch jobs), and `--max-rounds`
+counts completed K diagnosis cycles. Runtime, Planner calls, Operator calls, model
+cost, and repeated no-progress cycles are telemetry only and do not terminate a run.
+
 At `AWAITING_APPROVAL`, inspect the exact final report. Approval binds the run ID, Alpha ID, and report SHA-256. Use `wqb agent approve RUN_ID` or `wqb agent reject RUN_ID --reason TEXT`. Run `wqb agent eval` for the offline, no-network safety suite.
 
 The OpenAI Responses adapter uses [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs). Compatible endpoints must support the configured API style and may use local schema repair when strict Structured Outputs are unavailable.
+
+## Local Research App
+
+Research ideas are durable lifecycle units. The app shows each idea's inspect/simulation state, expressions, current error, retry time, and retry/abort controls. I and J process one idea at a time, isolate failures, and resume recorded simulations after a process restart.
+
+Install the editable package and start the real local control plane:
+
+```powershell
+python -m pip install -e .
+wqb app
+```
+
+The default URL is `http://127.0.0.1:8765/`. The app uses the real local API and SQLite store to create runs, follow the outer A–M workflow and candidate pipelines, resume paused work, configure both model roles, authenticate to BRAIN, and operate the human approval gate.
+
+```powershell
+wqb app --no-open
+wqb app --host 127.0.0.1 --port 9000
+```
+
+Configuration is stored in `local/config.json`; model keys remain in the system keyring, cookies in `local/auth/cookies.json`, run state in `local/agent/agent.sqlite3`, and artifacts under `research_runs/RUN_ID/`.
 
 
 - Python 3.11 or newer.
@@ -341,11 +367,14 @@ local/
 
 ### data_all
 
-`data_all` comes from the WebDataScope plugin's network-disk data package:
+`data_all` is compatible with local exports used by the WebDataScope plugin:
 
 [leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)
 
-`all_data.pickle` is not released with this repository. Download it from the Baidu Netdisk link provided by the WebDataScope plugin README, then place it under:
+The plugin repository no longer publishes a stable download location for
+`all_data.pickle`. The agent requires `info_data.bin` for aggregate scope
+ranking. If `all_data.pickle` is also available, it enables optional per-Alpha
+OS detail screening.
 
 ```text
 local/data_all/
@@ -356,8 +385,8 @@ Expected files:
 ```text
 local/data_all/
   info_data.bin
-  all_data.pickle
-  main.ipynb
+  all_data.pickle  # optional
+  main.ipynb       # optional
 ```
 
 Check local data:

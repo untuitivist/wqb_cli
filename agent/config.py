@@ -22,18 +22,29 @@ _MODEL_TEXT_FIELDS = (
     "reasoning",
     "secret_name",
     "fallback_model",
+    "proxy_mode",
+    "proxy_url",
 )
+_MODEL_TIMEOUT_FIELDS = ("connect_timeout_seconds", "read_timeout_seconds")
 _MODEL_PRICE_FIELDS = ("input_cost_per_million", "output_cost_per_million")
-_MODEL_FIELDS = {*_MODEL_TEXT_FIELDS, *_MODEL_PRICE_FIELDS, "structured_outputs"}
+_MODEL_FIELDS = {
+    *_MODEL_TEXT_FIELDS,
+    *_MODEL_TIMEOUT_FIELDS,
+    *_MODEL_PRICE_FIELDS,
+    "structured_outputs",
+}
 _BUDGET_COUNT_FIELDS = (
     "candidates_per_round",
     "rounds",
     "total_simulations",
+)
+_LEGACY_BUDGET_FIELDS = {
     "max_runtime_minutes",
     "planner_calls",
     "operator_calls",
-)
-_BUDGET_FIELDS = {*_BUDGET_COUNT_FIELDS, "max_model_cost_usd"}
+    "max_model_cost_usd",
+}
+_BUDGET_FIELDS = {*_BUDGET_COUNT_FIELDS, *_LEGACY_BUDGET_FIELDS}
 
 
 @dataclass(frozen=True)
@@ -48,6 +59,10 @@ class ModelConfig:
     fallback_model: str
     input_cost_per_million: float | None
     output_cost_per_million: float | None
+    connect_timeout_seconds: int = 10
+    read_timeout_seconds: int = 300
+    proxy_mode: str = "system"
+    proxy_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -153,6 +168,10 @@ def _validate_model_config(role: ModelRole, model: ModelConfig) -> ModelConfig:
             raise ValueError(f"{path}.{name} must be a string")
     if type(model.structured_outputs) is not bool:
         raise ValueError(f"{path}.structured_outputs must be a boolean")
+    for name in _MODEL_TIMEOUT_FIELDS:
+        value = getattr(model, name)
+        if type(value) is not int or value <= 0 or value > 3600:
+            raise ValueError(f"{path}.{name} must be an integer between 1 and 3600")
     for name in _MODEL_PRICE_FIELDS:
         value = getattr(model, name)
         if value is not None and (
@@ -163,6 +182,20 @@ def _validate_model_config(role: ModelRole, model: ModelConfig) -> ModelConfig:
         raise ValueError(f"{path}.provider has unsupported value: {model.provider}")
     if model.api_style not in _API_STYLES:
         raise ValueError(f"{path}.api_style has unsupported value: {model.api_style}")
+    if model.proxy_mode not in {"system", "direct", "custom"}:
+        raise ValueError(f"{path}.proxy_mode has unsupported value: {model.proxy_mode}")
+    if model.proxy_mode == "custom":
+        try:
+            parsed_proxy_url = urlparse(model.proxy_url.strip())
+        except ValueError as exc:
+            raise ValueError(f"{path}.proxy_url must be an absolute http(s) URL") from exc
+        if (
+            parsed_proxy_url.scheme.lower() not in {"http", "https"}
+            or not parsed_proxy_url.netloc
+        ):
+            raise ValueError(f"{path}.proxy_url must be an absolute http(s) URL")
+    elif model.proxy_url.strip():
+        raise ValueError(f"{path}.proxy_url must be blank unless proxy_mode is custom")
     if role is ModelRole.PLANNER and model.fallback_model.strip():
         raise ValueError(f"{path}.fallback_model must be blank")
     if model.model.strip():
@@ -186,14 +219,7 @@ def _load_budget(value: object) -> Budget:
         count = values.get(name)
         if type(count) is not int or count <= 0:
             raise ValueError(f"agent.budget.{name} must be a positive integer")
-    cost = values.get("max_model_cost_usd")
-    if cost is not None and (
-        type(cost) not in {int, float} or not isfinite(cost) or cost < 0
-    ):
-        raise ValueError(
-            "agent.budget.max_model_cost_usd must be a finite non-negative number or null"
-        )
-    return Budget(**values)
+    return Budget(**{name: values[name] for name in _BUDGET_COUNT_FIELDS})
 
 
 def _configured_path(value: object, default: Path, dotted_path: str) -> Path:

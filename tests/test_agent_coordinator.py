@@ -8,9 +8,10 @@ from pathlib import Path
 from unittest.mock import Mock
 
 from agent.policy import AgentPolicy
+from agent.schemas import ModelRefusal, SchemaViolation
 from agent.store import AgentStore
 from agent.types import Budget, NodeResult, RunConfig, RunState, ScopeMode, WorkflowNode
-from wqb_cli.agent.models import ModelTransportError
+from wqb_cli.agent.models import ModelReadTimeoutError, ModelTransportError
 
 
 def result(
@@ -131,6 +132,64 @@ class AgentCoordinatorTests(unittest.TestCase):
             ).fetchall()
         return [(row["status"], row["attempt_number"]) for row in rows]
 
+    def test_i_and_j_can_self_route_for_per_idea_processing(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.I] = [
+            result(
+                WorkflowNode.I,
+                WorkflowNode.I,
+                new_fingerprints=["fp-1"],
+                accepted=[{"fingerprint": "fp-1"}],
+            ),
+            result(
+                WorkflowNode.I,
+                WorkflowNode.J,
+                new_fingerprints=["fp-2"],
+                accepted=[{"fingerprint": "fp-1"}, {"fingerprint": "fp-2"}],
+            ),
+        ]
+        script[WorkflowNode.J] = [
+            result(
+                WorkflowNode.J,
+                WorkflowNode.J,
+                alpha_results=[{"alpha_id": "A1"}],
+            ),
+            result(
+                WorkflowNode.J,
+                WorkflowNode.K,
+                alpha_results=[{"alpha_id": "A1"}, {"alpha_id": "A2"}],
+            ),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        run = coordinator.run_manual(run_id="run-self-route", scope=self.config())
+
+        self.assertEqual(run.state, RunState.AWAITING_APPROVAL)
+        self.assertEqual(runner.calls[WorkflowNode.I], 2)
+        self.assertEqual(runner.calls[WorkflowNode.J], 2)
+        self.assertEqual(
+            self.attempts("run-self-route", WorkflowNode.I),
+            [("COMPLETED", 1), ("COMPLETED", 2)],
+        )
+
+    def test_j_can_return_to_i_when_an_idea_still_needs_inspection(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.I] = [
+            result(WorkflowNode.I, WorkflowNode.J, new_fingerprints=["fp-1"]),
+            result(WorkflowNode.I, WorkflowNode.J, new_fingerprints=["fp-2"]),
+        ]
+        script[WorkflowNode.J] = [
+            result(WorkflowNode.J, WorkflowNode.I),
+            result(WorkflowNode.J, WorkflowNode.K),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        run = coordinator.run_manual(run_id="run-j-backfill", scope=self.config())
+
+        self.assertEqual(run.state, RunState.AWAITING_APPROVAL)
+        self.assertEqual(runner.calls[WorkflowNode.I], 2)
+        self.assertEqual(runner.calls[WorkflowNode.J], 2)
+
     def test_success_stops_at_approval_and_loads_rules_each_call(self) -> None:
         coordinator, runner = self.coordinator(successful_script())
 
@@ -177,7 +236,7 @@ class AgentCoordinatorTests(unittest.TestCase):
             ).fetchall()
         self.assertEqual([row["next_node"] for row in routes], ["I", "L"])
 
-    def test_two_k_cycles_without_new_fingerprint_stop_no_progress(self) -> None:
+    def test_repeated_k_cycles_stop_only_at_round_limit(self) -> None:
         script = successful_script()
         script[WorkflowNode.I] = [
             result(WorkflowNode.I, WorkflowNode.J, new_fingerprints=[]),
@@ -191,11 +250,14 @@ class AgentCoordinatorTests(unittest.TestCase):
             result(WorkflowNode.K, WorkflowNode.I),
             result(WorkflowNode.K, WorkflowNode.I),
         ]
-        coordinator, runner = self.coordinator(script)
+        budget = Budget(rounds=2)
+        coordinator, runner = self.coordinator(script, budget=budget)
 
-        run = coordinator.run_manual(run_id="run-1", scope=self.config())
+        run = coordinator.run_manual(
+            run_id="run-1", scope=self.config(budget=budget)
+        )
 
-        self.assertEqual(run.state, RunState.NO_PROGRESS)
+        self.assertEqual(run.state, RunState.BUDGET_EXHAUSTED)
         self.submission.finalize_record_only.assert_called_once()
         self.submission.submit.assert_not_called()
         self.assertEqual(runner.calls[WorkflowNode.I], 2)
@@ -218,6 +280,57 @@ class AgentCoordinatorTests(unittest.TestCase):
         self.assertEqual(sum(runner.calls.values()), 0)
         self.submission.finalize_record_only.assert_called_once()
         self.submission.submit.assert_not_called()
+
+    def test_usage_runtime_counts_node_execution_not_paused_wall_time(self) -> None:
+        coordinator, _ = self.coordinator(successful_script())
+        self.store.create_run("run-1", self.config())
+        attempt = self.store.start_node_attempt("run-1", WorkflowNode.A)
+        self.store.finish_node_attempt(attempt, "COMPLETED", {"ok": True})
+        with closing(self.store.connect()) as connection:
+            connection.execute(
+                "UPDATE node_attempts SET started_at = ?, finished_at = ? WHERE id = ?",
+                ("2026-01-01T00:00:00Z", "2026-01-01T00:07:00Z", attempt.id),
+            )
+            connection.commit()
+
+        usage = coordinator._usage("run-1")
+
+        self.assertAlmostEqual(usage.elapsed_minutes, 7.0, places=4)
+
+    def test_usage_counts_linked_child_backtests_not_parent_batch(self) -> None:
+        coordinator, _ = self.coordinator(successful_script())
+        self.store.create_run("run-1", self.config())
+        candidate = self.store.add_candidate(
+            "run-1", "fingerprint", {"expression": "ts_delta(vwap,22)"}
+        )
+        self.store.record_simulation("run-1", "PARENT", "COMPLETE")
+        self.store.record_simulation(
+            "run-1", "CHILD", "COMPLETE", candidate_id=candidate.id
+        )
+
+        usage = coordinator._usage("run-1")
+
+        self.assertEqual(usage.simulations, 1)
+
+    def test_expression_refinement_creates_new_plan_and_idea_lifecycle(self) -> None:
+        coordinator, _ = self.coordinator(successful_script())
+        self.store.create_run("run-1", self.config())
+        mechanisms = [{"mechanism_id": "m1", "field_ids": ["vwap"]}]
+        self.store.record_research_plan(
+            "run-1", 1, "plan-hash", {"mechanisms": mechanisms}
+        )
+
+        coordinator._start_expression_refinement_plan("run-1", 42)
+
+        plan = self.store.get_latest_research_plan("run-1")
+        self.assertEqual(plan.plan_version, 2)
+        self.assertEqual(plan.plan["refinement"], {
+            "source_plan_version": 1,
+            "source_node_attempt_id": 42,
+        })
+        ideas = self.store.list_research_ideas("run-1", plan_version=2)
+        self.assertEqual([idea.idea_id for idea in ideas], ["p2:m1"])
+        self.assertEqual(ideas[0].status, "PENDING_INSPECT")
 
     def test_invalid_route_and_returned_node_fail_closed(self) -> None:
         for returned in (
@@ -284,6 +397,9 @@ class AgentCoordinatorTests(unittest.TestCase):
                 RunState.NEEDS_AUTH,
             ),
             (ModelTransportError("planner retries exhausted"), RunState.PAUSED_MODEL),
+            (ModelReadTimeoutError("planner read timed out"), RunState.PAUSED_MODEL),
+            (SchemaViolation("model output has the wrong shape"), RunState.PAUSED_MODEL),
+            (ModelRefusal("model refused"), RunState.PAUSED_MODEL),
         )
         for index, (outcome, expected) in enumerate(cases):
             with self.subTest(expected=expected):
@@ -314,6 +430,80 @@ class AgentCoordinatorTests(unittest.TestCase):
         self.assertEqual(resumed.state, RunState.AWAITING_APPROVAL)
         self.assertEqual(runner.calls[WorkflowNode.A], 1)
         self.assertEqual(runner.calls[WorkflowNode.B], 2)
+
+    def test_failed_h_can_be_reopened_after_transient_misclassification(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.H] = [
+            RuntimeError("transient planner failure"),
+            result(WorkflowNode.H, WorkflowNode.I),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        failed = coordinator.run_manual(run_id="run-1", scope=self.config())
+        resumed = coordinator.resume("run-1")
+
+        self.assertEqual(failed.state, RunState.FAILED)
+        self.assertNotEqual(resumed.state, RunState.FAILED)
+        self.assertEqual(runner.calls[WorkflowNode.H], 2)
+
+    def test_failed_c_can_be_reopened_after_transient_platform_error(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.C] = [
+            RuntimeError("platform returned 500"),
+            result(WorkflowNode.C, WorkflowNode.D),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        failed = coordinator.run_manual(run_id="run-c", scope=self.config())
+        resumed = coordinator.resume("run-c")
+
+        self.assertEqual(failed.state, RunState.FAILED)
+        self.assertNotEqual(resumed.state, RunState.FAILED)
+        self.assertEqual(runner.calls[WorkflowNode.C], 2)
+
+    def test_failed_g_can_be_reopened_without_replaying_f(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.G] = [
+            RuntimeError("optional evidence source unavailable"),
+            result(WorkflowNode.G, WorkflowNode.H),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        failed = coordinator.run_manual(run_id="run-g", scope=self.config())
+        resumed = coordinator.resume("run-g")
+
+        self.assertEqual(failed.state, RunState.FAILED)
+        self.assertNotEqual(resumed.state, RunState.FAILED)
+        self.assertEqual(runner.calls[WorkflowNode.F], 1)
+        self.assertEqual(runner.calls[WorkflowNode.G], 2)
+
+    def test_failed_j_can_be_reopened_for_simulation_recovery(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.J] = [
+            RuntimeError("simulation creation response was interrupted"),
+            result(WorkflowNode.J, WorkflowNode.K),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        failed = coordinator.run_manual(run_id="run-j", scope=self.config())
+        resumed = coordinator.resume("run-j")
+
+        self.assertEqual(failed.state, RunState.FAILED)
+        self.assertNotEqual(resumed.state, RunState.FAILED)
+        self.assertEqual(runner.calls[WorkflowNode.J], 2)
+
+    def test_missing_data_pauses_at_f_without_submission(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.F] = [
+            result(WorkflowNode.F, None, run_state=RunState.NEEDS_DATA)
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        run = coordinator.run_manual(run_id="needs-data", scope=self.config())
+
+        self.assertEqual(run.state, RunState.NEEDS_DATA)
+        self.assertEqual(runner.calls[WorkflowNode.F], 1)
+        self.submission.submit.assert_not_called()
 
     def test_resume_after_j_uses_persisted_route(self) -> None:
         coordinator, runner = self.coordinator(successful_script())
@@ -355,6 +545,57 @@ class AgentCoordinatorTests(unittest.TestCase):
         self.assertEqual(runner.calls[WorkflowNode.J], 0)
         self.assertEqual(runner.calls[WorkflowNode.K], 1)
 
+    def test_budget_stop_allows_k_and_l_to_finish_current_batch(self) -> None:
+        budget = Budget(rounds=1)
+        coordinator, runner = self.coordinator(successful_script(), budget=budget)
+        self.store.create_run("budget-finalize", self.config(budget=budget))
+        self.store.transition("budget-finalize", RunState.RUNNING, "test")
+        attempt = self.store.start_node_attempt("budget-finalize", WorkflowNode.J)
+        self.store.finish_node_attempt(
+            attempt,
+            "COMPLETED",
+            {"_coordinator": {"next_node": WorkflowNode.K.value, "payload": {}}},
+        )
+        self.store.transition(
+            "budget-finalize", RunState.BUDGET_EXHAUSTED, "budget reached"
+        )
+        runner.script = {
+            WorkflowNode.K: deque([result(WorkflowNode.K, WorkflowNode.L)]),
+            WorkflowNode.L: deque(
+                [result(WorkflowNode.L, WorkflowNode.M, alpha_id="ALPHA1")]
+            ),
+        }
+
+        run = coordinator.resume("budget-finalize")
+
+        self.assertEqual(run.state, RunState.AWAITING_APPROVAL)
+        self.assertEqual(runner.calls[WorkflowNode.K], 1)
+        self.assertEqual(runner.calls[WorkflowNode.L], 1)
+
+    def test_budget_stop_ends_after_k_routes_to_new_research(self) -> None:
+        budget = Budget(rounds=1)
+        coordinator, runner = self.coordinator(successful_script(), budget=budget)
+        self.store.create_run("budget-research", self.config(budget=budget))
+        self.store.transition("budget-research", RunState.RUNNING, "test")
+        attempt = self.store.start_node_attempt("budget-research", WorkflowNode.J)
+        self.store.finish_node_attempt(
+            attempt,
+            "COMPLETED",
+            {"_coordinator": {"next_node": WorkflowNode.K.value, "payload": {}}},
+        )
+        self.store.transition(
+            "budget-research", RunState.BUDGET_EXHAUSTED, "budget reached"
+        )
+        runner.script = {
+            WorkflowNode.K: deque([result(WorkflowNode.K, WorkflowNode.H)]),
+        }
+
+        run = coordinator.resume("budget-research")
+
+        self.assertEqual(run.state, RunState.BUDGET_EXHAUSTED)
+        self.assertEqual(runner.calls[WorkflowNode.K], 1)
+        self.assertEqual(runner.calls[WorkflowNode.H], 0)
+
     def test_incomplete_j_is_reentered_with_persisted_simulations(self) -> None:
         coordinator, runner = self.coordinator(successful_script())
         self.store.create_run("run-1", self.config())
@@ -392,6 +633,22 @@ class AgentCoordinatorTests(unittest.TestCase):
             self.assertEqual(run.state, state)
         self.assertEqual(sum(runner.calls.values()), 0)
         self.submission.submit.assert_not_called()
+
+    def test_failed_k_can_resume_from_checkpoint_without_replaying_j(self) -> None:
+        script = successful_script()
+        script[WorkflowNode.K] = [
+            TypeError("non-json failures"),
+            result(WorkflowNode.K, WorkflowNode.L),
+        ]
+        coordinator, runner = self.coordinator(script)
+
+        failed = coordinator.run_manual(run_id="run-1", scope=self.config())
+        resumed = coordinator.resume("run-1")
+
+        self.assertEqual(failed.state, RunState.FAILED)
+        self.assertEqual(resumed.state, RunState.AWAITING_APPROVAL)
+        self.assertEqual(runner.calls[WorkflowNode.J], 1)
+        self.assertEqual(runner.calls[WorkflowNode.K], 2)
 
     def test_unexpected_failure_marks_attempt_and_run_failed(self) -> None:
         script = successful_script()

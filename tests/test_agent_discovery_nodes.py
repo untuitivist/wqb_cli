@@ -34,6 +34,64 @@ def platform_binding() -> tuple[CoordinatorPlatformBinding, Mock]:
 
 
 class DiscoveryNodeTests(unittest.TestCase):
+    def test_d_extracts_scope_values_from_real_simulation_options_schema(self) -> None:
+        settings = {
+            "region": {
+                "choices": {
+                    "instrumentType": {
+                        "EQUITY": [
+                            {"label": "USA", "value": "USA"},
+                            {"label": "Europe", "value": "EUR"},
+                        ]
+                    }
+                }
+            },
+            "delay": {
+                "choices": {
+                    "instrumentType": {
+                        "EQUITY": {
+                            "region": {
+                                "USA": [{"label": "1", "value": 1}, {"label": "0", "value": 0}],
+                                "EUR": [{"label": "1", "value": 1}],
+                            }
+                        }
+                    }
+                }
+            },
+            "universe": {
+                "choices": {
+                    "instrumentType": {
+                        "EQUITY": {
+                            "region": {
+                                "USA": [{"label": "TOP1000", "value": "TOP1000"}],
+                                "EUR": [{"label": "TOP2500", "value": "TOP2500"}],
+                            }
+                        }
+                    }
+                }
+            },
+            "neutralization": {
+                "choices": {
+                    "instrumentType": {
+                        "EQUITY": {
+                            "region": {
+                                "USA": [{"label": "Fast Factors", "value": "FAST"}],
+                                "EUR": [{"label": "Industry", "value": "INDUSTRY"}],
+                            }
+                        }
+                    }
+                }
+            },
+        }
+        body = {"actions": {"POST": {"settings": {"children": settings}}}}
+
+        options = DiscoveryNodes._validated_sim_options(body)
+
+        self.assertEqual(options["regions"], ["EUR", "USA"])
+        self.assertEqual(options["delays"], [0, 1])
+        self.assertEqual(options["universes"], ["TOP1000", "TOP2500"])
+        self.assertEqual(options["neutralizations"], ["FAST", "INDUSTRY"])
+
     def test_a_pauses_when_authentication_is_missing(self) -> None:
         runner = Mock()
         runner.run.return_value.payload = {
@@ -47,12 +105,19 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertEqual(result.run_state, RunState.NEEDS_AUTH)
         runner.run.assert_called_once_with("run-1", WorkflowNode.A, ("auth", "status"), "auth_status.json")
 
-    def test_a_accepts_real_auth_status_shape_only_with_live_token(self) -> None:
+    def test_a_accepts_redacted_auth_status_with_user_identity(self) -> None:
         runner = Mock()
         runner.run.return_value.payload = {
             "ok": True,
             "request": {"method": "GET", "path": "/authentication"},
-            "response": {"status_code": 200, "body": {"user": {"id": "fixture-user"}, "token": {"expiry": 123.5}}},
+            "response": {
+                "status_code": 200,
+                "body": {
+                    "user": {"id": "fixture-user"},
+                    "token": "[REDACTED]",
+                    "permissions": ["MULTI_SIMULATION"],
+                },
+            },
         }
 
         result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_a("run-1")
@@ -60,11 +125,24 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertIsNone(result.run_state)
         self.assertEqual(result.next_node, WorkflowNode.B)
 
-    def test_a_pauses_for_expired_or_malformed_real_auth_status(self) -> None:
+    def test_a_pauses_for_empty_204_authentication_response(self) -> None:
+        runner = Mock()
+        runner.run.return_value.payload = {
+            "ok": True,
+            "response": {"status_code": 204, "body": None},
+        }
+
+        result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_a("run-1")
+
+        self.assertEqual(result.run_state, RunState.NEEDS_AUTH)
+
+    def test_a_pauses_for_missing_or_malformed_user_identity(self) -> None:
         for body in (
-            {"user": {"id": "fixture-user"}, "token": {"expiry": 0}},
-            {"user": {"id": "fixture-user"}, "token": {}},
-            {"user": {}, "token": {"expiry": 100}},
+            {"user": {}},
+            {"user": {"id": ""}},
+            {"user": {"id": "   "}},
+            {"user": {"id": 123}},
+            {"user": "fixture-user"},
         ):
             with self.subTest(body=body):
                 runner = Mock()
@@ -72,7 +150,7 @@ class DiscoveryNodeTests(unittest.TestCase):
                 result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_a("run-1")
                 self.assertEqual(result.run_state, RunState.NEEDS_AUTH)
 
-    def test_manual_d_locks_market_scope_while_planner_selects_category(self) -> None:
+    def test_manual_d_locks_the_only_validated_scope_without_planner(self) -> None:
         config = RunConfig.from_dict(
             {
                 "scope_mode": "manual",
@@ -120,7 +198,101 @@ class DiscoveryNodeTests(unittest.TestCase):
                 "category": "PV",
             },
         )
-        router.invoke.assert_called_once()
+        router.invoke.assert_not_called()
+
+    def test_auto_d_only_offers_scopes_supported_by_selected_dataset(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D1_PV")
+        binding, store = platform_binding()
+        candidates = {
+            "quarter_towers": [
+                {
+                    "candidate_id": "USA_D1_PV",
+                    "region": "USA",
+                    "delay": 1,
+                    "universe": "TOP3000",
+                    "neutralization": "SUBINDUSTRY",
+                    "category": "PV",
+                    "alphaCount": 1,
+                    "multiplier": 1.0,
+                },
+                {
+                    "candidate_id": "USA_D0_PV",
+                    "region": "USA",
+                    "delay": 0,
+                    "universe": "TOP3000",
+                    "neutralization": "SUBINDUSTRY",
+                    "category": "PV",
+                    "alphaCount": 0,
+                    "multiplier": 1.0,
+                },
+            ]
+        }
+
+        result = DiscoveryNodes(
+            runner=Mock(), router=router, store=store
+        ).run_d(
+            "run-1",
+            RunConfig.from_dict({"scope_mode": "auto"}),
+            candidates,
+            platform_binding=binding,
+            dataset_constraint={
+                "dataset_id": "chart_model_alpha",
+                "category": "PV",
+                "supported_scopes": [
+                    {"region": "USA", "delay": 1, "universe": "TOP3000"}
+                ],
+            },
+        )
+
+        offered = router.invoke.call_args.args[0].context["candidates"]
+        self.assertEqual(
+            [candidate["candidate_id"] for candidate in offered],
+            ["USA_D1_PV"],
+        )
+        self.assertEqual(result.summary["selected_dataset_id"], "chart_model_alpha")
+
+    def test_auto_d_respects_user_selected_region(self) -> None:
+        router = Mock()
+        router.invoke.return_value.value = planner_choice("USA_D1_PV")
+        sim = {"ok": True, "response": {"status_code": 200, "body": {
+            "regions": ["USA", "EUR"], "delays": [1], "universes": ["TOP3000"],
+            "neutralizations": ["SUBINDUSTRY"],
+        }}}
+        categories = {"ok": True, "response": {"status_code": 200, "body": [
+            {"id": "pv", "name": "Price Volume"},
+        ]}}
+        binding = CoordinatorPlatformBinding(1, sim, 2, categories)
+        store = Mock()
+        store.get_artifact.side_effect = {
+            1: SimpleNamespace(id=1, run_id="run-1", node=WorkflowNode.D, name="validated_sim_options.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(sim)),
+            2: SimpleNamespace(id=2, run_id="run-1", node=WorkflowNode.D, name="data_categories.json", kind="json", sha256=DiscoveryNodes._canonical_payload_hash(categories)),
+        }.__getitem__
+        candidates = {
+            "quarter_towers": [
+                {"candidate_id": "USA_D1_PV", "region": "USA", "delay": 1, "universe": "TOP3000", "neutralization": "SUBINDUSTRY", "category": "PV", "alphaCount": 1, "multiplier": 1.0},
+                {"candidate_id": "EUR_D1_PV", "region": "EUR", "delay": 1, "universe": "TOP3000", "neutralization": "SUBINDUSTRY", "category": "PV", "alphaCount": 1, "multiplier": 1.0},
+            ]
+        }
+
+        result = DiscoveryNodes(runner=Mock(), router=router, store=store).run_d(
+            "run-1",
+            RunConfig.from_dict({"scope_mode": "auto", "region": "USA"}),
+            candidates,
+            platform_binding=binding,
+            dataset_constraint={
+                "dataset_id": "analyst4",
+                "category": "PV",
+                "supported_scopes": [
+                    {"region": "USA", "delay": 1, "universe": "TOP3000"},
+                    {"region": "EUR", "delay": 1, "universe": "TOP3000"},
+                ],
+            },
+        )
+
+        offered = router.invoke.call_args.args[0].context["candidates"]
+        self.assertEqual([candidate["candidate_id"] for candidate in offered], ["USA_D1_PV"])
+        self.assertEqual(result.summary["scope"]["region"], "USA")
 
     def test_auto_d_uses_planner_only_after_validating_candidates(self) -> None:
         router = Mock()
@@ -386,7 +558,7 @@ class DiscoveryNodeTests(unittest.TestCase):
         self.assertEqual(result.summary["submission_day"], "2026-07-01")
         self.assertIn("2026-07-01T00:00:00-04:00", runner.run.call_args_list[0].args[2])
 
-    def test_c_rejects_unsuccessful_response_from_any_collected_command(self) -> None:
+    def test_c_degrades_unsuccessful_auxiliary_responses_but_requires_total_alphas(self) -> None:
         payloads = [
             {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
             {"ok": True, "response": {"status_code": 200, "body": {"results": []}}},
@@ -401,10 +573,16 @@ class DiscoveryNodeTests(unittest.TestCase):
                 altered = [dict(payload) for payload in payloads]
                 altered[index] = {"ok": False, "response": {"status_code": 500, "body": {}}}
                 runner.run.side_effect = [Mock(payload=payload) for payload in altered]
-                with self.assertRaisesRegex(ValueError, "successful response"):
-                    DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_c(
-                        "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
-                    )
+                if index == 0:
+                    with self.assertRaisesRegex(ValueError, "successful response"):
+                        DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_c(
+                            "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
+                        )
+                    continue
+                result = DiscoveryNodes(runner=runner, router=Mock(), store=Mock()).run_c(
+                    "run-1", now=lambda: datetime(2026, 7, 1, tzinfo=timezone.utc)
+                )
+                self.assertEqual(len(result.summary["degraded_sources"]), 1)
 
     def test_c_rejects_successful_auxiliary_responses_with_wrong_shapes(self) -> None:
         valid = [

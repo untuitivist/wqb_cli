@@ -41,6 +41,10 @@ wqb_cli = [
     "resources/api_inventory/**/*.html",
     "resources/docs/**/*.md",
     "resources/docs/**/*.json",
+    "resources/docs/assets/branding/*.png",
+    "docs/ui-prototype/*.html",
+    "docs/ui-prototype/*.css",
+    "docs/ui-prototype/*.js",
     "skills/**/*.md",
     "skills/**/agents/*.yaml",
 ]

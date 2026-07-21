@@ -12,10 +12,17 @@ import requests
 
 from wqb_cli.agent.config import ModelConfig
 from wqb_cli.agent.models.base import (
+    ModelConnectError,
+    ModelNetworkError,
+    ModelReadTimeoutError,
+    ModelRateLimitError,
     ModelRequest,
     ModelResponseError,
     ModelResult,
+    ModelServerError,
     ModelTransportError,
+    ModelUpstreamError,
+    create_model_session,
 )
 from wqb_cli.agent.models.compatible import CompatibleAdapter
 from wqb_cli.agent.models.openai import OpenAIResponsesAdapter
@@ -74,11 +81,29 @@ def valid_output(role: ModelRole, node: WorkflowNode) -> dict[str, object]:
     if role is ModelRole.OPERATOR:
         value["task_result"] = {"status": "COMPLETED", "payload": {}}
     elif node is WorkflowNode.D:
-        value["scope_decision"] = {}
+        value["scope_decision"] = {"candidate_id": "USA_D1_PV"}
     elif node in {WorkflowNode.F, WorkflowNode.G}:
         value["evidence_requirements"] = {}
     elif node is WorkflowNode.H:
-        value["research_plan"] = {}
+        value["research_plan"] = {
+            "mechanisms": [
+                {
+                    "mechanism_id": "m1",
+                    "tower_id": "tower-1",
+                    "field_ids": ["vwap"],
+                    "field_bindings": [
+                        {
+                            "field_id": "vwap",
+                            "role": "primary_signal",
+                            "rationale": "Volume-weighted price measures persistent price discovery pressure.",
+                            "evidence_refs": ["artifact:1"],
+                        }
+                    ],
+                    "evidence_refs": ["artifact:1"],
+                    "hypothesis": "Persistent price-volume divergence may reveal delayed price discovery.",
+                }
+            ]
+        }
     elif node is WorkflowNode.I:
         value["candidate_plan"] = {}
     elif node is WorkflowNode.K:
@@ -282,7 +307,7 @@ class AdapterTests(unittest.TestCase):
         body = call["json"]
         assert isinstance(body, dict)
         self.assertEqual(call["url"], "https://models.example.test/v1/responses")
-        self.assertEqual(call["timeout"], 60)
+        self.assertEqual(call["timeout"], (10, 300))
         self.assertEqual(body["text"]["format"]["type"], "json_schema")
         self.assertIs(body["text"]["format"]["strict"], True)
         self.assertEqual(result.input_tokens, 11)
@@ -301,21 +326,21 @@ class AdapterTests(unittest.TestCase):
         self.assertNotIn(FAKE_SECRET, repr(adapter))
 
     def test_openai_open_schema_uses_json_object_and_repairs_local_validation_twice_at_most(self) -> None:
-        incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.D)
-        incomplete.pop("scope_decision")
+        incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.F)
+        incomplete.pop("evidence_requirements")
         session = FakeSession(
             [
                 openai_response(incomplete),
                 openai_response(incomplete),
-                openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.D)),
+                openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.F)),
             ]
         )
         adapter = OpenAIResponsesAdapter(model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session)
         result = adapter.invoke(
-            ModelRequest(ModelRole.PLANNER, WorkflowNode.D, "Choose scope", {"regions": ["USA"]})
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.F, "Choose evidence", {"regions": ["USA"]})
         )
 
-        self.assertEqual(result.value["scope_decision"], {})
+        self.assertEqual(result.value["evidence_requirements"], {})
         self.assertEqual(result.input_tokens, 33)
         self.assertEqual(result.output_tokens, 21)
         self.assertEqual(len(session.calls), 3)
@@ -324,20 +349,36 @@ class AdapterTests(unittest.TestCase):
             assert isinstance(body, dict)
             self.assertEqual(body["text"]["format"], {"type": "json_object"})
             self.assertIn("JSON object", body["instructions"])
-        self.assertIn("scope_decision", session.calls[1]["json"]["instructions"])
+        self.assertIn("evidence_requirements", session.calls[1]["json"]["instructions"])
+
+    def test_openai_unsupported_strict_schema_uses_json_object(self) -> None:
+        session = FakeSession(
+            [openai_response(valid_output(ModelRole.PLANNER, WorkflowNode.H))]
+        )
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
+        )
+
+        adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.H, "Plan", {}))
+
+        self.assertEqual(
+            session.calls[0]["json"]["text"]["format"], {"type": "json_object"}
+        )
 
     def test_schema_repair_is_bounded_to_initial_plus_two_retries(self) -> None:
-        incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.D)
-        incomplete.pop("scope_decision")
+        incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.F)
+        incomplete.pop("evidence_requirements")
         session = FakeSession([openai_response(incomplete) for _ in range(3)])
         adapter = OpenAIResponsesAdapter(model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session)
-        with self.assertRaisesRegex(ValueError, "scope_decision"):
-            adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.D, "Choose", {}))
+        with self.assertRaisesRegex(ValueError, "evidence_requirements"):
+            adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.F, "Choose", {}))
         self.assertEqual(len(session.calls), 3)
 
     def test_compatible_closed_open_and_disabled_structured_modes(self) -> None:
         cases = (
             (ModelRole.PLANNER, WorkflowNode.K, True, "json_schema"),
+            (ModelRole.PLANNER, WorkflowNode.D, True, "json_schema"),
+            (ModelRole.PLANNER, WorkflowNode.H, True, "json_object"),
             (ModelRole.OPERATOR, WorkflowNode.F, True, "json_object"),
             (ModelRole.PLANNER, WorkflowNode.K, False, "json_object"),
         )
@@ -354,10 +395,16 @@ class AdapterTests(unittest.TestCase):
                     session=session,
                 )
                 result = adapter.invoke(ModelRequest(role, node, "Execute", {}))
-                response_format = session.calls[0]["json"]["response_format"]
+                request_body = session.calls[0]["json"]
+                response_format = request_body["response_format"]
                 self.assertEqual(response_format["type"], expected_type)
                 if expected_type == "json_schema":
                     self.assertIs(response_format["json_schema"]["strict"], True)
+                instructions = request_body["messages"][0]["content"]
+                self.assertIn("Required JSON Schema:", instructions)
+                self.assertIn('"decision"', instructions)
+                self.assertIn('"reasoning_summary"', instructions)
+                self.assertIn('"evidence_refs"', instructions)
                 self.assertEqual(result.value, valid_output(role, node))
                 self.assertNotIn(FAKE_SECRET, json.dumps(session.calls[0]["json"]))
 
@@ -574,10 +621,134 @@ class AdapterTests(unittest.TestCase):
         retryable = (requests.ConnectionError(FAKE_SECRET), FakeResponse(429, {}), FakeResponse(503, {}))
         session = FakeSession(list(retryable))
         adapter = OpenAIResponsesAdapter(model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session)
-        with self.assertRaises(ModelTransportError) as raised:
-            adapter.invoke(ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {}))
+        with patch("wqb_cli.agent.models.base.sleep") as sleeper, self.assertRaises(
+            ModelServerError
+        ) as raised:
+            adapter.invoke(
+                ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+            )
         self.assertEqual(len(session.calls), 3)
+        self.assertEqual(sleeper.call_args_list[0].args, (1.0,))
+        self.assertEqual(sleeper.call_args_list[1].args, (2.0,))
         self.assertNotIn(FAKE_SECRET, str(raised.exception))
+
+    def test_retry_exhaustion_classifies_network_rate_limit_and_server_errors(self) -> None:
+        cases = (
+            (
+                [requests.ConnectionError(FAKE_SECRET) for _ in range(3)],
+                ModelNetworkError,
+            ),
+            ([FakeResponse(429, {}) for _ in range(3)], ModelRateLimitError),
+            ([FakeResponse(502, {}) for _ in range(3)], ModelServerError),
+            (
+                [
+                    FakeResponse(
+                        424,
+                        {"error": {"type": "api_error", "message": FAKE_SECRET}},
+                    )
+                    for _ in range(3)
+                ],
+                ModelUpstreamError,
+            ),
+        )
+        for outcomes, expected in cases:
+            with self.subTest(expected=expected):
+                session = FakeSession(outcomes)
+                adapter = OpenAIResponsesAdapter(
+                    model_config(role=ModelRole.PLANNER),
+                    FAKE_SECRET,
+                    session=session,
+                )
+                with patch("wqb_cli.agent.models.base.sleep") as sleeper:
+                    with self.assertRaises(expected) as raised:
+                        adapter.invoke(
+                            ModelRequest(
+                                ModelRole.PLANNER, WorkflowNode.B, "Plan", {}
+                            )
+                        )
+                self.assertEqual(sleeper.call_count, 2)
+                if expected is ModelUpstreamError:
+                    self.assertIn("HTTP 424", str(raised.exception))
+                    self.assertIn("type=api_error", str(raised.exception))
+                    self.assertNotIn(FAKE_SECRET, str(raised.exception))
+
+    def test_read_timeout_is_not_retried_after_request_submission(self) -> None:
+        session = FakeSession([requests.ReadTimeout(FAKE_SECRET)])
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
+        )
+
+        with patch("wqb_cli.agent.models.base.sleep") as sleeper:
+            with self.assertRaisesRegex(ModelReadTimeoutError, "300 seconds"):
+                adapter.invoke(
+                    ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                )
+
+        self.assertEqual(len(session.calls), 1)
+        self.assertEqual(session.calls[0]["timeout"], (10, 300))
+        sleeper.assert_not_called()
+
+    def test_connect_failures_remain_bounded_and_retryable(self) -> None:
+        session = FakeSession([requests.ConnectTimeout("down") for _ in range(3)])
+        adapter = OpenAIResponsesAdapter(
+            model_config(role=ModelRole.PLANNER), FAKE_SECRET, session=session
+        )
+
+        with patch("wqb_cli.agent.models.base.sleep") as sleeper:
+            with self.assertRaises(ModelConnectError):
+                adapter.invoke(
+                    ModelRequest(ModelRole.PLANNER, WorkflowNode.B, "Plan", {})
+                )
+
+        self.assertEqual(len(session.calls), 3)
+        self.assertEqual(sleeper.call_count, 2)
+
+    def test_model_session_applies_role_proxy_mode(self) -> None:
+        direct = create_model_session(
+            replace(model_config(role=ModelRole.PLANNER), proxy_mode="direct")
+        )
+        self.assertIs(direct.trust_env, False)
+        self.assertEqual(direct.proxies, {})
+
+        custom = create_model_session(
+            replace(
+                model_config(role=ModelRole.PLANNER),
+                proxy_mode="custom",
+                proxy_url="http://127.0.0.1:7890",
+            )
+        )
+        self.assertIs(custom.trust_env, False)
+        self.assertEqual(custom.proxies["http"], "http://127.0.0.1:7890")
+        self.assertEqual(custom.proxies["https"], "http://127.0.0.1:7890")
+
+    def test_compatible_h_json_object_keeps_local_schema_repair(self) -> None:
+        incomplete = valid_output(ModelRole.PLANNER, WorkflowNode.H)
+        incomplete.pop("research_plan")
+        session = FakeSession(
+            [
+                compatible_response(incomplete),
+                compatible_response(valid_output(ModelRole.PLANNER, WorkflowNode.H)),
+            ]
+        )
+        config = replace(
+            model_config(role=ModelRole.PLANNER, structured_outputs=True),
+            api_style="chat_completions",
+        )
+        adapter = CompatibleAdapter(config, FAKE_SECRET, session=session)
+
+        result = adapter.invoke(
+            ModelRequest(ModelRole.PLANNER, WorkflowNode.H, "Plan", {})
+        )
+
+        self.assertEqual(len(session.calls), 2)
+        self.assertEqual(
+            session.calls[0]["json"]["response_format"], {"type": "json_object"}
+        )
+        self.assertIn(
+            "research_plan",
+            session.calls[1]["json"]["messages"][0]["content"],
+        )
+        self.assertIn("research_plan", result.value)
 
     def test_nonretryable_and_malformed_responses_fail_without_echoing_payload(self) -> None:
         cases = (

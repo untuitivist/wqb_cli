@@ -66,6 +66,38 @@ class ResearchPlanRecord:
 
 
 @dataclass(frozen=True)
+class ResearchIdeaRecord:
+    id: int
+    run_id: str
+    idea_id: str
+    plan_version: int
+    plan_hash: str
+    status: str
+    stage: str
+    idea: dict[str, Any]
+    retry_count: int
+    last_error: str | None
+    next_retry_at: str | None
+    abort_requested: bool
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True)
+class IdeaAttemptRecord:
+    id: int
+    run_id: str
+    idea_id: str
+    stage: str
+    attempt_number: int
+    status: str
+    detail: dict[str, Any] | None
+    error: str | None
+    started_at: str
+    finished_at: str | None
+
+
+@dataclass(frozen=True)
 class OperatorTaskRecord:
     id: int
     run_id: str
@@ -194,31 +226,48 @@ class ExperienceRecord:
 
 
 _ALLOWED_TRANSITIONS: dict[RunState, frozenset[RunState]] = {
-    RunState.CREATED: frozenset({RunState.RUNNING, RunState.FAILED}),
+    RunState.CREATED: frozenset({RunState.RUNNING, RunState.STOPPED, RunState.FAILED}),
     RunState.RUNNING: frozenset(
         {
             RunState.NEEDS_AUTH,
+            RunState.NEEDS_DATA,
             RunState.PAUSED_MODEL,
             RunState.AWAITING_APPROVAL,
             RunState.BUDGET_EXHAUSTED,
             RunState.NO_PROGRESS,
+            RunState.STOPPED,
             RunState.FAILED,
         }
     ),
-    RunState.NEEDS_AUTH: frozenset({RunState.RUNNING, RunState.FAILED}),
-    RunState.PAUSED_MODEL: frozenset({RunState.RUNNING, RunState.FAILED}),
+    RunState.NEEDS_AUTH: frozenset({RunState.RUNNING, RunState.STOPPED, RunState.FAILED}),
+    RunState.NEEDS_DATA: frozenset({RunState.RUNNING, RunState.STOPPED, RunState.FAILED}),
+    RunState.PAUSED_MODEL: frozenset({RunState.RUNNING, RunState.STOPPED, RunState.FAILED}),
     RunState.AWAITING_APPROVAL: frozenset(
-        {RunState.RUNNING, RunState.REJECTED, RunState.FAILED}
+        {RunState.RUNNING, RunState.REJECTED, RunState.STOPPED, RunState.FAILED}
     ),
     RunState.SUBMITTED: frozenset(),
     RunState.REJECTED: frozenset(),
     RunState.BUDGET_EXHAUSTED: frozenset(),
     RunState.NO_PROGRESS: frozenset(),
+    RunState.STOPPED: frozenset(),
     RunState.FAILED: frozenset(),
 }
 
 _FINISHED_ATTEMPT_STATUSES = frozenset({"COMPLETED", "FAILED", "INTERRUPTED"})
 _TERMINAL_TASK_STATUSES = frozenset({"COMPLETED", "FAILED", "BLOCKED"})
+_IDEA_STATUSES = frozenset(
+    {
+        "PENDING_INSPECT",
+        "INSPECTING",
+        "READY",
+        "SIMULATING",
+        "COMPLETED",
+        "ERROR",
+        "ABORTED",
+    }
+)
+_IDEA_STAGES = frozenset({"INSPECT", "SIMULATE"})
+_IDEA_ATTEMPT_TERMINAL_STATUSES = frozenset({"COMPLETED", "FAILED", "ABORTED"})
 _TERMINAL_SIMULATION_STATUSES = frozenset(
     {"COMPLETE", "WARNING", "ERROR", "FAIL", "FAILED"}
 )
@@ -554,6 +603,64 @@ _MIGRATIONS = (
             "ON command_ledger(artifact_id)",
         ),
     ),
+    _Migration(
+        version=5,
+        statements=(
+            f"""
+            CREATE TABLE research_ideas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL,
+                idea_id TEXT NOT NULL CHECK (length(trim(idea_id)) > 0),
+                plan_version INTEGER NOT NULL CHECK (plan_version > 0),
+                plan_hash TEXT NOT NULL CHECK (length(trim(plan_hash)) > 0),
+                status TEXT NOT NULL CHECK (status IN (
+                    'PENDING_INSPECT','INSPECTING','READY','SIMULATING',
+                    'COMPLETED','ERROR','ABORTED'
+                )),
+                stage TEXT NOT NULL CHECK (stage IN ('INSPECT','SIMULATE')),
+                idea_json TEXT NOT NULL,
+                retry_count INTEGER NOT NULL DEFAULT 0 CHECK (retry_count >= 0),
+                last_error TEXT,
+                next_retry_at TEXT,
+                abort_requested INTEGER NOT NULL DEFAULT 0
+                    CHECK (abort_requested IN (0, 1)),
+                created_at TEXT NOT NULL DEFAULT ({_NOW_SQL}),
+                updated_at TEXT NOT NULL DEFAULT ({_NOW_SQL}),
+                FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE,
+                FOREIGN KEY (run_id, plan_version)
+                    REFERENCES research_plans(run_id, plan_version) ON DELETE CASCADE,
+                UNIQUE (run_id, idea_id)
+            )
+            """,
+            """
+            CREATE INDEX idx_research_ideas_run_work
+            ON research_ideas(run_id, plan_version, stage, status, next_retry_at, id)
+            """,
+            f"""
+            CREATE TABLE idea_attempts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id TEXT NOT NULL,
+                idea_id TEXT NOT NULL,
+                stage TEXT NOT NULL CHECK (stage IN ('INSPECT','SIMULATE')),
+                attempt_number INTEGER NOT NULL CHECK (attempt_number > 0),
+                status TEXT NOT NULL CHECK (
+                    status IN ('RUNNING','COMPLETED','FAILED','ABORTED')
+                ),
+                detail_json TEXT,
+                error TEXT,
+                started_at TEXT NOT NULL DEFAULT ({_NOW_SQL}),
+                finished_at TEXT,
+                FOREIGN KEY (run_id, idea_id)
+                    REFERENCES research_ideas(run_id, idea_id) ON DELETE CASCADE,
+                UNIQUE (run_id, idea_id, stage, attempt_number)
+            )
+            """,
+            """
+            CREATE INDEX idx_idea_attempts_run_idea
+            ON idea_attempts(run_id, idea_id, stage, attempt_number DESC)
+            """,
+        ),
+    ),
 )
 LATEST_SCHEMA_VERSION = _MIGRATIONS[-1].version
 
@@ -727,6 +834,42 @@ def _research_plan_from_row(row: sqlite3.Row) -> ResearchPlanRecord:
         plan_hash=row["plan_hash"],
         plan=json.loads(row["plan_json"]),
         created_at=row["created_at"],
+    )
+
+
+def _research_idea_from_row(row: sqlite3.Row) -> ResearchIdeaRecord:
+    return ResearchIdeaRecord(
+        id=row["id"],
+        run_id=row["run_id"],
+        idea_id=row["idea_id"],
+        plan_version=row["plan_version"],
+        plan_hash=row["plan_hash"],
+        status=row["status"],
+        stage=row["stage"],
+        idea=json.loads(row["idea_json"]),
+        retry_count=row["retry_count"],
+        last_error=row["last_error"],
+        next_retry_at=row["next_retry_at"],
+        abort_requested=bool(row["abort_requested"]),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _idea_attempt_from_row(row: sqlite3.Row) -> IdeaAttemptRecord:
+    return IdeaAttemptRecord(
+        id=row["id"],
+        run_id=row["run_id"],
+        idea_id=row["idea_id"],
+        stage=row["stage"],
+        attempt_number=row["attempt_number"],
+        status=row["status"],
+        detail=(
+            None if row["detail_json"] is None else json.loads(row["detail_json"])
+        ),
+        error=row["error"],
+        started_at=row["started_at"],
+        finished_at=row["finished_at"],
     )
 
 
@@ -1023,6 +1166,382 @@ class AgentStore:
                 (run_id,),
             ).fetchone()
         return None if row is None else _research_plan_from_row(row)
+
+    def sync_research_ideas(
+        self,
+        run_id: str,
+        plan_version: int,
+        plan_hash: str,
+        ideas: list[dict[str, Any]],
+    ) -> list[ResearchIdeaRecord]:
+        """Persist the plan's mechanisms as independently resumable ideas."""
+        _validate_run_id(run_id)
+        _validate_positive_integer(plan_version, "plan_version")
+        _validate_nonblank_string(plan_hash, "plan_hash")
+        if type(ideas) is not list or not ideas:
+            raise ValueError("ideas must be a non-empty list")
+        normalized: list[tuple[str, str]] = []
+        identifiers: set[str] = set()
+        for index, idea in enumerate(ideas):
+            if type(idea) is not dict:
+                raise TypeError(f"ideas[{index}] must be a dictionary")
+            mechanism_id = idea.get("mechanism_id", idea.get("idea_id"))
+            _validate_nonblank_string(mechanism_id, f"ideas[{index}].idea_id")
+            mechanism_id = mechanism_id.strip()
+            if mechanism_id in identifiers:
+                raise ValueError(f"duplicate idea_id: {mechanism_id}")
+            identifiers.add(mechanism_id)
+            idea_id = f"p{plan_version}:{mechanism_id}"
+            normalized.append((idea_id, _validated_json_object(idea, f"ideas[{index}]")))
+
+        with self._transaction() as connection:
+            plan = connection.execute(
+                "SELECT plan_hash FROM research_plans WHERE run_id = ? AND plan_version = ?",
+                (run_id, plan_version),
+            ).fetchone()
+            if plan is None:
+                raise StoreRecordNotFound(
+                    f"research plan does not exist: {run_id}.{plan_version}"
+                )
+            if plan["plan_hash"] != plan_hash:
+                raise StoreConflict("research idea plan hash does not match persisted plan")
+            for idea_id, idea_json in normalized:
+                existing = connection.execute(
+                    "SELECT plan_version,plan_hash,idea_json FROM research_ideas "
+                    "WHERE run_id = ? AND idea_id = ?",
+                    (run_id, idea_id),
+                ).fetchone()
+                if existing is not None:
+                    if (
+                        existing["plan_version"] != plan_version
+                        or existing["plan_hash"] != plan_hash
+                        or existing["idea_json"] != idea_json
+                    ):
+                        raise StoreConflict(
+                            f"idea_id has conflicting persisted content: {run_id}.{idea_id}"
+                        )
+                    continue
+                connection.execute(
+                    "INSERT INTO research_ideas"
+                    "(run_id,idea_id,plan_version,plan_hash,status,stage,idea_json) "
+                    "VALUES (?, ?, ?, ?, 'PENDING_INSPECT', 'INSPECT', ?)",
+                    (run_id, idea_id, plan_version, plan_hash, idea_json),
+                )
+            rows = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND plan_version = ? "
+                "ORDER BY id",
+                (run_id, plan_version),
+            ).fetchall()
+        return [_research_idea_from_row(row) for row in rows]
+
+    def get_research_idea(self, run_id: str, idea_id: str) -> ResearchIdeaRecord:
+        _validate_run_id(run_id)
+        _validate_nonblank_string(idea_id, "idea_id")
+        with closing(self.connect()) as connection:
+            row = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+        if row is None:
+            raise StoreRecordNotFound(f"research idea not found: {run_id}.{idea_id}")
+        return _research_idea_from_row(row)
+
+    def list_research_ideas(
+        self, run_id: str, *, plan_version: int | None = None
+    ) -> list[ResearchIdeaRecord]:
+        _validate_run_id(run_id)
+        if plan_version is not None:
+            _validate_positive_integer(plan_version, "plan_version")
+        with closing(self.connect()) as connection:
+            if plan_version is None:
+                rows = connection.execute(
+                    "SELECT * FROM research_ideas WHERE run_id = ? ORDER BY id",
+                    (run_id,),
+                ).fetchall()
+            else:
+                rows = connection.execute(
+                    "SELECT * FROM research_ideas WHERE run_id = ? AND plan_version = ? "
+                    "ORDER BY id",
+                    (run_id, plan_version),
+                ).fetchall()
+        return [_research_idea_from_row(row) for row in rows]
+
+    def set_research_idea_status(
+        self,
+        run_id: str,
+        idea_id: str,
+        status: str,
+        *,
+        stage: str | None = None,
+        error: str | None = None,
+    ) -> ResearchIdeaRecord:
+        _validate_run_id(run_id)
+        _validate_nonblank_string(idea_id, "idea_id")
+        _validate_nonblank_string(status, "status")
+        status = status.strip().upper()
+        if status not in _IDEA_STATUSES:
+            raise ValueError(f"invalid idea status: {status}")
+        if stage is not None:
+            _validate_nonblank_string(stage, "stage")
+            stage = stage.strip().upper()
+            if stage not in _IDEA_STAGES:
+                raise ValueError(f"invalid idea stage: {stage}")
+        _validate_optional_string(error, "error")
+        with self._transaction() as connection:
+            current = connection.execute(
+                "SELECT stage FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+            if current is None:
+                raise StoreRecordNotFound(f"research idea not found: {run_id}.{idea_id}")
+            connection.execute(
+                f"UPDATE research_ideas SET status = ?, stage = ?, last_error = ?, "
+                f"next_retry_at = NULL, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND idea_id = ?",
+                (
+                    status,
+                    current["stage"] if stage is None else stage,
+                    None if error is None else error.strip()[:2000],
+                    run_id,
+                    idea_id.strip(),
+                ),
+            )
+            row = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+        return _research_idea_from_row(row)
+
+    def begin_idea_attempt(
+        self, run_id: str, idea_id: str, stage: str
+    ) -> IdeaAttemptRecord:
+        _validate_run_id(run_id)
+        _validate_nonblank_string(idea_id, "idea_id")
+        _validate_nonblank_string(stage, "stage")
+        stage = stage.strip().upper()
+        if stage not in _IDEA_STAGES:
+            raise ValueError(f"invalid idea stage: {stage}")
+        active_status = "INSPECTING" if stage == "INSPECT" else "SIMULATING"
+        eligible = (
+            ("PENDING_INSPECT", "ERROR")
+            if stage == "INSPECT"
+            else ("READY", "ERROR")
+        )
+        with self._transaction() as connection:
+            idea = connection.execute(
+                "SELECT status,stage,abort_requested FROM research_ideas "
+                "WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+            if idea is None:
+                raise StoreRecordNotFound(f"research idea not found: {run_id}.{idea_id}")
+            if idea["abort_requested"]:
+                raise StoreConflict(f"research idea is aborted: {run_id}.{idea_id}")
+            if idea["status"] not in eligible or (
+                idea["status"] == "ERROR" and idea["stage"] != stage
+            ):
+                raise StoreConflict(
+                    f"research idea cannot begin {stage}: {idea['status']}/{idea['stage']}"
+                )
+            attempt_number = connection.execute(
+                "SELECT COALESCE(MAX(attempt_number), 0) + 1 FROM idea_attempts "
+                "WHERE run_id = ? AND idea_id = ? AND stage = ?",
+                (run_id, idea_id.strip(), stage),
+            ).fetchone()[0]
+            cursor = connection.execute(
+                "INSERT INTO idea_attempts"
+                "(run_id,idea_id,stage,attempt_number,status) "
+                "VALUES (?, ?, ?, ?, 'RUNNING')",
+                (run_id, idea_id.strip(), stage, attempt_number),
+            )
+            connection.execute(
+                f"UPDATE research_ideas SET status = ?, stage = ?, last_error = NULL, "
+                f"next_retry_at = NULL, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND idea_id = ?",
+                (active_status, stage, run_id, idea_id.strip()),
+            )
+            row = connection.execute(
+                "SELECT * FROM idea_attempts WHERE id = ?", (cursor.lastrowid,)
+            ).fetchone()
+        return _idea_attempt_from_row(row)
+
+    def finish_idea_attempt(
+        self,
+        attempt: IdeaAttemptRecord,
+        status: str,
+        idea_status: str,
+        *,
+        detail: dict[str, Any] | None = None,
+        error: str | None = None,
+        retry_after_seconds: int = 0,
+    ) -> ResearchIdeaRecord:
+        if type(attempt) is not IdeaAttemptRecord or attempt.status != "RUNNING":
+            raise TypeError("attempt must be a running IdeaAttemptRecord")
+        _validate_nonblank_string(status, "status")
+        _validate_nonblank_string(idea_status, "idea_status")
+        status = status.strip().upper()
+        idea_status = idea_status.strip().upper()
+        if status not in _IDEA_ATTEMPT_TERMINAL_STATUSES:
+            raise ValueError(f"invalid terminal idea attempt status: {status}")
+        if idea_status not in _IDEA_STATUSES - {"INSPECTING", "SIMULATING"}:
+            raise ValueError(f"invalid terminal idea status: {idea_status}")
+        if detail is not None and type(detail) is not dict:
+            raise TypeError("detail must be a dictionary or None")
+        detail_json = None if detail is None else _validated_json_object(detail, "detail")
+        _validate_optional_string(error, "error")
+        if type(retry_after_seconds) is not int or retry_after_seconds < 0:
+            raise ValueError("retry_after_seconds must be a non-negative integer")
+        error = None if error is None else error.strip()[:2000]
+        retry_modifier = f"+{retry_after_seconds} seconds"
+        with self._transaction() as connection:
+            idea_row = connection.execute(
+                "SELECT abort_requested FROM research_ideas "
+                "WHERE run_id = ? AND idea_id = ?",
+                (attempt.run_id, attempt.idea_id),
+            ).fetchone()
+            if idea_row is None:
+                raise StoreRecordNotFound(
+                    f"research idea not found: {attempt.run_id}.{attempt.idea_id}"
+                )
+            if idea_row["abort_requested"]:
+                status = "ABORTED"
+                idea_status = "ABORTED"
+                error = "aborted by user"
+                retry_after_seconds = 0
+            cursor = connection.execute(
+                f"UPDATE idea_attempts SET status = ?, detail_json = ?, error = ?, "
+                f"finished_at = ({_NOW_SQL}) WHERE id = ? AND run_id = ? "
+                "AND idea_id = ? AND stage = ? AND attempt_number = ? "
+                "AND status = 'RUNNING'",
+                (
+                    status,
+                    detail_json,
+                    error,
+                    attempt.id,
+                    attempt.run_id,
+                    attempt.idea_id,
+                    attempt.stage,
+                    attempt.attempt_number,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise StoreConflict(f"idea attempt is already finished: {attempt.id}")
+            next_retry_sql = (
+                "NULL"
+                if idea_status != "ERROR" or retry_after_seconds == 0
+                else "strftime('%Y-%m-%dT%H:%M:%fZ', 'now', ?)"
+            )
+            params: list[Any] = [
+                idea_status,
+                "SIMULATE" if idea_status == "READY" else attempt.stage,
+                error,
+                1 if idea_status == "ERROR" else 0,
+            ]
+            if next_retry_sql != "NULL":
+                params.append(retry_modifier)
+            params.extend((attempt.run_id, attempt.idea_id))
+            connection.execute(
+                f"UPDATE research_ideas SET status = ?, stage = ?, last_error = ?, "
+                f"retry_count = retry_count + ?, next_retry_at = {next_retry_sql}, "
+                f"updated_at = ({_NOW_SQL}) WHERE run_id = ? AND idea_id = ?",
+                tuple(params),
+            )
+            row = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (attempt.run_id, attempt.idea_id),
+            ).fetchone()
+        return _research_idea_from_row(row)
+
+    def retry_research_idea(self, run_id: str, idea_id: str) -> ResearchIdeaRecord:
+        _validate_run_id(run_id)
+        _validate_nonblank_string(idea_id, "idea_id")
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT status,stage FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+            if row is None:
+                raise StoreRecordNotFound(f"research idea not found: {run_id}.{idea_id}")
+            if row["status"] not in {"ERROR", "ABORTED"}:
+                raise StoreConflict("only ERROR or ABORTED ideas can be retried")
+            if connection.execute(
+                "SELECT 1 FROM idea_attempts WHERE run_id = ? AND idea_id = ? "
+                "AND status = 'RUNNING'",
+                (run_id, idea_id.strip()),
+            ).fetchone() is not None:
+                raise StoreConflict("idea is still stopping; retry after its active call exits")
+            target = "PENDING_INSPECT" if row["stage"] == "INSPECT" else "READY"
+            connection.execute(
+                f"UPDATE research_ideas SET status = ?, abort_requested = 0, "
+                f"last_error = NULL, next_retry_at = NULL, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND idea_id = ?",
+                (target, run_id, idea_id.strip()),
+            )
+            updated = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+        return _research_idea_from_row(updated)
+
+    def abort_research_idea(self, run_id: str, idea_id: str) -> ResearchIdeaRecord:
+        _validate_run_id(run_id)
+        _validate_nonblank_string(idea_id, "idea_id")
+        with self._transaction() as connection:
+            cursor = connection.execute(
+                f"UPDATE research_ideas SET status = 'ABORTED', abort_requested = 1, "
+                f"next_retry_at = NULL, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND idea_id = ? AND status != 'COMPLETED'",
+                (run_id, idea_id.strip()),
+            )
+            if cursor.rowcount != 1:
+                row = connection.execute(
+                    "SELECT status FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                    (run_id, idea_id.strip()),
+                ).fetchone()
+                if row is None:
+                    raise StoreRecordNotFound(
+                        f"research idea not found: {run_id}.{idea_id}"
+                    )
+                raise StoreConflict("completed ideas cannot be aborted")
+            updated = connection.execute(
+                "SELECT * FROM research_ideas WHERE run_id = ? AND idea_id = ?",
+                (run_id, idea_id.strip()),
+            ).fetchone()
+        return _research_idea_from_row(updated)
+
+    def recover_interrupted_ideas(self, run_id: str) -> int:
+        """Turn process-interrupted in-flight ideas into immediately retryable errors."""
+        _validate_run_id(run_id)
+        with self._transaction() as connection:
+            connection.execute(
+                f"UPDATE idea_attempts SET status = 'ABORTED', "
+                f"error = 'aborted by user', finished_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND status = 'RUNNING' AND EXISTS ("
+                "SELECT 1 FROM research_ideas WHERE research_ideas.run_id = idea_attempts.run_id "
+                "AND research_ideas.idea_id = idea_attempts.idea_id "
+                "AND research_ideas.status = 'ABORTED')",
+                (run_id,),
+            )
+            rows = connection.execute(
+                "SELECT idea_id,stage FROM research_ideas WHERE run_id = ? "
+                "AND status IN ('INSPECTING','SIMULATING')",
+                (run_id,),
+            ).fetchall()
+            for row in rows:
+                connection.execute(
+                    f"UPDATE research_ideas SET status = 'ERROR', "
+                    f"last_error = 'process interrupted', retry_count = retry_count + 1, "
+                    f"next_retry_at = NULL, updated_at = ({_NOW_SQL}) "
+                    "WHERE run_id = ? AND idea_id = ?",
+                    (run_id, row["idea_id"]),
+                )
+                connection.execute(
+                    f"UPDATE idea_attempts SET status = 'FAILED', "
+                    f"error = 'process interrupted', finished_at = ({_NOW_SQL}) "
+                    "WHERE run_id = ? AND idea_id = ? AND stage = ? AND status = 'RUNNING'",
+                    (run_id, row["idea_id"], row["stage"]),
+                )
+        return len(rows)
 
     def record_operator_task(
         self,
@@ -1401,6 +1920,62 @@ class AgentStore:
                 ) from error
             return self._command_after_terminal_update(connection, command_id, cursor)
 
+    def restart_rejected_command(self, command_id: int) -> CommandLedgerRecord:
+        """Reopen a completed, resource-free rejection for an explicit retry."""
+        _validate_positive_integer(command_id, "command_id")
+        with self._transaction() as connection:
+            cursor = connection.execute(
+                f"UPDATE command_ledger SET status = 'STARTED', exit_code = NULL, "
+                f"artifact_id = NULL, error = NULL, updated_at = ({_NOW_SQL}) "
+                "WHERE id = ? AND status = 'COMPLETED' "
+                "AND resource_id IS NULL AND exit_code != 0",
+                (command_id,),
+            )
+            row = connection.execute(
+                "SELECT * FROM command_ledger WHERE id = ?", (command_id,)
+            ).fetchone()
+            if row is None:
+                raise StoreRecordNotFound(f"command not found: {command_id}")
+            if cursor.rowcount != 1:
+                raise StoreConflict(
+                    f"command is not a retryable rejection: {command_id}"
+                )
+            return _command_from_row(row)
+
+    def record_command_recovery_artifact(
+        self,
+        command_id: int,
+        exit_code: int,
+        artifact_id: int,
+    ) -> CommandLedgerRecord:
+        """Attach one recovery inspection result without terminalizing the mutation."""
+        _validate_positive_integer(command_id, "command_id")
+        self._validate_exit_code(exit_code, "exit_code", optional=False)
+        _validate_positive_integer(artifact_id, "artifact_id")
+        with self._transaction() as connection:
+            self._validate_command_artifact_link(connection, command_id, artifact_id)
+            try:
+                cursor = connection.execute(
+                    f"UPDATE command_ledger SET exit_code = ?, artifact_id = ?, "
+                    f"updated_at = ({_NOW_SQL}) WHERE id = ? AND status = 'STARTED' "
+                    "AND resource_id IS NOT NULL",
+                    (exit_code, artifact_id, command_id),
+                )
+            except sqlite3.IntegrityError as error:
+                raise StoreRecordNotFound(
+                    f"artifact does not exist: {artifact_id}"
+                ) from error
+            row = connection.execute(
+                "SELECT * FROM command_ledger WHERE id = ?", (command_id,)
+            ).fetchone()
+            if row is None:
+                raise StoreRecordNotFound(f"command not found: {command_id}")
+            if cursor.rowcount != 1:
+                raise StoreConflict(
+                    f"command is not awaiting resource recovery: {command_id}"
+                )
+            return _command_from_row(row, status="RECOVERY_REQUIRED")
+
     def fail_command(
         self,
         command_id: int,
@@ -1531,6 +2106,14 @@ class AgentStore:
         if row is None:
             raise StoreRecordNotFound(f"candidate not found: {run_id}.{fingerprint}")
         return _candidate_from_row(row)
+
+    def list_candidates(self, run_id: str) -> list[CandidateRecord]:
+        _validate_run_id(run_id)
+        with closing(self.connect()) as connection:
+            rows = connection.execute(
+                "SELECT * FROM candidates WHERE run_id = ? ORDER BY id", (run_id,)
+            ).fetchall()
+        return [_candidate_from_row(row) for row in rows]
 
     def record_simulation(
         self,
@@ -2334,6 +2917,151 @@ class AgentStore:
             ).fetchone()
             return _run_from_row(updated)
 
+    def reopen_failed_run(
+        self, run_id: str, failed_node: WorkflowNode, reason: str
+    ) -> RunRecord:
+        _validate_run_id(run_id)
+        _validate_workflow_node(failed_node)
+        _validate_reason(reason)
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if row is None:
+                raise RunNotFound(run_id)
+            if RunState(row["state"]) is not RunState.FAILED:
+                raise InvalidTransition("only FAILED runs can be reopened")
+            attempt = connection.execute(
+                "SELECT node FROM node_attempts "
+                "WHERE run_id = ? AND status = 'FAILED' "
+                "ORDER BY completion_sequence DESC, id DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            if attempt is None or attempt["node"] != failed_node.value:
+                raise InvalidTransition("latest failed node does not match recovery request")
+            cursor = connection.execute(
+                f"UPDATE runs SET state = ?, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND state = ?",
+                (RunState.RUNNING.value, run_id, RunState.FAILED.value),
+            )
+            if cursor.rowcount != 1:
+                raise InvalidTransition(f"run state changed concurrently: {run_id}")
+            connection.execute(
+                "INSERT INTO state_transitions(run_id, from_state, to_state, reason) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    run_id,
+                    RunState.FAILED.value,
+                    RunState.RUNNING.value,
+                    reason,
+                ),
+            )
+            updated = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            return _run_from_row(updated)
+
+    def reopen_budget_exhausted_run(
+        self, run_id: str, finalization_node: WorkflowNode, reason: str
+    ) -> RunRecord:
+        _validate_run_id(run_id)
+        _validate_workflow_node(finalization_node)
+        _validate_reason(reason)
+        expected_source = {
+            WorkflowNode.K: WorkflowNode.J,
+            WorkflowNode.L: WorkflowNode.K,
+        }.get(finalization_node)
+        if expected_source is None:
+            raise InvalidTransition("budget recovery is limited to K or L")
+        with self._transaction() as connection:
+            row = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            if row is None:
+                raise RunNotFound(run_id)
+            if RunState(row["state"]) is not RunState.BUDGET_EXHAUSTED:
+                raise InvalidTransition("only BUDGET_EXHAUSTED runs can be reopened")
+            attempt = connection.execute(
+                "SELECT node, summary_json FROM node_attempts "
+                "WHERE run_id = ? AND status = 'COMPLETED' "
+                "ORDER BY completion_sequence DESC, id DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+            if attempt is None or attempt["node"] != expected_source.value:
+                raise InvalidTransition(
+                    "latest completed node does not match budget finalization request"
+                )
+            try:
+                summary = json.loads(attempt["summary_json"] or "{}")
+            except (TypeError, json.JSONDecodeError):
+                summary = {}
+            coordinator = summary.get("_coordinator")
+            next_node = (
+                coordinator.get("next_node")
+                if isinstance(coordinator, dict)
+                else None
+            )
+            if next_node != finalization_node.value:
+                raise InvalidTransition(
+                    "latest completed checkpoint does not route to finalization node"
+                )
+            cursor = connection.execute(
+                f"UPDATE runs SET state = ?, updated_at = ({_NOW_SQL}) "
+                "WHERE run_id = ? AND state = ?",
+                (
+                    RunState.RUNNING.value,
+                    run_id,
+                    RunState.BUDGET_EXHAUSTED.value,
+                ),
+            )
+            if cursor.rowcount != 1:
+                raise InvalidTransition(f"run state changed concurrently: {run_id}")
+            connection.execute(
+                "INSERT INTO state_transitions(run_id, from_state, to_state, reason) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    run_id,
+                    RunState.BUDGET_EXHAUSTED.value,
+                    RunState.RUNNING.value,
+                    reason,
+                ),
+            )
+            updated = connection.execute(
+                "SELECT * FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone()
+            return _run_from_row(updated)
+
+    def budget_finalization_node(self, run_id: str) -> WorkflowNode | None:
+        _validate_run_id(run_id)
+        with closing(self.connect()) as connection:
+            if connection.execute(
+                "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone() is None:
+                raise RunNotFound(run_id)
+            attempt = connection.execute(
+                "SELECT node, summary_json FROM node_attempts "
+                "WHERE run_id = ? AND status = 'COMPLETED' "
+                "ORDER BY completion_sequence DESC, id DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+        if attempt is None:
+            return None
+        try:
+            summary = json.loads(attempt["summary_json"] or "{}")
+        except (TypeError, json.JSONDecodeError):
+            return None
+        coordinator = summary.get("_coordinator")
+        next_node = (
+            coordinator.get("next_node")
+            if isinstance(coordinator, dict)
+            else None
+        )
+        routes = {
+            (WorkflowNode.J.value, WorkflowNode.K.value): WorkflowNode.K,
+            (WorkflowNode.K.value, WorkflowNode.L.value): WorkflowNode.L,
+        }
+        return routes.get((attempt["node"], next_node))
+
     def start_node_attempt(
         self, run_id: str, node: WorkflowNode
     ) -> NodeAttemptRecord:
@@ -2405,6 +3133,21 @@ class AgentStore:
             row = connection.execute(
                 "SELECT node FROM node_attempts "
                 "WHERE run_id = ? AND status = 'COMPLETED' "
+                "ORDER BY completion_sequence DESC, id DESC LIMIT 1",
+                (run_id,),
+            ).fetchone()
+        return None if row is None else WorkflowNode(row["node"])
+
+    def latest_failed_node(self, run_id: str) -> WorkflowNode | None:
+        _validate_run_id(run_id)
+        with closing(self.connect()) as connection:
+            if connection.execute(
+                "SELECT 1 FROM runs WHERE run_id = ?", (run_id,)
+            ).fetchone() is None:
+                raise RunNotFound(run_id)
+            row = connection.execute(
+                "SELECT node FROM node_attempts "
+                "WHERE run_id = ? AND status = 'FAILED' "
                 "ORDER BY completion_sequence DESC, id DESC LIMIT 1",
                 (run_id,),
             ).fetchone()

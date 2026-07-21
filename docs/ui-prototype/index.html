@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light" />
+  <title>WQB Research Desk</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <a class="brand" href="#home" data-view="home" aria-label="WQB Research Desk 首页">
+        <img src="brand.png" alt="WQB" />
+        <span><strong>RESEARCH DESK</strong><small>QUANT AGENT CONTROL PLANE</small></span>
+      </a>
+      <div class="system-state">
+        <span id="apiState" class="status-dot">API</span>
+        <span id="activeRunLabel">NO ACTIVE RUN</span>
+      </div>
+      <nav aria-label="主导航">
+        <button class="nav-btn active" data-view="home">总览</button>
+        <button class="nav-btn" data-view="new">新研究</button>
+        <button class="nav-btn" data-view="run">研究过程</button>
+        <button class="nav-btn" data-view="history">历史</button>
+        <button class="nav-btn" data-view="settings">设置</button>
+      </nav>
+    </header>
+
+    <main>
+      <section class="view active" id="view-home">
+        <div class="page-head">
+          <div><span class="eyebrow">CONTROL ROOM</span><h1>研究总览</h1></div>
+          <button class="btn primary" data-view="new">+ 创建研究</button>
+        </div>
+        <div class="status-strip">
+          <div><small>BRAIN 会话</small><strong id="homeAuth">检查中</strong></div>
+          <div><small>PLANNER</small><strong id="homePlanner">未配置</strong></div>
+          <div><small>OPERATOR</small><strong id="homeOperator">未配置</strong></div>
+          <div><small>需要处理</small><strong id="homeAttention">0</strong></div>
+        </div>
+        <div class="section-head"><h2>当前队列</h2><button class="text-btn" id="refreshHome">刷新</button></div>
+        <div id="homeQueue" class="run-list"></div>
+      </section>
+
+      <section class="view" id="view-new">
+        <div class="page-head">
+          <div><span class="eyebrow">NEW RUN</span><h1>创建研究</h1></div>
+          <div class="stepper" id="stepper">
+            <span class="active">1 模式</span><span>2 范围</span><span>3 终止条件</span><span>4 启动</span>
+          </div>
+        </div>
+        <div class="wizard-shell">
+          <aside class="run-rail">
+            <div><span>A</span><strong>验证环境</strong></div>
+            <div><span>D</span><strong>锁定范围</strong></div>
+            <div><span>H</span><strong>建立机制</strong></div>
+            <div><span>I–K</span><strong>候选 Pipeline</strong></div>
+            <div><span>L–M</span><strong>终检与审批</strong></div>
+          </aside>
+          <form id="runForm" class="wizard-body">
+            <div class="wizard-pane active" data-step="1">
+              <h2>研究模式</h2>
+              <div class="choice-grid">
+                <label class="choice selected"><input type="radio" name="scope_mode" value="manual" checked /><strong>手动范围</strong><span>固定 Region、Delay、Universe 与 Neutralization</span></label>
+                <label class="choice"><input type="radio" name="scope_mode" value="auto" /><strong>自动选择</strong><span>由 Agent 基于机会与额度锁定范围</span></label>
+              </div>
+            </div>
+            <div class="wizard-pane" data-step="2">
+              <h2>研究范围</h2>
+              <div id="manualScope" class="form-grid">
+                <label><span>REGION</span><select name="region"><option value="">加载平台清单…</option></select></label>
+                <label><span>DELAY</span><select name="delay"><option value="">—</option></select></label>
+                <label><span>UNIVERSE</span><select name="universe"><option value="">—</option></select></label>
+                <label><span>NEUTRALIZATION</span><select name="neutralization"><option value="">—</option></select></label>
+              </div>
+              <div class="form-grid dataset-scope">
+                <label><span>DATASET TYPE</span><select name="dataset_category" disabled><option value="">先选择范围</option></select></label>
+                <label><span>DATASET</span><select name="dataset_id" required disabled><option value="">加载数据集…</option></select></label>
+              </div>
+              <div class="scope-options-bar">
+                <div><strong id="scopeOptionsSource">WQ OPTIONS · LOADING</strong><span id="scopeOptionsMeta">正在读取平台范围配置</span></div>
+                <button type="button" class="btn" id="refreshScopeOptions">刷新平台清单</button>
+              </div>
+              <div id="autoScope" class="form-grid" hidden>
+                <label><span>REGION</span><select name="auto_region"><option value="">加载平台清单…</option></select></label>
+                <div class="notice">已固定 Region 与数据集；Agent 将自动锁定 Delay、Universe 和 Neutralization。</div>
+              </div>
+            </div>
+            <div class="wizard-pane" data-step="3">
+              <h2>终止条件</h2>
+              <div class="form-grid two">
+                <label><span>最大实际回测数</span><input type="number" name="max_simulations" min="1" value="40" required /></label>
+                <label><span>最大诊断轮数</span><input type="number" name="max_rounds" min="1" value="5" required /></label>
+              </div>
+              <div class="notice">回测数按候选子模拟计数。轮数按完成的 K 诊断计数。</div>
+            </div>
+            <div class="wizard-pane" data-step="4">
+              <h2>确认启动</h2>
+              <div id="runConfirm" class="confirm-grid"></div>
+              <div class="gate-warning"><strong>SUBMISSION GATE</strong><span>启动研究授权真实回测，不授权正式提交。通过 L 后仍需人工审批。</span></div>
+            </div>
+            <div class="wizard-actions">
+              <button type="button" class="btn" id="wizardBack">← 上一步</button>
+              <button type="button" class="btn primary" id="wizardNext">下一步 →</button>
+              <button type="submit" class="btn danger" id="startRun" hidden>启动真实研究</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="view" id="view-run">
+        <div class="page-head run-head">
+          <div><span class="eyebrow">LIVE RUN</span><h1>研究过程</h1></div>
+          <label class="run-switch"><span>当前 RUN</span><select id="runSelect"></select></label>
+        </div>
+        <div id="emptyRun" class="empty-state">尚未选择研究任务。</div>
+        <div id="runContent" hidden>
+          <div id="runHero" class="run-hero"></div>
+          <section class="work-section">
+            <div class="section-head"><h2>A–M 研究状态机</h2><span class="tag">OUTER PIPELINE</span></div>
+            <div id="outerPipeline" class="outer-pipeline"></div>
+          </section>
+          <section class="work-section idea-stage">
+            <div class="section-head"><h2>Research Ideas</h2><span id="ideaCount" class="tag">0 IDEAS</span></div>
+            <div id="ideaFlow" class="idea-flow"></div>
+            <div id="ideaList" class="idea-list"></div>
+          </section>
+          <section class="work-section candidate-stage">
+            <div class="section-head"><h2>候选研究 Pipeline</h2><span id="candidateCount" class="tag">0 CANDIDATES</span></div>
+            <div id="candidateFlow" class="candidate-flow"></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>ID</th><th>表达式</th><th>机制 / 模板</th><th>模拟</th><th>Sharpe</th><th>Fitness</th><th>状态</th></tr></thead>
+                <tbody id="candidateRows"></tbody>
+              </table>
+            </div>
+          </section>
+          <div class="run-grid">
+            <div>
+              <section class="work-section">
+                <div class="section-head"><h2>过程日志</h2><div class="inline-actions"><select id="logFilter"><option value="">全部节点</option></select><button class="text-btn" id="copyLog">复制</button></div></div>
+                <div id="logWindow" class="log-window"></div>
+              </section>
+              <section class="work-section">
+                <div class="section-head"><h2>节点时间线</h2><span id="attemptCount" class="tag">0 ATTEMPTS</span></div>
+                <div id="timeline" class="timeline"></div>
+              </section>
+            </div>
+            <aside>
+              <section class="work-section">
+                <div class="section-head"><h2>研究计划</h2><span id="planTag" class="tag">NO PLAN</span></div>
+                <div id="planBody" class="data-body"></div>
+              </section>
+              <section class="work-section">
+                <div class="section-head"><h2>终止计数</h2><span class="tag">BOUNDARY</span></div>
+                <div id="terminationMeters" class="meters"></div>
+              </section>
+              <section class="work-section" id="actionPanel">
+                <div class="section-head"><h2>操作</h2><span id="actionTag" class="tag">STATE</span></div>
+                <div id="actionBody" class="action-body"></div>
+              </section>
+              <section class="work-section">
+                <div class="section-head"><h2>成果文件</h2><span id="artifactCount" class="tag">0 FILES</span></div>
+                <div id="artifactList" class="artifact-list"></div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-history">
+        <div class="page-head">
+          <div><span class="eyebrow">ARCHIVE</span><h1>研究历史</h1></div>
+          <label class="filter"><span>状态</span><select id="historyFilter"><option value="">全部</option></select></label>
+        </div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+
+      <section class="view" id="view-settings">
+        <div class="page-head"><div><span class="eyebrow">LOCAL CONFIG</span><h1>设置</h1></div><span id="configPath" class="path-label"></span></div>
+        <div class="settings-grid">
+          <section class="work-section auth-settings">
+            <div class="section-head"><h2>BRAIN 认证</h2><span id="authTag" class="tag">UNKNOWN</span></div>
+            <div class="form-grid two">
+              <label><span>邮箱</span><input type="email" id="authEmail" autocomplete="username" /></label>
+              <label><span>密码</span><input type="password" id="authPassword" autocomplete="current-password" /></label>
+            </div>
+            <div class="settings-actions"><button class="btn" id="checkAuth">检查会话</button><button class="btn primary" id="loginAuth">登录并保存 Cookie</button></div>
+            <div id="authResult" class="result-line"></div>
+          </section>
+          <section class="work-section model-settings" data-role="planner">
+            <div class="section-head"><h2>Planner</h2><span class="tag">DECISION MODEL</span></div>
+            <div class="model-form"></div>
+          </section>
+          <section class="work-section model-settings" data-role="operator">
+            <div class="section-head"><h2>Operator</h2><span class="tag">ACTION MODEL</span></div>
+            <div class="model-form"></div>
+          </section>
+          <section class="work-section storage-settings">
+            <div class="section-head"><h2>本地存储</h2><span class="tag">PATHS</span></div>
+            <dl id="storagePaths" class="path-list"></dl>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>WQB RESEARCH DESK</span><span>LOCAL API · HUMAN SUBMISSION GATE</span></footer>
+  </div>
+
+  <div id="modal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head"><h2 id="modalTitle"></h2><button id="modalClose" class="icon-btn" aria-label="关闭">×</button></div>
+      <div id="modalBody" class="modal-body"></div>
+      <div id="modalActions" class="modal-actions"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

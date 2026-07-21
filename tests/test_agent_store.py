@@ -23,26 +23,31 @@ from wqb_cli.agent.types import Budget, RunConfig, RunState, ScopeMode, Workflow
 
 
 ALLOWED_TRANSITIONS = {
-    RunState.CREATED: {RunState.RUNNING, RunState.FAILED},
+    RunState.CREATED: {RunState.RUNNING, RunState.STOPPED, RunState.FAILED},
     RunState.RUNNING: {
         RunState.NEEDS_AUTH,
+        RunState.NEEDS_DATA,
         RunState.PAUSED_MODEL,
         RunState.AWAITING_APPROVAL,
         RunState.BUDGET_EXHAUSTED,
         RunState.NO_PROGRESS,
+        RunState.STOPPED,
         RunState.FAILED,
     },
-    RunState.NEEDS_AUTH: {RunState.RUNNING, RunState.FAILED},
-    RunState.PAUSED_MODEL: {RunState.RUNNING, RunState.FAILED},
+    RunState.NEEDS_AUTH: {RunState.RUNNING, RunState.STOPPED, RunState.FAILED},
+    RunState.NEEDS_DATA: {RunState.RUNNING, RunState.STOPPED, RunState.FAILED},
+    RunState.PAUSED_MODEL: {RunState.RUNNING, RunState.STOPPED, RunState.FAILED},
     RunState.AWAITING_APPROVAL: {
         RunState.RUNNING,
         RunState.REJECTED,
+        RunState.STOPPED,
         RunState.FAILED,
     },
     RunState.SUBMITTED: set(),
     RunState.REJECTED: set(),
     RunState.BUDGET_EXHAUSTED: set(),
     RunState.NO_PROGRESS: set(),
+    RunState.STOPPED: set(),
     RunState.FAILED: set(),
 }
 
@@ -50,6 +55,7 @@ PATH_TO_STATE = {
     RunState.CREATED: (),
     RunState.RUNNING: (RunState.RUNNING,),
     RunState.NEEDS_AUTH: (RunState.RUNNING, RunState.NEEDS_AUTH),
+    RunState.NEEDS_DATA: (RunState.RUNNING, RunState.NEEDS_DATA),
     RunState.PAUSED_MODEL: (RunState.RUNNING, RunState.PAUSED_MODEL),
     RunState.AWAITING_APPROVAL: (RunState.RUNNING, RunState.AWAITING_APPROVAL),
     RunState.REJECTED: (
@@ -59,6 +65,7 @@ PATH_TO_STATE = {
     ),
     RunState.BUDGET_EXHAUSTED: (RunState.RUNNING, RunState.BUDGET_EXHAUSTED),
     RunState.NO_PROGRESS: (RunState.RUNNING, RunState.NO_PROGRESS),
+    RunState.STOPPED: (RunState.RUNNING, RunState.STOPPED),
     RunState.FAILED: (RunState.FAILED,),
 }
 
@@ -74,7 +81,7 @@ def manual_config() -> RunConfig:
         delay=1,
         universe="TOP2000",
         neutralization="INDUSTRY",
-        budget=Budget(candidates_per_round=4, max_model_cost_usd=2.5),
+        budget=Budget(candidates_per_round=4),
     )
 
 
@@ -246,9 +253,8 @@ class AgentStoreTests(unittest.TestCase):
                     loaded.state = RunState.RUNNING  # type: ignore[misc]
 
         expected = (
-            '{"budget":{"candidates_per_round":8,"max_model_cost_usd":null,'
-            '"max_runtime_minutes":180,"operator_calls":100,"planner_calls":20,'
-            '"rounds":3,"total_simulations":40},"delay":null,"neutralization":null,'
+            '{"budget":{"candidates_per_round":8,"rounds":3,'
+            '"total_simulations":40},"dataset_id":null,"delay":null,"neutralization":null,'
             '"region":null,"scope_mode":"auto","universe":null}'
         )
         with closing(self.store.connect()) as connection:
@@ -418,6 +424,49 @@ class AgentStoreTests(unittest.TestCase):
         self.assertEqual(self.store.latest_completed_node("feedback"), WorkflowNode.H)
         with self.assertRaises(RunNotFound):
             self.store.latest_completed_node("missing")
+
+    def test_failed_run_can_only_be_reopened_for_its_latest_failed_node(self) -> None:
+        self.store.create_run("recoverable", auto_config())
+        self.store.transition("recoverable", RunState.RUNNING, "test")
+        attempt = self.store.start_node_attempt("recoverable", WorkflowNode.K)
+        self.store.finish_node_attempt(attempt, "FAILED", {"failure": "TypeError"})
+        self.store.transition("recoverable", RunState.FAILED, "node K failed")
+
+        self.assertEqual(
+            self.store.latest_failed_node("recoverable"), WorkflowNode.K
+        )
+        with self.assertRaises(InvalidTransition):
+            self.store.reopen_failed_run("recoverable", WorkflowNode.D, "wrong")
+        reopened = self.store.reopen_failed_run(
+            "recoverable", WorkflowNode.K, "retry K"
+        )
+        self.assertEqual(reopened.state, RunState.RUNNING)
+
+    def test_budget_exhausted_run_reopens_only_for_latest_finalization_route(self) -> None:
+        self.store.create_run("budget-finalize", auto_config())
+        self.store.transition("budget-finalize", RunState.RUNNING, "test")
+        attempt = self.store.start_node_attempt("budget-finalize", WorkflowNode.J)
+        self.store.finish_node_attempt(
+            attempt,
+            "COMPLETED",
+            {"_coordinator": {"next_node": WorkflowNode.K.value, "payload": {}}},
+        )
+        self.store.transition(
+            "budget-finalize", RunState.BUDGET_EXHAUSTED, "budget reached"
+        )
+
+        self.assertEqual(
+            self.store.budget_finalization_node("budget-finalize"), WorkflowNode.K
+        )
+        with self.assertRaises(InvalidTransition):
+            self.store.reopen_budget_exhausted_run(
+                "budget-finalize", WorkflowNode.L, "wrong checkpoint"
+            )
+        reopened = self.store.reopen_budget_exhausted_run(
+            "budget-finalize", WorkflowNode.K, "finish diagnosis"
+        )
+
+        self.assertEqual(reopened.state, RunState.RUNNING)
 
     def test_latest_completed_node_uses_completion_sequence_not_timestamp_or_id(
         self,
@@ -589,7 +638,7 @@ class AgentStoreTests(unittest.TestCase):
                         "SELECT version FROM schema_version"
                     ).fetchall()
                 ],
-                [1, 2, 3, 4],
+                [1, 2, 3, 4, 5],
             )
             with self.assertRaises(sqlite3.IntegrityError):
                 connection.execute(
@@ -683,7 +732,7 @@ class AgentStoreTests(unittest.TestCase):
                     ("other", "J", 3),
                 ],
             )
-            self.assertEqual([row["version"] for row in versions], [1, 2, 3, 4])
+            self.assertEqual([row["version"] for row in versions], [1, 2, 3, 4, 5])
             self.assertIn("completion_sequence DESC", index_sql)
             self.assertEqual(upgraded.latest_completed_node("legacy"), WorkflowNode.F)
 
@@ -721,7 +770,7 @@ class AgentStoreTests(unittest.TestCase):
                 connection.execute(
                     "CREATE TABLE schema_version (version INTEGER PRIMARY KEY)"
                 )
-                connection.execute("INSERT INTO schema_version(version) VALUES (5)")
+                connection.execute("INSERT INTO schema_version(version) VALUES (6)")
                 connection.execute("CREATE TABLE sentinel (value TEXT)")
                 connection.commit()
                 self.assertEqual(
@@ -769,7 +818,7 @@ class AgentStoreTests(unittest.TestCase):
 
     def test_failed_injected_migration_is_atomic_and_does_not_enable_wal(self) -> None:
         failing = store_module._Migration(
-            version=5,
+            version=6,
             statements=(
                 "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
                 "INSERT INTO table_that_does_not_exist(value) VALUES (1)",
@@ -790,9 +839,9 @@ class AgentStoreTests(unittest.TestCase):
             self.assertEqual(journal_mode, "delete")
 
     def test_only_unapplied_ordered_migrations_execute(self) -> None:
-        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 4)
+        self.assertEqual(store_module.LATEST_SCHEMA_VERSION, 5)
         fifth = store_module._Migration(
-            version=5,
+            version=6,
             statements=(
                 "CREATE TABLE migration_probe (value INTEGER NOT NULL)",
                 "INSERT INTO migration_probe(value) VALUES (1)",
@@ -818,7 +867,7 @@ class AgentStoreTests(unittest.TestCase):
                 probe = connection.execute(
                     "SELECT value FROM migration_probe"
                 ).fetchall()
-        self.assertEqual([row["version"] for row in versions], [1, 2, 3, 4, 5])
+        self.assertEqual([row["version"] for row in versions], [1, 2, 3, 4, 5, 6])
         self.assertEqual([row["value"] for row in probe], [1])
 
     def test_separate_store_instances_allocate_unique_attempt_numbers(self) -> None:

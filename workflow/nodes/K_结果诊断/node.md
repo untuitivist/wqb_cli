@@ -36,6 +36,8 @@ wqb alpha correlation prod <alpha_id> --max-wait-seconds 900 --output <node_dir>
 - `diagnosis.md`
 - `next_node.json`
 - `best_alpha_candidates.json`
+- `template_density.json`
+- `anti_patterns.json`
 - `node_summary.md`
 
 可选：
@@ -49,6 +51,14 @@ wqb alpha correlation prod <alpha_id> --max-wait-seconds 900 --output <node_dir>
 - `1% < turnover < 70%`
 - `margin > 0.1%`
 - "checks"下的元素里的"result"没有FAIL状态
+
+## 模板级诊断
+
+- K 必须按 `template_id` 统计测试数、有效信号数、通过数、因子密度和通过率
+- 有效信号的探索门槛为 `abs(sharpe)>0.7`、`abs(fitness)>0.7`、`abs(pnl)>3000000` 且多空持仓合计大于 100
+- 某模板已回测但因子密度和通过率均为 0 时，记录 `LOW_FACTOR_DENSITY` Anti-Pattern
+- K 的模板统计用于选择下一轮策略，不替代 Regular 提交硬指标
+- PC/self correlation 仍由 L 慢速终检处理，不提前改变现有流程
 
 ## 硬要求：必须回退
 

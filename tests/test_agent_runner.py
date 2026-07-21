@@ -102,6 +102,53 @@ class AgentRunnerFirstRedTests(unittest.TestCase):
         self.assertEqual(result.artifact, artifact)
         run.assert_not_called()
 
+    def test_completed_auth_rejected_sim_create_is_safely_reopened(self) -> None:
+        candidate = self.root / "candidate.json"
+        candidate.write_text('{"regular":"rank(close)"}', encoding="utf-8")
+        store = AgentStore(self.root / "agent.sqlite3")
+        store.initialize()
+        store.create_run("run-1", RunConfig(scope_mode=ScopeMode.AUTO))
+        runner = AgentRunner(
+            store,
+            AgentPolicy(Budget()),
+            ArtifactWriter(self.root / "artifacts", store),
+        )
+        outcomes = [
+            subprocess.CompletedProcess(
+                [],
+                1,
+                '{"ok":false,"simulation_id":null,"response":{"status_code":401}}',
+                "",
+            ),
+            subprocess.CompletedProcess(
+                [], 0, '{"ok":true,"simulation_id":"SIM-NEW"}', ""
+            ),
+        ]
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", side_effect=outcomes
+        ) as process:
+            rejected = runner.run(
+                "run-1",
+                WorkflowNode.J,
+                ("sim", "create", "--input", str(candidate)),
+                "rejected.json",
+            )
+            result = runner.run(
+                "run-1",
+                WorkflowNode.J,
+                ("sim", "create", "--input", str(candidate)),
+                "retried.json",
+            )
+
+        self.assertEqual(rejected.returncode, 1)
+        self.assertEqual(result.payload["simulation_id"], "SIM-NEW")
+        self.assertFalse(result.reused)
+        self.assertEqual(process.call_count, 2)
+        command = store.get_command(1)
+        self.assertEqual(command.status, "COMPLETED")
+        self.assertEqual(command.resource_id, "SIM-NEW")
+
     def test_recovery_of_sim_create_inspects_existing_resource(self) -> None:
         self.store.reserve_command.return_value = command_record(
             status="RECOVERY_REQUIRED", resource_id="SIM1"
@@ -127,6 +174,41 @@ class AgentRunnerFirstRedTests(unittest.TestCase):
         self.assertNotIn("create", executed)
         self.assertFalse(result.reused)
         self.store.complete_command.assert_called_once_with(11, 0, artifact_id=8)
+
+    def test_recovery_auth_rejection_is_returned_without_terminalizing_create(self) -> None:
+        self.store.reserve_command.return_value = command_record(
+            status="RECOVERY_REQUIRED", resource_id="SIM1"
+        )
+        self.store.add_or_update_artifact.return_value = SimpleNamespace(id=8)
+        completed = subprocess.CompletedProcess(
+            args=[],
+            returncode=1,
+            stdout=(
+                '{"ok":false,"response":{"status_code":401,'
+                '"reason":"Unauthorized"}}\n'
+            ),
+            stderr="",
+        )
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", return_value=completed
+        ) as process:
+            result = self.runner.run(
+                "run-1",
+                WorkflowNode.J,
+                ("sim", "create", "--input", "candidate.json"),
+                "result.json",
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.payload["response"]["status_code"], 401)
+        self.assertEqual(
+            process.call_args.args[0][-5:],
+            ["sim", "get", "SIM1", "--max-wait-seconds", "900"],
+        )
+        self.store.record_command_recovery_artifact.assert_called_once_with(11, 1, 8)
+        self.store.complete_command.assert_not_called()
+        self.store.fail_command.assert_not_called()
 
 
 class ArtifactWriterTests(unittest.TestCase):
@@ -1010,6 +1092,11 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
             with self.subTest(stdout=stdout), self.assertRaises(RunnerError):
                 AgentRunner._parse_stdout(stdout)
 
+    def test_stdout_parser_converts_artifact_limits_to_runner_error(self) -> None:
+        with patch("wqb_cli.agent.artifacts.MAX_JSON_CHARS", 8):
+            with self.assertRaises(RunnerError):
+                AgentRunner._parse_stdout('{"ok":true}')
+
     def test_subprocess_contract_and_sanitized_environment_are_exact(self) -> None:
         completed = subprocess.CompletedProcess([], 0, '{"ok":true}', "safe stderr")
         with patch.dict(
@@ -1179,6 +1266,42 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
                 WorkflowNode.F,
                 ("scope", "files", "--info", "info_data.bin"),
                 cwd=self.root,
+            ),
+        )
+        default_info = self.root / "local" / "data_all" / "info_data.bin"
+        missing_default = command_fingerprint(
+            WorkflowNode.F, ("scope", "files"), cwd=self.root
+        )
+        default_info.parent.mkdir(parents=True)
+        default_info.write_bytes(b"default-info")
+        self.assertNotEqual(
+            missing_default,
+            command_fingerprint(
+                WorkflowNode.F, ("scope", "files"), cwd=self.root
+            ),
+        )
+        remote_before_login = command_fingerprint(
+            WorkflowNode.F, ("data", "fields", "--region", "USA"), cwd=self.root
+        )
+        cookie = self.root / "local" / "auth" / "cookies.json"
+        cookie.parent.mkdir(parents=True)
+        cookie.write_text("{}", encoding="utf-8")
+        self.assertNotEqual(
+            remote_before_login,
+            command_fingerprint(
+                WorkflowNode.F,
+                ("data", "fields", "--region", "USA"),
+                cwd=self.root,
+            ),
+        )
+        sim_read_before_refresh = command_fingerprint(
+            WorkflowNode.J, ("sim", "get", "SIM1"), cwd=self.root
+        )
+        cookie.write_text('{"cookies":{"session":"new"}}', encoding="utf-8")
+        self.assertNotEqual(
+            sim_read_before_refresh,
+            command_fingerprint(
+                WorkflowNode.J, ("sim", "get", "SIM1"), cwd=self.root
             ),
         )
         sqlite = self.root / "community.sqlite3"
@@ -1364,6 +1487,30 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
         rendered = repr((first, second, lines))
         self.assertNotIn("first-secret", rendered)
         self.assertNotIn("second-secret", rendered)
+
+    def test_structured_nonzero_read_rejection_is_persisted_for_classification(self) -> None:
+        self.store.reserve_command.return_value = command_record(id=41)
+        completed = subprocess.CompletedProcess(
+            [],
+            1,
+            '{"ok":false,"response":{"status_code":401,"reason":"Unauthorized"}}',
+            "",
+        )
+
+        with patch(
+            "wqb_cli.agent.runner.subprocess.run", return_value=completed
+        ):
+            result = self.runner.run(
+                "read-rejection",
+                WorkflowNode.J,
+                ("sim", "get", "SIM1"),
+                "result.json",
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertEqual(result.payload["response"]["status_code"], 401)
+        self.store.complete_command.assert_called_once()
+        self.store.fail_command.assert_not_called()
 
     def test_nonzero_timeout_oserror_and_malformed_output_fail_without_retry(self) -> None:
         cases = (
@@ -1595,6 +1742,35 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
 
                 self.store.fail_command.assert_not_called()
                 self.store.complete_command.assert_not_called()
+
+    def test_confirmed_simulation_rejection_is_persisted_for_diagnosis(self) -> None:
+        candidate = self.root / "rejected-simulation.json"
+        candidate.write_text('{"expression":"rank(close)"}', encoding="utf-8")
+        self.store.reserve_command.return_value = command_record(id=139)
+        payload = {
+            "ok": False,
+            "simulation_id": None,
+            "classification": {"reason": "simulation_create_failed"},
+            "create": {"response": {"status_code": 400}},
+        }
+        completed = subprocess.CompletedProcess(
+            [], 1, json.dumps(payload), ""
+        )
+
+        with patch("wqb_cli.agent.runner.subprocess.run", return_value=completed):
+            result = self.runner.run(
+                "confirmed-rejection",
+                WorkflowNode.J,
+                ("sim", "create", "--input", str(candidate)),
+                "result.json",
+            )
+
+        self.assertEqual(result.payload, payload)
+        self.assertEqual(result.returncode, 1)
+        self.store.complete_command.assert_called_once_with(
+            139, 1, artifact_id=result.artifact.id
+        )
+        self.store.fail_command.assert_not_called()
 
     def test_explicit_invalid_resource_fields_remain_recoverable_for_all_exit_codes(self) -> None:
         candidate = self.root / "invalid-resource-recovery.json"
@@ -1901,6 +2077,73 @@ class AgentRunnerBoundaryTests(unittest.TestCase):
 
 
 class AgentRunnerStoreIntegrationTests(unittest.TestCase):
+    def test_recovery_read_rejection_keeps_bound_mutation_recoverable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            store = AgentStore(root / "agent.sqlite3")
+            store.initialize()
+            store.create_run("run", RunConfig(scope_mode=ScopeMode.AUTO))
+            candidate = root / "candidate.json"
+            candidate.write_text('{"expression":"rank(close)"}', encoding="utf-8")
+            runner = AgentRunner(
+                store, AgentPolicy(Budget()), ArtifactWriter(root / "artifacts")
+            )
+            outcomes = (
+                subprocess.CompletedProcess(
+                    [], 1, '{"ok":true,"simulation_id":"SIM1"}', ""
+                ),
+                subprocess.CompletedProcess(
+                    [],
+                    1,
+                    '{"ok":false,"response":{"status_code":401}}',
+                    "",
+                ),
+                subprocess.CompletedProcess(
+                    [], 0, '{"ok":true,"simulation_id":"SIM1"}', ""
+                ),
+            )
+
+            with patch(
+                "wqb_cli.agent.runner.subprocess.run", side_effect=outcomes
+            ) as process:
+                with self.assertRaises(RunnerError):
+                    runner.run(
+                        "run",
+                        WorkflowNode.J,
+                        ("sim", "create", "--input", str(candidate)),
+                        "create.json",
+                    )
+                rejected = runner.run(
+                    "run",
+                    WorkflowNode.J,
+                    ("sim", "create", "--input", str(candidate)),
+                    "auth-rejection.json",
+                )
+                recovery = store.reserve_command(
+                    "run",
+                    WorkflowNode.J,
+                    command_fingerprint(
+                        WorkflowNode.J,
+                        ("sim", "create", "--input", str(candidate)),
+                        cwd=runner.command_cwd,
+                    ),
+                    ("sim", "create", "--input", str(candidate)),
+                )
+                completed = runner.run(
+                    "run",
+                    WorkflowNode.J,
+                    ("sim", "create", "--input", str(candidate)),
+                    "recovered.json",
+                )
+
+            self.assertEqual(rejected.payload["response"]["status_code"], 401)
+            self.assertEqual(recovery.status, "RECOVERY_REQUIRED")
+            self.assertEqual(recovery.resource_id, "SIM1")
+            self.assertEqual(completed.payload["simulation_id"], "SIM1")
+            self.assertEqual(process.call_count, 3)
+            self.assertNotIn("create", process.call_args_list[1].args[0])
+            self.assertNotIn("create", process.call_args_list[2].args[0])
+
     def test_real_store_reuses_completed_result_and_preserves_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

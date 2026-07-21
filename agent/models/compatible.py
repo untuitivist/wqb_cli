@@ -13,6 +13,7 @@ from ..schemas import (
     ModelRefusal,
     SchemaViolation,
     has_open_object_schema,
+    has_unsupported_strict_output_schema,
     parse_json_text,
     schema_for,
     validate_model_output,
@@ -24,6 +25,7 @@ from .base import (
     ModelResult,
     UsageAccumulator,
     attach_failure_metadata,
+    create_model_session,
     elapsed_ms,
     post_json_with_retries,
     response_object,
@@ -52,7 +54,7 @@ class CompatibleAdapter:
             raise ValueError("api_key must be nonblank")
         self.config = config
         self._api_key = api_key
-        self._session = session or requests.Session()
+        self._session = session if session is not None else create_model_session(config)
         self._transport_identity = (
             _transport_identity if _transport_identity is not None else object()
         )
@@ -91,6 +93,10 @@ class CompatibleAdapter:
                         "Content-Type": "application/json",
                     },
                     body=self._body(current),
+                    timeout=(
+                        self.config.connect_timeout_seconds,
+                        self.config.read_timeout_seconds,
+                    ),
                 )
                 payload = response_object(response)
             except ModelError as error:
@@ -174,7 +180,12 @@ class CompatibleAdapter:
 
     def _body(self, request: ModelRequest) -> dict[str, object]:
         schema = schema_for(request.role, request.node)
-        if self.config.structured_outputs and not has_open_object_schema(schema):
+        native_schema = (
+            self.config.structured_outputs
+            and not has_open_object_schema(schema)
+            and not has_unsupported_strict_output_schema(schema)
+        )
+        if native_schema:
             response_format: dict[str, object] = {
                 "type": "json_schema",
                 "json_schema": {

@@ -21,7 +21,6 @@ MAX_NESTING = 32
 MAX_NUMBER_CHARS = 256
 MAX_NUMBER_EXPONENT = 1_024
 MAX_OPERATOR_CALLS = 5
-MAX_FIELDS = 2
 MAX_CANDIDATE_DEPTH = 64
 MAX_CANDIDATE_NODES = 10_000
 
@@ -99,6 +98,9 @@ _ALLOWED_NAMED_PARAMETERS = {
     "ts_poly_regression": frozenset({"k"}),
     "ts_quantile": frozenset({"driver"}),
 }
+_VECTOR_REDUCERS = frozenset(
+    {"vec_avg", "vec_count", "vec_max", "vec_min", "vec_range", "vec_stddev", "vec_sum"}
+)
 
 
 def _normalized_number(text: str) -> str:
@@ -381,12 +383,51 @@ def _walk_expression(
         pending.extend(reversed(arguments))
 
 
+def _validate_field_types(
+    expression: _Expression, field_types: Mapping[str, str]
+) -> None:
+    pending: list[tuple[_Expression, str | None]] = [(expression, None)]
+    while pending:
+        current, parent_operator = pending.pop()
+        if isinstance(current, _Identifier):
+            field_type = field_types.get(current.name, "MATRIX")
+            if field_type == "VECTOR" and parent_operator not in _VECTOR_REDUCERS:
+                raise ExpressionViolation(
+                    f"vector field requires a vec_* reducer: {current.name}"
+                )
+            continue
+        if isinstance(current, _Literal):
+            continue
+        if isinstance(current, _Unary):
+            pending.append((current.value, None))
+            continue
+        if isinstance(current, _Binary):
+            pending.append((current.right, None))
+            pending.append((current.left, None))
+            continue
+        if current.name in _VECTOR_REDUCERS:
+            if (
+                len(current.positional) != 1
+                or current.named
+                or not isinstance(current.positional[0], _Identifier)
+                or field_types.get(current.positional[0].name, "MATRIX") != "VECTOR"
+            ):
+                raise ExpressionViolation(
+                    f"operator {current.name} requires one direct vector field"
+                )
+        for child in current.positional:
+            pending.append((child, current.name))
+        for _, child in current.named:
+            pending.append((child, current.name))
+
+
 def validate_candidate(
     candidate: object,
     *,
     allowed_fields: object,
     banned_fields: object,
     operators: object,
+    field_types: object | None = None,
 ) -> ValidatedCandidate:
     """Validate one model-proposed REGULAR FASTEXPR candidate without executing it."""
 
@@ -417,8 +458,15 @@ def validate_candidate(
         field_seen=set(),
         operators=used_operators,
     )
-    if len(fields) > MAX_FIELDS:
-        raise ExpressionViolation("expression exceeds field limit")
+    if field_types is not None:
+        if not isinstance(field_types, Mapping):
+            raise TypeError("field_types must be a mapping")
+        normalized_field_types: dict[str, str] = {}
+        for name, value in field_types.items():
+            if type(name) is not str or not name.strip() or type(value) is not str:
+                raise TypeError("field_types must map field names to type names")
+            normalized_field_types[name.strip().lower()] = value.strip().upper()
+        _validate_field_types(parsed, normalized_field_types)
     candidate_field = field_id.lower()
     all_fields = set(fields) | {candidate_field}
     banned = sorted(all_fields & normalized_banned)

@@ -13,6 +13,7 @@ from .types import ModelRole, WorkflowNode
 
 
 MAX_SCHEMA_VIOLATION_LENGTH = 1024
+MAX_RESEARCH_IDEAS = 20
 
 
 class ModelRefusal(RuntimeError):
@@ -63,6 +64,90 @@ DIAGNOSIS_ROUTES = {
 }
 
 _OBJECT_PAYLOAD = {"type": "object"}
+_NONBLANK_STRING = {"type": "string", "minLength": 1, "pattern": r"\S"}
+_FIELD_ROLES = (
+    "primary_signal",
+    "confirmation",
+    "condition",
+    "grouping",
+    "weighting",
+    "normalization",
+    "risk_control",
+    "benchmark",
+)
+_FIELD_BINDING = {
+    "type": "object",
+    "properties": {
+        "field_id": _NONBLANK_STRING,
+        "role": {"type": "string", "enum": list(_FIELD_ROLES)},
+        "rationale": {"type": "string", "minLength": 20, "pattern": r"\S"},
+        "evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": True,
+            "items": _NONBLANK_STRING,
+        },
+    },
+    "required": ["field_id", "role", "rationale", "evidence_refs"],
+    "additionalProperties": False,
+}
+_SCOPE_DECISION = {
+    "type": "object",
+    "properties": {"candidate_id": _NONBLANK_STRING},
+    "required": ["candidate_id"],
+    "additionalProperties": False,
+}
+_RESEARCH_PLAN = {
+    "type": "object",
+    "properties": {
+        "mechanisms": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": MAX_RESEARCH_IDEAS,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "mechanism_id": _NONBLANK_STRING,
+                    "tower_id": _NONBLANK_STRING,
+                    "field_ids": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": True,
+                        "items": _NONBLANK_STRING,
+                    },
+                    "field_bindings": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": True,
+                        "items": _FIELD_BINDING,
+                    },
+                    "evidence_refs": {
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": True,
+                        "items": _NONBLANK_STRING,
+                    },
+                    "hypothesis": {
+                        "type": "string",
+                        "minLength": 40,
+                        "pattern": r"\S",
+                    },
+                },
+                "required": [
+                    "mechanism_id",
+                    "tower_id",
+                    "field_ids",
+                    "field_bindings",
+                    "evidence_refs",
+                    "hypothesis",
+                ],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["mechanisms"],
+    "additionalProperties": False,
+}
 _TASK_RESULT = {
     "type": "object",
     "properties": {
@@ -83,10 +168,10 @@ _DIAGNOSIS = {
 }
 
 _PLANNER_PAYLOADS: dict[WorkflowNode, tuple[str, dict[str, Any]]] = {
-    WorkflowNode.D: ("scope_decision", _OBJECT_PAYLOAD),
+    WorkflowNode.D: ("scope_decision", _SCOPE_DECISION),
     WorkflowNode.F: ("evidence_requirements", _OBJECT_PAYLOAD),
     WorkflowNode.G: ("evidence_requirements", _OBJECT_PAYLOAD),
-    WorkflowNode.H: ("research_plan", _OBJECT_PAYLOAD),
+    WorkflowNode.H: ("research_plan", _RESEARCH_PLAN),
     WorkflowNode.I: ("candidate_plan", _OBJECT_PAYLOAD),
     WorkflowNode.K: ("diagnosis", _DIAGNOSIS),
     WorkflowNode.L: ("final_recommendation", _OBJECT_PAYLOAD),
@@ -147,6 +232,8 @@ _SCHEMA_VALUE_KEYWORDS = frozenset(
     }
 )
 
+_UNSUPPORTED_STRICT_OUTPUT_KEYWORDS = frozenset({"uniqueItems"})
+
 
 def has_open_object_schema(schema: object) -> bool:
     """Return whether any object node permits unspecified properties.
@@ -178,6 +265,26 @@ def has_open_object_schema(schema: object) -> bool:
                 stack.append(child)
             elif type(child) is list:
                 stack.extend(child)
+    return False
+
+
+def has_unsupported_strict_output_schema(schema: object) -> bool:
+    """Return whether the schema uses keywords rejected by provider strict mode."""
+
+    visited: set[int] = set()
+    stack = [schema]
+    while stack:
+        current = stack.pop()
+        if type(current) is dict:
+            identity = id(current)
+            if identity in visited:
+                continue
+            visited.add(identity)
+            if _UNSUPPORTED_STRICT_OUTPUT_KEYWORDS.intersection(current):
+                return True
+            stack.extend(current.values())
+        elif type(current) is list:
+            stack.extend(current)
     return False
 
 

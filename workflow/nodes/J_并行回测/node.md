@@ -60,3 +60,10 @@ For multi-simulation, `wqb sim create` also waits for child simulations and plac
 ## 下一路
 
 - `K 结果诊断`
+# Runtime lifecycle invariants
+
+- J simulates exactly one `READY` idea per invocation and may route to itself while other ideas remain.
+- Simulation records stay linked to candidate records. After a restart, reusable child simulation IDs are queried again and only missing or failed candidates are submitted anew. If a parent was already created, its ledger remains bound to that parent and recovery performs `sim get`; a 401/403 routes the run to `NEEDS_AUTH` without replaying `sim create`.
+- A platform failure marks only the current idea as `ERROR`; ready ideas continue immediately, then failed ideas retry after bounded cooldown.
+- Idea states progress through `READY`, `SIMULATING`, and `COMPLETED`. User abort requests stop further work for that idea after the active provider call exits.
+- K receives the cumulative alpha results from every completed idea in the latest locked plan, not results from earlier plan versions.

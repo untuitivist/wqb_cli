@@ -23,6 +23,26 @@ wqb agent resume RUN_ID
 
 达到 `AWAITING_APPROVAL` 后，审批会绑定 run ID、推荐 Alpha ID 和最终报告 SHA-256。报告变化会让旧审批失效。只能使用 `wqb agent approve RUN_ID` 或 `wqb agent reject RUN_ID --reason TEXT`。`wqb agent eval` 运行离线、无网络安全评估。
 
+## 本地研究 App
+
+研究 idea 现在是独立、持久化的生命周期单元。界面会显示每个 idea 的检查/回测状态、表达式、当前错误、下次重试时间，以及重试和中断操作。I、J 节点每次只处理一个 idea，隔离单个失败，并在进程重启后恢复已记录的 simulation。
+
+安装或更新 editable 包后启动本地工作台：
+
+```powershell
+python -m pip install -e .
+wqb app
+```
+
+默认地址为 `http://127.0.0.1:8765/`。App 使用真实本地 API 和 SQLite 数据，不是静态演示；可以创建研究、查看 A–M 状态机与候选 Pipeline、恢复暂停任务、配置双模型、登录 BRAIN，以及在人工审批门批准或拒绝正式提交。
+
+```powershell
+wqb app --no-open
+wqb app --host 127.0.0.1 --port 9000
+```
+
+运行配置位于 `local/config.json`，模型密钥位于系统 Keyring，Cookie 位于 `local/auth/cookies.json`，研究索引位于 `local/agent/agent.sqlite3`，成果文件位于 `research_runs/RUN_ID/`。
+
 <p align="center">
   <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
 </p>

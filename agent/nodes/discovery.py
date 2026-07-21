@@ -68,7 +68,7 @@ class DiscoveryNodes:
         result = self._run(run_id, WorkflowNode.A, ("auth", "status"), "auth_status.json")
         payload = self._payload(result)
         status = self._status(payload)
-        if status in {401, 403}:
+        if status in {204, 401, 403}:
             authenticated = False
         else:
             body = self._successful_body(payload)
@@ -143,26 +143,45 @@ class DiscoveryNodes:
         pyramid_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-alphas"), "pyramid_alphas.json")
         multipliers_result = self._run(run_id, WorkflowNode.C, ("user", "pyramid-multipliers"), "pyramid_multipliers.json")
         all_body = self._successful_body(self._payload(all_result))
-        regular_body = self._successful_body(self._payload(regular_result))
-        super_body = self._successful_body(self._payload(super_result))
-        self._validate_alphas_summary(
-            self._successful_body(self._payload(alphas_summary_result))
+        all_records = self._records(all_body)
+        optional_payloads = {
+            "regular_alphas": self._payload(regular_result),
+            "super_alphas": self._payload(super_result),
+            "alphas_summary": self._payload(alphas_summary_result),
+            "pyramid_alphas": self._payload(pyramid_result),
+            "pyramid_multipliers": self._payload(multipliers_result),
+        }
+        degraded_sources = sorted(
+            name for name, payload in optional_payloads.items()
+            if payload.get("ok") is not True or not 200 <= self._status(payload) < 300
         )
-        self._validate_pyramids_response(
-            self._successful_body(self._payload(pyramid_result)), "pyramid alphas"
+        regular_body = self._optional_successful_body(optional_payloads["regular_alphas"])
+        super_body = self._optional_successful_body(optional_payloads["super_alphas"])
+        alphas_summary = self._optional_successful_body(optional_payloads["alphas_summary"])
+        if alphas_summary is not None:
+            self._validate_alphas_summary(alphas_summary)
+        pyramids = self._optional_successful_body(optional_payloads["pyramid_alphas"])
+        if pyramids is not None:
+            self._validate_pyramids_response(pyramids, "pyramid alphas")
+        multipliers = self._optional_successful_body(optional_payloads["pyramid_multipliers"])
+        if multipliers is not None:
+            self._validate_pyramids_response(multipliers, "pyramid multipliers")
+        regular_count = (
+            len(self._records(regular_body)) if regular_body is not None
+            else sum(item.get("type") == "REGULAR" for item in all_records)
         )
-        self._validate_pyramids_response(
-            self._successful_body(self._payload(multipliers_result)), "pyramid multipliers"
+        super_count = (
+            len(self._records(super_body)) if super_body is not None
+            else sum(item.get("type") == "SUPER" for item in all_records)
         )
-        regular_count = len(self._records(regular_body))
-        super_count = len(self._records(super_body))
         summary = {
             "submission_day": start.date().isoformat(),
             "interval": {"start": interval[0], "end": interval[1], "timezone": "America/New_York"},
             "regular_submitted": regular_count,
             "regular_remaining": max(0, self._regular_daily_quota - regular_count),
             "super_submitted": super_count,
-            "all_submitted": len(self._records(all_body)),
+            "all_submitted": len(all_records),
+            "degraded_sources": degraded_sources,
         }
         artifact_ids = self._artifact_ids(
             all_result, regular_result, super_result, alphas_summary_result, pyramid_result, multipliers_result
@@ -181,6 +200,8 @@ class DiscoveryNodes:
         *,
         platform_binding: CoordinatorPlatformBinding | None = None,
         user_id: str | None = None,
+        dataset_constraint: Mapping[str, Any] | None = None,
+        dataset_artifact_id: int | None = None,
     ) -> NodeResult:
         if not isinstance(config, RunConfig):
             raise TypeError("config must be a RunConfig")
@@ -196,19 +217,63 @@ class DiscoveryNodes:
         )
         options = self._validated_sim_options(platform["sim_options"])
         valid_candidates = self._validated_candidates(source.data, config, options, platform["category_ids"])
+        selected_dataset_id = None
+        if dataset_constraint is not None:
+            selected_dataset_id, category, supported_scopes = (
+                self._validated_dataset_constraint(
+                    dataset_constraint, platform["category_ids"]
+                )
+            )
+            valid_candidates = [
+                candidate
+                for candidate in valid_candidates
+                if candidate["category"] == category
+                and (
+                    candidate["region"],
+                    candidate["delay"],
+                    candidate["universe"],
+                )
+                in supported_scopes
+            ]
+        if config.scope_mode is ScopeMode.AUTO and config.region is not None:
+            region = config.region.upper()
+            valid_candidates = [
+                candidate
+                for candidate in valid_candidates
+                if candidate["region"].upper() == region
+            ]
         if not valid_candidates:
-            raise DiscoveryError("no validated current-quarter candidates are available")
-        # The planner sees IDs and immutable candidate facts, never an authority to change scope.
-        planner = self._invoke(
-            ModelRole.PLANNER,
-            WorkflowNode.D,
-            "Select exactly one candidate_id from the supplied validated current-quarter candidates. Do not modify scope values.",
-            {"scope_mode": config.scope_mode.value, "candidates": valid_candidates},
-        )
-        decision = planner.get("scope_decision")
-        if type(decision) is not dict or type(decision.get("candidate_id")) is not str:
-            raise DiscoveryError("planner response is missing scope_decision.candidate_id")
-        selected_id = decision["candidate_id"]
+            reason = (
+                "selected dataset has no validated scope candidate in the selected region"
+                if dataset_constraint is not None and config.region is not None
+                else "selected dataset has no validated scope candidate"
+                if dataset_constraint is not None
+                else "no validated current-quarter candidates are available"
+            )
+            raise DiscoveryError(reason)
+        if config.scope_mode is ScopeMode.MANUAL and len(valid_candidates) == 1:
+            selected_id = valid_candidates[0]["candidate_id"]
+            planner = {
+                "decision": selected_id,
+                "reasoning_summary": "Selected the only platform-validated manual scope candidate.",
+                "evidence_refs": [
+                    f"artifact:{artifact_id}" for artifact_id in platform["artifact_ids"]
+                ],
+                "confidence": 1.0,
+                "scope_decision": {"candidate_id": selected_id},
+            }
+        else:
+            # The planner sees IDs and immutable candidate facts, never an authority to change scope.
+            planner = self._invoke(
+                ModelRole.PLANNER,
+                WorkflowNode.D,
+                "Select exactly one candidate_id from the supplied validated current-quarter candidates. Do not modify scope values.",
+                {"scope_mode": config.scope_mode.value, "candidates": valid_candidates},
+            )
+            decision = planner.get("scope_decision")
+            if type(decision) is not dict or type(decision.get("candidate_id")) is not str:
+                raise DiscoveryError("planner response is missing scope_decision.candidate_id")
+            selected_id = decision["candidate_id"]
         selected = next((item for item in valid_candidates if item["candidate_id"] == selected_id), None)
         if selected is None:
             raise DiscoveryError("planner selected an ID outside the supplied candidates")
@@ -226,8 +291,11 @@ class DiscoveryNodes:
             "platform_options_source": platform["sim_options_source"],
             "data_categories_source": platform["categories_source"],
             "planner": planner,
+            "selected_dataset_id": selected_dataset_id,
         }
         artifact_ids = tuple(platform["artifact_ids"]) + source.command_artifact_ids
+        if type(dataset_artifact_id) is int and dataset_artifact_id > 0:
+            artifact_ids += (str(dataset_artifact_id),)
         artifact_ids += self._write_json(
             run_id,
             WorkflowNode.D,
@@ -240,8 +308,45 @@ class DiscoveryNodes:
         artifact_ids += self._write_markdown(run_id, WorkflowNode.D, "node_summary.md", "REGULAR scope is locked for nodes F through L.")
         return NodeResult(
             WorkflowNode.D, deepcopy(summary), artifact_ids, next_node=WorkflowNode.F,
-            payload={"scope": deepcopy(scope), "scope_hash": scope_hash},
+            payload={
+                "scope": deepcopy(scope),
+                "scope_hash": scope_hash,
+                "tower": {"id": selected_id},
+            },
         )
+
+    @staticmethod
+    def _validated_dataset_constraint(
+        value: Mapping[str, Any], category_ids: frozenset[str]
+    ) -> tuple[str, str, frozenset[tuple[str, int, str]]]:
+        if not isinstance(value, Mapping):
+            raise DiscoveryError("dataset constraint is invalid")
+        dataset_id = value.get("dataset_id")
+        category = value.get("category")
+        rows = value.get("supported_scopes")
+        if type(dataset_id) is not str or not dataset_id.strip():
+            raise DiscoveryError("dataset constraint has invalid dataset id")
+        if type(category) is not str or category.strip().upper() not in category_ids:
+            raise DiscoveryError("dataset category is not platform-authorized")
+        if not isinstance(rows, list) or not rows:
+            raise DiscoveryError("dataset constraint has no supported scopes")
+        scopes: set[tuple[str, int, str]] = set()
+        for row in rows:
+            if not isinstance(row, Mapping):
+                raise DiscoveryError("dataset supported scope is invalid")
+            region = row.get("region")
+            delay = row.get("delay")
+            universe = row.get("universe")
+            if (
+                type(region) is not str
+                or not region.strip()
+                or type(delay) is not int
+                or type(universe) is not str
+                or not universe.strip()
+            ):
+                raise DiscoveryError("dataset supported scope is invalid")
+            scopes.add((region.strip().upper(), delay, universe.strip().upper()))
+        return dataset_id.strip(), category.strip().upper(), frozenset(scopes)
 
     def _verified_platform_binding(
         self, run_id: str, binding: CoordinatorPlatformBinding
@@ -332,19 +437,53 @@ class DiscoveryNodes:
         values.sort(key=lambda item: (0 if item["delay"] == 1 else 1, -item["neededToLight"], item["candidate_id"]))
         return values
 
-    @staticmethod
-    def _validated_sim_options(value: Mapping[str, Any] | None) -> dict[str, list[Any]]:
+    @classmethod
+    def _validated_sim_options(cls, value: Mapping[str, Any] | None) -> dict[str, list[Any]]:
         if not isinstance(value, Mapping):
             raise DiscoveryError("validated sim_options are required for scope selection")
         options = dict(value)
         required = ("regions", "delays", "universes", "neutralizations")
+        extracted = not all(type(options.get(name)) is list for name in required)
+        if extracted:
+            options = {
+                "regions": cls._simulation_setting_values(value, "region"),
+                "delays": cls._simulation_setting_values(value, "delay"),
+                "universes": cls._simulation_setting_values(value, "universe"),
+                "neutralizations": cls._simulation_setting_values(value, "neutralization"),
+            }
         if any(type(options.get(name)) is not list or not options[name] for name in required):
             raise DiscoveryError("validated sim_options are incomplete")
         if any(type(item) is not str or not item.strip() for name in ("regions", "universes", "neutralizations") for item in options[name]):
             raise DiscoveryError("validated sim_options contain invalid text values")
         if any(type(item) is not int or item not in {0, 1} for item in options["delays"]):
             raise DiscoveryError("validated sim_options contain invalid delays")
+        if extracted:
+            return {name: sorted(set(options[name])) for name in required}
         return {name: list(options[name]) for name in required}
+
+    @staticmethod
+    def _simulation_setting_values(value: Mapping[str, Any], setting: str) -> list[Any]:
+        current: Any = value
+        for key in ("actions", "POST", "settings", "children", setting, "choices"):
+            if not isinstance(current, Mapping) or key not in current:
+                return []
+            current = current[key]
+        values: list[Any] = []
+        stack = [current]
+        while stack:
+            item = stack.pop()
+            if isinstance(item, Mapping):
+                stack.extend(item[key] for key in sorted(item, reverse=True))
+            elif type(item) is list:
+                for choice in item:
+                    if type(choice) is not dict or "value" not in choice:
+                        return []
+                    choice_value = choice["value"]
+                    if choice_value not in values:
+                        values.append(choice_value)
+            else:
+                return []
+        return values
 
     @classmethod
     def _normalize_candidates(
@@ -525,6 +664,11 @@ class DiscoveryNodes:
             raise DiscoveryError("command did not return a successful response")
         return self._body(payload)
 
+    def _optional_successful_body(self, payload: dict[str, Any]) -> dict[str, Any] | None:
+        if payload.get("ok") is not True or not 200 <= self._status(payload) < 300:
+            return None
+        return self._body(payload)
+
     @staticmethod
     def _validate_alphas_summary(body: dict[str, Any]) -> None:
         if any(type(body.get(name)) is not int or body[name] < 0 for name in ("is", "os", "prod")):
@@ -564,16 +708,10 @@ class DiscoveryNodes:
         if body.get("authenticated") is True or body.get("is_authenticated") is True:
             return True
         user = body.get("user")
-        token = body.get("token")
-        expiry = token.get("expiry") if type(token) is dict else None
         return (
             type(user) is dict
             and type(user.get("id")) is str
             and bool(user["id"].strip())
-            and type(expiry) in {int, float}
-            and not isinstance(expiry, bool)
-            and isfinite(expiry)
-            and expiry > 0
         )
 
     @classmethod

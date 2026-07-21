@@ -32,7 +32,7 @@ def manual_config() -> RunConfig:
         delay=1,
         universe="TOP3000",
         neutralization="INDUSTRY",
-        budget=Budget(planner_calls=7, operator_calls=11),
+        budget=Budget(),
     )
 
 

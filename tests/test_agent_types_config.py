@@ -66,17 +66,27 @@ class RunConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "manual scope requires"):
             RunConfig(scope_mode=ScopeMode.MANUAL)
 
-    def test_direct_auto_scope_rejects_pinned_market_fields(self) -> None:
-        with self.assertRaisesRegex(ValueError, "auto scope must not pin"):
-            RunConfig(scope_mode=ScopeMode.AUTO, region="USA")
+    def test_direct_auto_scope_allows_a_region_constraint(self) -> None:
+        config = RunConfig(scope_mode=ScopeMode.AUTO, region="USA")
+        self.assertEqual(config.region, "USA")
+
+    def test_direct_auto_scope_rejects_other_pinned_market_fields(self) -> None:
+        for field, value in (("delay", 1), ("universe", "TOP3000"), ("neutralization", "FAST")):
+            with self.subTest(field=field):
+                with self.assertRaisesRegex(ValueError, "auto scope must not pin"):
+                    RunConfig(scope_mode=ScopeMode.AUTO, **{field: value})  # type: ignore[arg-type]
 
     def test_manual_scope_requires_all_market_fields(self) -> None:
         with self.assertRaisesRegex(ValueError, "manual scope requires"):
             RunConfig.from_dict({"scope_mode": "manual", "region": "USA"})
 
-    def test_auto_scope_rejects_partial_pinned_market_fields(self) -> None:
-        with self.assertRaisesRegex(ValueError, "auto scope must not pin"):
-            RunConfig.from_dict({"scope_mode": "auto", "region": "USA"})
+    def test_auto_scope_accepts_region_but_rejects_blank_region(self) -> None:
+        self.assertEqual(
+            RunConfig.from_dict({"scope_mode": "auto", "region": "USA"}).region,
+            "USA",
+        )
+        with self.assertRaisesRegex(ValueError, "auto scope region"):
+            RunConfig.from_dict({"scope_mode": "auto", "region": " "})
 
     def test_run_config_round_trips_through_asdict(self) -> None:
         original = RunConfig.from_dict(
@@ -86,7 +96,7 @@ class RunConfigTests(unittest.TestCase):
                 "delay": 1,
                 "universe": "TOP3000",
                 "neutralization": "INDUSTRY",
-                "budget": {"rounds": 3, "max_model_cost_usd": 1.25},
+                "budget": {"rounds": 3, "total_simulations": 24},
             }
         )
 
@@ -99,6 +109,7 @@ class RunConfigTests(unittest.TestCase):
     def test_domain_enums_and_node_result_defaults(self) -> None:
         self.assertEqual(ModelRole.PLANNER.value, "planner")
         self.assertEqual(ScopeMode.AUTO.value, "auto")
+        self.assertEqual(RunState.STOPPED.value, "STOPPED")
         self.assertEqual(RunState.CREATED.value, "CREATED")
         self.assertEqual(WorkflowNode.M.value, "M")
         result = NodeResult(node=WorkflowNode.A, summary={"count": 1})
@@ -109,14 +120,11 @@ class RunConfigTests(unittest.TestCase):
 
 
 class BudgetTests(unittest.TestCase):
-    def test_count_and_time_limits_must_be_positive(self) -> None:
+    def test_budget_limits_must_be_positive(self) -> None:
         fields = (
             "candidates_per_round",
             "rounds",
             "total_simulations",
-            "max_runtime_minutes",
-            "planner_calls",
-            "operator_calls",
         )
         for field in fields:
             for value in (0, -1):
@@ -124,33 +132,17 @@ class BudgetTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         Budget(**{field: value})
 
-    def test_model_cost_must_be_none_or_non_negative(self) -> None:
-        self.assertIsNone(Budget(max_model_cost_usd=None).max_model_cost_usd)
-        self.assertEqual(Budget(max_model_cost_usd=0).max_model_cost_usd, 0)
-        with self.assertRaises(ValueError):
-            Budget(max_model_cost_usd=-0.01)
-
-    def test_count_and_time_limits_require_exact_integer_types(self) -> None:
+    def test_budget_limits_require_exact_integer_types(self) -> None:
         fields = (
             "candidates_per_round",
             "rounds",
             "total_simulations",
-            "max_runtime_minutes",
-            "planner_calls",
-            "operator_calls",
         )
         for field in fields:
             for value in (True, 1.5):
                 with self.subTest(field=field, value=value):
                     with self.assertRaises(ValueError):
                         Budget(**{field: value})
-
-    def test_model_cost_requires_finite_non_boolean_number(self) -> None:
-        for value in (True, float("nan"), float("inf"), float("-inf"), "1"):
-            with self.subTest(value=value):
-                with self.assertRaises(ValueError):
-                    Budget(max_model_cost_usd=value)  # type: ignore[arg-type]
-
 
 class AgentConfigTests(unittest.TestCase):
     def assert_config_error(
@@ -188,6 +180,10 @@ class AgentConfigTests(unittest.TestCase):
                         "secret_name": "agent-planner-api-key",
                         "structured_outputs": True,
                         "fallback_model": "",
+                        "connect_timeout_seconds": 10,
+                        "read_timeout_seconds": 300,
+                        "proxy_mode": "system",
+                        "proxy_url": "",
                         "input_cost_per_million": None,
                         "output_cost_per_million": None,
                     },
@@ -200,6 +196,10 @@ class AgentConfigTests(unittest.TestCase):
                         "secret_name": "agent-operator-api-key",
                         "structured_outputs": True,
                         "fallback_model": "",
+                        "connect_timeout_seconds": 10,
+                        "read_timeout_seconds": 300,
+                        "proxy_mode": "system",
+                        "proxy_url": "",
                         "input_cost_per_million": None,
                         "output_cost_per_million": None,
                     },
@@ -208,16 +208,13 @@ class AgentConfigTests(unittest.TestCase):
                     "candidates_per_round": 8,
                     "rounds": 5,
                     "total_simulations": 40,
-                    "max_runtime_minutes": 180,
-                    "planner_calls": 20,
-                    "operator_calls": 100,
-                    "max_model_cost_usd": None,
                 },
             },
         )
 
     def test_defaults_are_role_specific_and_use_default_paths(self) -> None:
-        config = load_agent_config(None)
+        with tempfile.TemporaryDirectory() as tmp:
+            config = load_agent_config(str(Path(tmp) / "missing-config.json"))
 
         self.assertEqual(config.models[ModelRole.PLANNER].api_style, "responses")
         self.assertEqual(config.models[ModelRole.OPERATOR].api_style, "chat_completions")
@@ -249,7 +246,8 @@ class AgentConfigTests(unittest.TestCase):
         self.assertEqual(updated.budget, original.budget)
 
     def test_model_overrides_validate_resulting_routes(self) -> None:
-        original = load_agent_config(None)
+        with tempfile.TemporaryDirectory() as tmp:
+            original = load_agent_config(str(Path(tmp) / "missing-config.json"))
 
         with self.assertRaisesRegex(ValueError, re.escape("agent.models.operator.base_url")):
             with_model_overrides(original, operator_model="operator-x")
@@ -277,8 +275,11 @@ class AgentConfigTests(unittest.TestCase):
             with_model_overrides(original, planner_model="planner-x", require_models=True)
 
     def test_required_models_names_each_missing_role(self) -> None:
-        with self.assertRaisesRegex(ValueError, "planner.*operator"):
-            load_agent_config(None, require_models=True)
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "planner.*operator"):
+                load_agent_config(
+                    str(Path(tmp) / "missing-config.json"), require_models=True
+                )
 
     def test_invalid_route_and_pricing_values_are_rejected(self) -> None:
         cases = (
@@ -442,13 +443,24 @@ class AgentConfigTests(unittest.TestCase):
     def test_budget_values_report_dotted_paths(self) -> None:
         cases = (
             ("rounds", True),
-            ("planner_calls", 1.5),
-            ("max_model_cost_usd", float("inf")),
+            ("total_simulations", 1.5),
         )
         for field, value in cases:
             dotted_path = f"agent.budget.{field}"
             with self.subTest(dotted_path=dotted_path):
                 self.assert_config_error({"agent": {"budget": {field: value}}}, dotted_path)
+
+    def test_legacy_budget_termination_fields_are_ignored(self) -> None:
+        config = self.load_payload({"agent": {"budget": {
+            "max_runtime_minutes": 1,
+            "planner_calls": 1,
+            "operator_calls": 1,
+            "max_model_cost_usd": 0,
+        }}})
+        self.assertEqual(
+            asdict(config.budget),
+            {"candidates_per_round": 8, "rounds": 5, "total_simulations": 40},
+        )
 
     def test_whitespace_model_is_missing_when_required(self) -> None:
         self.assert_config_error(

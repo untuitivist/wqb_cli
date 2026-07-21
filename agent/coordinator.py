@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from contextlib import closing
 from dataclasses import asdict
-from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
+import time
 from typing import Any, Protocol, runtime_checkable
 
 from .artifacts import ArtifactWriter
@@ -30,13 +30,30 @@ FORWARD: Mapping[WorkflowNode, WorkflowNode] = {
 K_ROUTES = frozenset(
     {WorkflowNode.F, WorkflowNode.G, WorkflowNode.H, WorkflowNode.I, WorkflowNode.L}
 )
+J_ROUTES = frozenset(
+    {WorkflowNode.H, WorkflowNode.I, WorkflowNode.J, WorkflowNode.K}
+)
 L_ROUTES = frozenset({WorkflowNode.K, WorkflowNode.M})
+RECOVERABLE_FAILED_NODES = frozenset(
+    {
+        WorkflowNode.C,
+        WorkflowNode.D,
+        WorkflowNode.F,
+        WorkflowNode.G,
+        WorkflowNode.H,
+        WorkflowNode.I,
+        WorkflowNode.J,
+        WorkflowNode.K,
+    }
+)
+SELF_ROUTES = frozenset({WorkflowNode.I, WorkflowNode.J})
 TERMINAL_STATES = frozenset(
     {
         RunState.SUBMITTED,
         RunState.REJECTED,
         RunState.BUDGET_EXHAUSTED,
         RunState.NO_PROGRESS,
+        RunState.STOPPED,
         RunState.FAILED,
     }
 )
@@ -157,13 +174,47 @@ class AgentCoordinator:
 
     def resume(self, run_id: str) -> RunRecord:
         run = self.store.get_run(run_id)
-        if run.state is RunState.AWAITING_APPROVAL or run.state in TERMINAL_STATES:
+        self.store.recover_interrupted_ideas(run_id)
+        checkpoint = self._checkpoint(run_id)
+        failed_node = (
+            self.store.latest_failed_node(run_id)
+            if run.state is RunState.FAILED
+            else None
+        )
+        recoverable_failure = failed_node in RECOVERABLE_FAILED_NODES
+        budget_finalization_node = (
+            self.store.budget_finalization_node(run_id)
+            if run.state is RunState.BUDGET_EXHAUSTED
+            else None
+        )
+        if run.state is RunState.AWAITING_APPROVAL or (
+            run.state in TERMINAL_STATES
+            and not recoverable_failure
+            and budget_finalization_node is None
+        ):
             return run
-        paused = run.state in {RunState.NEEDS_AUTH, RunState.PAUSED_MODEL}
+        self._bind_run_budget(run)
+        paused = run.state in {
+            RunState.NEEDS_AUTH,
+            RunState.NEEDS_DATA,
+            RunState.PAUSED_MODEL,
+        }
         if paused:
             self.store.transition(run_id, RunState.RUNNING, "resume prerequisite retry")
+        elif recoverable_failure:
+            assert failed_node is not None
+            self.store.reopen_failed_run(
+                run_id,
+                failed_node,
+                f"retry recoverable failed node {failed_node.value}",
+            )
+        elif budget_finalization_node is not None:
+            self.store.reopen_budget_exhausted_run(
+                run_id,
+                budget_finalization_node,
+                f"complete budget finalization node {budget_finalization_node.value}",
+            )
 
-        checkpoint = self._checkpoint(run_id)
         context = self._initial_context(run.config)
         context.update(checkpoint["context"])
         node = checkpoint["node"]
@@ -180,6 +231,15 @@ class AgentCoordinator:
             checkpoint["fingerprints"],
         )
 
+    def _bind_run_budget(self, run: RunRecord) -> None:
+        if run.config.budget == self.policy.budget:
+            return
+        policy = AgentPolicy(run.config.budget)
+        self.policy = policy
+        runner = getattr(self.node_runner, "runner", None)
+        if runner is not None and hasattr(runner, "policy"):
+            runner.policy = policy
+
     def _execute(
         self,
         run_id: str,
@@ -189,11 +249,14 @@ class AgentCoordinator:
         fingerprints_since_k: set[str],
     ) -> RunRecord:
         while True:
-            stop = self.policy.stop_reason(
-                self._usage(run_id), consecutive_no_progress
-            )
-            if stop is not None:
-                return self._record_only(run_id, RunState(stop), stop)
+            if self._is_stopped(run_id):
+                return self.store.get_run(run_id)
+            if node not in {WorkflowNode.K, WorkflowNode.L}:
+                stop = self.policy.stop_reason(
+                    self._usage(run_id), consecutive_no_progress
+                )
+                if stop is not None:
+                    return self._record_only(run_id, RunState(stop), stop)
 
             attempt = self.store.start_node_attempt(run_id, node)
             call_context = dict(context)
@@ -202,9 +265,19 @@ class AgentCoordinator:
                 if node is WorkflowNode.K:
                     call_context["node_attempt_id"] = attempt.id
                 node_result = self.node_runner.run(run_id, node, call_context)
+                if self._is_stopped(run_id):
+                    self.store.finish_node_attempt(
+                        attempt, "INTERRUPTED", {"reason": "manually stopped"}
+                    )
+                    return self.store.get_run(run_id)
                 self._validate_result(node, node_result)
                 self._validate_scope(context, node_result)
             except Exception as error:
+                if self._is_stopped(run_id):
+                    self.store.finish_node_attempt(
+                        attempt, "INTERRUPTED", {"reason": "manually stopped"}
+                    )
+                    return self.store.get_run(run_id)
                 if self._is_auth_failure(error):
                     self.store.finish_node_attempt(
                         attempt,
@@ -235,12 +308,12 @@ class AgentCoordinator:
                         },
                     )
                     return self.store.transition(
-                        run_id, RunState.PAUSED_MODEL, "planner retries exhausted"
+                        run_id, RunState.PAUSED_MODEL, "model retries exhausted"
                     )
                 self.store.finish_node_attempt(
                     attempt,
                     "FAILED",
-                    {"failure": type(error).__name__, "node": node.value},
+                    self._node_failure_summary(error, node),
                 )
                 return self.store.transition(
                     run_id, RunState.FAILED, f"node {node.value} failed closed"
@@ -259,7 +332,14 @@ class AgentCoordinator:
                     summary["_coordinator"]["paused_node"] = node.value
                     self.store.finish_node_attempt(attempt, "COMPLETED", summary)
                     return self.store.transition(
-                        run_id, RunState.PAUSED_MODEL, "planner retries exhausted"
+                        run_id, RunState.PAUSED_MODEL, "model retries exhausted"
+                    )
+                if node_result.run_state is RunState.NEEDS_DATA:
+                    summary = self._attempt_summary(node_result, node)
+                    summary["_coordinator"]["paused_node"] = node.value
+                    self.store.finish_node_attempt(attempt, "COMPLETED", summary)
+                    return self.store.transition(
+                        run_id, RunState.NEEDS_DATA, "local research data required"
                     )
 
                 payload = self._json_object(node_result.payload, "node payload")
@@ -284,6 +364,10 @@ class AgentCoordinator:
                     fingerprints_since_k.clear()
                     self._ensure_k_diagnosis(run_id, attempt.id, node_result)
                     self._record_k_experiences(run_id, context, node_result)
+                    if node_result.next_node is WorkflowNode.I:
+                        self._start_expression_refinement_plan(
+                            run_id, attempt.id
+                        )
 
                 self.store.finish_node_attempt(
                     attempt, "COMPLETED", self._attempt_summary(node_result, node)
@@ -292,31 +376,45 @@ class AgentCoordinator:
                 self.store.finish_node_attempt(
                     attempt,
                     "FAILED",
-                    {"failure": type(error).__name__, "node": node.value},
+                    self._node_failure_summary(error, node),
                 )
                 return self.store.transition(
                     run_id, RunState.FAILED, f"node {node.value} failed closed"
                 )
 
-            if node is WorkflowNode.K and consecutive_no_progress >= 2:
-                return self._record_only(run_id, RunState.NO_PROGRESS, "NO_PROGRESS")
             if node is WorkflowNode.L and node_result.next_node is WorkflowNode.M:
                 return self._await_approval(run_id, context, node_result)
             next_node = node_result.next_node
             if next_node is None:
                 return self._fail_without_attempt(run_id, node, "node returned no route")
+            if next_node is node:
+                retry_after = node_result.payload.get("retry_after_seconds", 0)
+                if type(retry_after) is int and retry_after > 0:
+                    time.sleep(min(retry_after, 60))
             node = next_node
+
+    def _is_stopped(self, run_id: str) -> bool:
+        return self.store.get_run(run_id).state is RunState.STOPPED
 
     def _validate_result(self, node: WorkflowNode, result: object) -> None:
         if not isinstance(result, NodeResult):
             raise CoordinatorError("node runner must return NodeResult")
         if result.node is not node:
             raise CoordinatorError("returned node does not match invoked node")
-        if result.run_state not in {None, RunState.NEEDS_AUTH, RunState.PAUSED_MODEL}:
+        if result.run_state not in {
+            None,
+            RunState.NEEDS_AUTH,
+            RunState.NEEDS_DATA,
+            RunState.PAUSED_MODEL,
+        }:
             raise CoordinatorError("node cannot control terminal run state")
         route = result.next_node
-        if node in FORWARD:
+        if node is WorkflowNode.J:
+            allowed = set(J_ROUTES)
+        elif node in FORWARD:
             allowed = {FORWARD[node]}
+            if node in SELF_ROUTES:
+                allowed.add(node)
         elif node is WorkflowNode.K:
             allowed = set(K_ROUTES)
         elif node is WorkflowNode.L:
@@ -370,6 +468,47 @@ class AgentCoordinator:
             "rules": rules,
         }
 
+    def _start_expression_refinement_plan(
+        self, run_id: str, source_attempt_id: int
+    ) -> None:
+        latest = self.store.get_latest_research_plan(run_id)
+        if latest is None:
+            return
+        mechanisms = latest.plan.get("mechanisms")
+        if not isinstance(mechanisms, list) or not mechanisms:
+            raise CoordinatorError("expression refinement requires plan mechanisms")
+        plan = {
+            "mechanisms": json.loads(
+                json.dumps(
+                    mechanisms,
+                    ensure_ascii=False,
+                    allow_nan=False,
+                )
+            ),
+            "refinement": {
+                "source_plan_version": latest.plan_version,
+                "source_node_attempt_id": source_attempt_id,
+            },
+        }
+        canonical = json.dumps(
+            plan,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+            allow_nan=False,
+        )
+        version = latest.plan_version + 1
+        plan_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+        self.store.record_research_plan(
+            run_id, version, plan_hash, plan
+        )
+        self.store.sync_research_ideas(
+            run_id,
+            version,
+            plan_hash,
+            [dict(item) for item in plan["mechanisms"]],
+        )
+
     def _attempt_summary(
         self, result: NodeResult, node: WorkflowNode
     ) -> dict[str, object]:
@@ -390,28 +529,29 @@ class AgentCoordinator:
         operator = summary.get("operator", {})
         with closing(self.store.connect()) as connection:
             simulations = connection.execute(
-                "SELECT COUNT(*) FROM simulations WHERE run_id = ?", (run_id,)
+                "SELECT COUNT(*) FROM simulations "
+                "WHERE run_id = ? "
+                "AND (candidate_id IS NOT NULL OR alpha_id IS NOT NULL)",
+                (run_id,),
             ).fetchone()[0]
             rounds = connection.execute(
                 "SELECT COUNT(*) FROM node_attempts WHERE run_id = ? "
                 "AND node = ? AND status = 'COMPLETED'",
                 (run_id, WorkflowNode.K.value),
             ).fetchone()[0]
-        elapsed = 0.0
-        if run.created_at:
-            try:
-                created = datetime.fromisoformat(run.created_at.replace("Z", "+00:00"))
-                elapsed = max(
-                    0.0,
-                    (datetime.now(timezone.utc) - created).total_seconds() / 60.0,
-                )
-            except ValueError:
-                elapsed = 0.0
+            elapsed = connection.execute(
+                "SELECT COALESCE(SUM(MAX(0.0, "
+                "(julianday(COALESCE(finished_at, "
+                "strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))) "
+                "- julianday(started_at)) * 1440.0)), 0.0) "
+                "FROM node_attempts WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()[0]
         return UsageSnapshot(
             simulations=int(coordinator.get("simulations", simulations)),
             planner_calls=int(planner.get("calls", 0)),
             operator_calls=int(operator.get("calls", 0)),
-            elapsed_minutes=elapsed,
+            elapsed_minutes=float(elapsed),
             rounds=int(coordinator.get("rounds", rounds)),
             model_cost_usd=float(planner.get("cost_usd", 0.0))
             + float(operator.get("cost_usd", 0.0)),
@@ -713,18 +853,27 @@ class AgentCoordinator:
 
     @staticmethod
     def _is_model_failure(error: BaseException) -> bool:
-        name = type(error).__name__
-        module = type(error).__module__
-        return isinstance(error, PlannerUnavailable) or (
-            name
-            in {
-                "ModelError",
-                "ModelTransportError",
-                "ModelResponseError",
-                "RoleRoutingError",
-            }
-            and ".models" in module
-        )
+        if isinstance(error, PlannerUnavailable):
+            return True
+        for error_type in type(error).__mro__:
+            name = error_type.__name__
+            module = error_type.__module__
+            if name == "ModelError" and ".models" in module:
+                return True
+            if name in {"ModelRefusal", "SchemaViolation"} and ".schemas" in module:
+                return True
+        return False
+
+    @staticmethod
+    def _node_failure_summary(
+        error: BaseException, node: WorkflowNode
+    ) -> dict[str, str]:
+        summary = {"failure": type(error).__name__, "node": node.value}
+        if ".nodes" in type(error).__module__:
+            detail = " ".join(str(error).split())[:512]
+            if detail:
+                summary["detail"] = detail
+        return summary
 
 
 __all__ = [

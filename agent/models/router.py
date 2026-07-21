@@ -12,11 +12,19 @@ from ..types import ModelRole, WorkflowNode
 from .base import (
     FallbackCapableAdapter,
     ModelAdapter,
+    ModelConnectError,
     ModelError,
+    ModelNetworkError,
+    ModelProxyError,
+    ModelRateLimitError,
+    ModelReadTimeoutError,
     ModelRequest,
     ModelResponseError,
     ModelResult,
+    ModelServerError,
+    ModelTLSError,
     ModelTransportError,
+    ModelUpstreamError,
     elapsed_ms,
     sanitize_provider_request_id,
 )
@@ -144,7 +152,7 @@ class ModelRouter:
         except ModelTransportError:
             fallback_model = config.fallback_model.strip()
             if request.role is not ModelRole.OPERATOR or not fallback_model:
-                raise ModelTransportError("model provider transport failed") from None
+                raise
             try:
                 fallback_capable = isinstance(adapter, FallbackCapableAdapter)
                 transport_identity = (
@@ -440,10 +448,31 @@ def _safe_error(error: Exception) -> str:
         return str(error)
     if isinstance(error, ModelRefusal):
         return "model refusal"
+    if isinstance(error, ModelRateLimitError):
+        return "model rate limit exhausted"
+    if isinstance(error, ModelServerError):
+        status = _safe_exception_metadata(error, "model_http_status")
+        return (
+            f"model provider HTTP {status} retries exhausted"
+            if type(status) is int and 500 <= status <= 599
+            else "model provider 5xx retries exhausted"
+        )
+    if isinstance(error, ModelUpstreamError):
+        return _safe_response_error(error, retries_exhausted=True)
+    if isinstance(error, ModelReadTimeoutError):
+        return str(error)
+    if isinstance(error, ModelProxyError):
+        return "model provider proxy retries exhausted"
+    if isinstance(error, ModelTLSError):
+        return "model provider TLS retries exhausted"
+    if isinstance(error, ModelConnectError):
+        return str(error)
+    if isinstance(error, ModelNetworkError):
+        return "model network retries exhausted"
     if isinstance(error, ModelTransportError):
         return "model transport failure"
     if isinstance(error, ModelResponseError):
-        return "model response failure"
+        return _safe_response_error(error)
     if isinstance(error, ModelError):
         return "model invocation failure"
     return "unexpected model invocation failure"
@@ -454,10 +483,41 @@ def _sanitized_exception(error: Exception) -> Exception:
         return SchemaViolation(str(error))
     if isinstance(error, ModelRefusal):
         return ModelRefusal("model refused to provide a response")
+    if isinstance(error, ModelRateLimitError):
+        return ModelRateLimitError("model provider rate limit exhausted")
+    if isinstance(error, ModelServerError):
+        return ModelServerError("model provider server retries exhausted")
+    if isinstance(error, ModelUpstreamError):
+        return ModelUpstreamError(_safe_response_error(error, retries_exhausted=True))
+    if isinstance(error, ModelReadTimeoutError):
+        return ModelReadTimeoutError(str(error))
+    if isinstance(error, ModelProxyError):
+        return ModelProxyError("model provider proxy retries exhausted")
+    if isinstance(error, ModelTLSError):
+        return ModelTLSError("model provider TLS retries exhausted")
+    if isinstance(error, ModelConnectError):
+        return ModelConnectError(str(error))
+    if isinstance(error, ModelNetworkError):
+        return ModelNetworkError("model provider network retries exhausted")
     if isinstance(error, ModelTransportError):
         return ModelTransportError("model provider transport failed")
     if isinstance(error, ModelResponseError):
-        return ModelResponseError("model provider response failed")
+        return ModelResponseError(_safe_response_error(error))
     if isinstance(error, ModelError):
         return ModelError("model invocation failed")
     return ModelError("unexpected model invocation failure")
+
+
+def _safe_response_error(error: Exception, *, retries_exhausted: bool = False) -> str:
+    status = _safe_exception_metadata(error, "model_http_status")
+    summary = f"model provider HTTP {status}" if type(status) is int else "model response failure"
+    details = []
+    for name in ("type", "code", "param"):
+        value = _safe_exception_metadata(error, f"model_provider_error_{name}")
+        if type(value) is str:
+            details.append(f"{name}={value}")
+    if details:
+        summary += f" ({', '.join(details)})"
+    if retries_exhausted:
+        summary += " retries exhausted"
+    return summary

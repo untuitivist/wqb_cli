@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from math import isfinite
 from typing import Any
 
 
@@ -20,12 +19,14 @@ class RunState(StrEnum):
     CREATED = "CREATED"
     RUNNING = "RUNNING"
     NEEDS_AUTH = "NEEDS_AUTH"
+    NEEDS_DATA = "NEEDS_DATA"
     PAUSED_MODEL = "PAUSED_MODEL"
     AWAITING_APPROVAL = "AWAITING_APPROVAL"
     SUBMITTED = "SUBMITTED"
     REJECTED = "REJECTED"
     BUDGET_EXHAUSTED = "BUDGET_EXHAUSTED"
     NO_PROGRESS = "NO_PROGRESS"
+    STOPPED = "STOPPED"
     FAILED = "FAILED"
 
 
@@ -59,29 +60,17 @@ class Budget:
     candidates_per_round: int = 8
     rounds: int = 5
     total_simulations: int = 40
-    max_runtime_minutes: int = 180
-    planner_calls: int = 20
-    operator_calls: int = 100
-    max_model_cost_usd: float | None = None
 
     def __post_init__(self) -> None:
         positive_fields = (
             "candidates_per_round",
             "rounds",
             "total_simulations",
-            "max_runtime_minutes",
-            "planner_calls",
-            "operator_calls",
         )
         for name in positive_fields:
             value = getattr(self, name)
             if type(value) is not int or value <= 0:
                 raise ValueError(f"{name} must be a positive integer")
-        cost = self.max_model_cost_usd
-        if cost is not None and (
-            type(cost) not in {int, float} or not isfinite(cost) or cost < 0
-        ):
-            raise ValueError("max_model_cost_usd must be a finite non-negative number or None")
 
 
 @dataclass(frozen=True)
@@ -91,6 +80,7 @@ class RunConfig:
     delay: int | None = None
     universe: str | None = None
     neutralization: str | None = None
+    dataset_id: str | None = None
     budget: Budget = field(default_factory=Budget)
 
     def __post_init__(self) -> None:
@@ -98,8 +88,11 @@ class RunConfig:
             raise ValueError("scope_mode must be a ScopeMode")
         if not isinstance(self.budget, Budget):
             raise ValueError("budget must be a Budget")
+        if self.dataset_id is not None and (
+            not isinstance(self.dataset_id, str) or not self.dataset_id.strip()
+        ):
+            raise ValueError("dataset_id must be a nonblank string when provided")
 
-        market_fields = ("region", "delay", "universe", "neutralization")
         if self.scope_mode is ScopeMode.MANUAL:
             missing = [
                 name
@@ -110,8 +103,14 @@ class RunConfig:
                 missing.append("delay")
             if missing:
                 raise ValueError(f"manual scope requires {', '.join(missing)}")
-        elif any(getattr(self, name) is not None for name in market_fields):
-            raise ValueError("auto scope must not pin market fields")
+        else:
+            if self.region is not None and (
+                not isinstance(self.region, str) or not self.region.strip()
+            ):
+                raise ValueError("auto scope region must be a nonblank string when provided")
+            pinned_fields = ("delay", "universe", "neutralization")
+            if any(getattr(self, name) is not None for name in pinned_fields):
+                raise ValueError("auto scope must not pin delay, universe, or neutralization")
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RunConfig:
@@ -119,7 +118,13 @@ class RunConfig:
         values["scope_mode"] = ScopeMode(values["scope_mode"])
         budget = values.get("budget", Budget())
         if isinstance(budget, dict):
-            budget = Budget(**budget)
+            budget = Budget(
+                **{
+                    key: budget[key]
+                    for key in ("candidates_per_round", "rounds", "total_simulations")
+                    if key in budget
+                }
+            )
         if not isinstance(budget, Budget):
             raise ValueError("budget must be a Budget or object")
         values["budget"] = budget

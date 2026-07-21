@@ -65,7 +65,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
                 "SELECT sql FROM sqlite_master WHERE type = 'index' "
                 "AND name = 'idx_experiences_scope_fingerprint'"
             ).fetchone()
-        self.assertEqual(versions, [1, 2, 3, 4])
+        self.assertEqual(versions, [1, 2, 3, 4, 5])
         self.assertTrue(expected_tables <= tables)
         self.assertIsNotNone(ledger_index_sql)
         self.assertIn("command_ledger(run_id, status)", ledger_index_sql[0])
@@ -111,7 +111,7 @@ class AgentStoreExtendedTests(unittest.TestCase):
                     "AND name = 'idx_command_ledger_run_status'"
                 ).fetchone()
             self.assertEqual(after, before)
-            self.assertEqual(upgraded_versions, [1, 2, 3, 4])
+            self.assertEqual(upgraded_versions, [1, 2, 3, 4, 5])
             self.assertIsNotNone(upgraded_ledger_index)
             self.assertIn(
                 "command_ledger(run_id, status)", upgraded_ledger_index[0]
@@ -169,6 +169,68 @@ class AgentStoreExtendedTests(unittest.TestCase):
             ).fetchone()
         self.assertEqual(stored_plan, '{"a":{"task":true},"z":1}')
         self.assertEqual(tuple(stored_task), ('{"a":"first","z":"last"}', '{"answer":42}'))
+
+    def test_research_ideas_have_independent_resumable_lifecycles(self) -> None:
+        self.create_run()
+        mechanisms = [
+            {"mechanism_id": "m1", "field_ids": ["close"]},
+            {"mechanism_id": "m2", "field_ids": ["volume"]},
+        ]
+        self.store.record_research_plan(
+            "run", 1, "plan-hash-1", {"mechanisms": mechanisms}
+        )
+        ideas = self.store.sync_research_ideas(
+            "run", 1, "plan-hash-1", mechanisms
+        )
+        self.assertEqual([idea.idea_id for idea in ideas], ["p1:m1", "p1:m2"])
+        self.assertTrue(all(idea.status == "PENDING_INSPECT" for idea in ideas))
+
+        inspect = self.store.begin_idea_attempt("run", "p1:m1", "INSPECT")
+        failed = self.store.finish_idea_attempt(
+            inspect,
+            "FAILED",
+            "ERROR",
+            error="empty expressions",
+            retry_after_seconds=5,
+        )
+        self.assertEqual(failed.status, "ERROR")
+        self.assertEqual(failed.stage, "INSPECT")
+        self.assertEqual(failed.retry_count, 1)
+        self.assertIsNotNone(failed.next_retry_at)
+
+        retried = self.store.retry_research_idea("run", "p1:m1")
+        self.assertEqual(retried.status, "PENDING_INSPECT")
+        inspect = self.store.begin_idea_attempt("run", "p1:m1", "INSPECT")
+        ready = self.store.finish_idea_attempt(
+            inspect, "COMPLETED", "READY", detail={"accepted": 4}
+        )
+        self.assertEqual((ready.status, ready.stage), ("READY", "SIMULATE"))
+
+        simulation = self.store.begin_idea_attempt("run", "p1:m1", "SIMULATE")
+        aborted = self.store.abort_research_idea("run", "p1:m1")
+        self.assertTrue(aborted.abort_requested)
+        self.assertEqual(aborted.status, "ABORTED")
+        with closing(self.store.connect()) as connection:
+            attempt_status = connection.execute(
+                "SELECT status FROM idea_attempts WHERE id=?", (simulation.id,)
+            ).fetchone()[0]
+        self.assertEqual(attempt_status, "RUNNING")
+        with self.assertRaises(store_module.StoreConflict):
+            self.store.retry_research_idea("run", "p1:m1")
+        self.store.finish_idea_attempt(
+            simulation, "ABORTED", "ABORTED", error="aborted by user"
+        )
+        self.assertEqual(
+            self.store.retry_research_idea("run", "p1:m1").status, "READY"
+        )
+
+        self.store.record_research_plan(
+            "run", 2, "plan-hash-2", {"mechanisms": mechanisms[:1]}
+        )
+        next_round = self.store.sync_research_ideas(
+            "run", 2, "plan-hash-2", mechanisms[:1]
+        )
+        self.assertEqual(next_round[0].idea_id, "p2:m1")
 
     def test_json_objects_reject_lossy_or_non_native_values(self) -> None:
         self.create_run()
@@ -429,6 +491,26 @@ class AgentStoreExtendedTests(unittest.TestCase):
             ).fetchone()[0]
         self.assertEqual(tuple(stored), ("FAILED", "provider failed"))
         self.assertEqual(count, 1)
+
+    def test_completed_resource_free_rejection_can_be_reopened_once(self) -> None:
+        self.create_run()
+        artifact = self.store.add_artifact(
+            "run", WorkflowNode.J, "json", "rejected.json", "sha"
+        )
+        command = self.store.reserve_command(
+            "run", WorkflowNode.J, "rejected-fingerprint", ("sim", "create")
+        )
+        completed = self.store.complete_command(
+            command.id, 1, artifact_id=artifact.id
+        )
+
+        restarted = self.store.restart_rejected_command(completed.id)
+
+        self.assertEqual(restarted.status, "STARTED")
+        self.assertIsNone(restarted.exit_code)
+        self.assertIsNone(restarted.artifact_id)
+        with self.assertRaises(store_module.StoreConflict):
+            self.store.restart_rejected_command(completed.id)
 
     def test_candidates_simulations_and_diagnoses_preserve_domain_identity(self) -> None:
         self.create_run()

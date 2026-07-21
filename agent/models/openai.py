@@ -13,6 +13,7 @@ from ..schemas import (
     ModelRefusal,
     SchemaViolation,
     has_open_object_schema,
+    has_unsupported_strict_output_schema,
     parse_json_text,
     schema_for,
     validate_model_output,
@@ -24,6 +25,7 @@ from .base import (
     ModelResult,
     UsageAccumulator,
     attach_failure_metadata,
+    create_model_session,
     elapsed_ms,
     post_json_with_retries,
     response_object,
@@ -51,7 +53,7 @@ class OpenAIResponsesAdapter:
             raise ValueError("api_key must be nonblank")
         self.config = config
         self._api_key = api_key
-        self._session = session or requests.Session()
+        self._session = session if session is not None else create_model_session(config)
         self._transport_identity = (
             _transport_identity if _transport_identity is not None else object()
         )
@@ -90,6 +92,10 @@ class OpenAIResponsesAdapter:
                         "Content-Type": "application/json",
                     },
                     body=self._body(current),
+                    timeout=(
+                        self.config.connect_timeout_seconds,
+                        self.config.read_timeout_seconds,
+                    ),
                 )
                 payload = response_object(response)
             except ModelError as error:
@@ -188,7 +194,11 @@ class OpenAIResponsesAdapter:
     def _body(self, request: ModelRequest) -> dict[str, object]:
         schema = schema_for(request.role, request.node)
         instructions = _json_only_instructions(request)
-        if self.config.structured_outputs and not has_open_object_schema(schema):
+        if (
+            self.config.structured_outputs
+            and not has_open_object_schema(schema)
+            and not has_unsupported_strict_output_schema(schema)
+        ):
             response_format: dict[str, object] = {
                 "type": "json_schema",
                 "name": f"{request.role.value}_{request.node.value}_response",
@@ -239,6 +249,13 @@ class OpenAIResponsesAdapter:
 def _json_only_instructions(request: ModelRequest) -> str:
     instructions = request.instructions.rstrip()
     instructions += "\nReturn only a JSON object matching the required schema."
+    instructions += "\nRequired JSON Schema: " + json.dumps(
+        schema_for(request.role, request.node),
+        ensure_ascii=True,
+        allow_nan=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     if request.repair_error is not None:
         instructions += f"\nThe previous output failed schema validation: {request.repair_error}"
     return instructions

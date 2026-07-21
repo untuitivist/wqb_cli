@@ -170,7 +170,7 @@ class AgentPolicyTests(unittest.TestCase):
         with self.assertRaises(PolicyViolation):
             self.policy.require_simulation_capacity("not-a-snapshot")  # type: ignore[arg-type]
 
-    def test_stop_reason_checks_every_hard_cap_at_equality(self) -> None:
+    def test_stop_reason_checks_only_round_and_simulation_caps(self) -> None:
         from wqb_cli.agent.policy import AgentPolicy, UsageSnapshot
         from wqb_cli.agent.types import Budget
 
@@ -178,27 +178,18 @@ class AgentPolicyTests(unittest.TestCase):
             Budget(
                 rounds=2,
                 total_simulations=3,
-                planner_calls=4,
-                operator_calls=5,
-                max_runtime_minutes=6,
-                max_model_cost_usd=7.0,
             )
         )
         capped = (
             UsageSnapshot(0, 0, 0, 0.0, rounds=2),
             UsageSnapshot(3, 0, 0, 0.0),
-            UsageSnapshot(0, 4, 0, 0.0),
-            UsageSnapshot(0, 0, 5, 0.0),
-            UsageSnapshot(0, 0, 0, 6.0),
-            UsageSnapshot(0, 0, 0, 0.0, model_cost_usd=7.0),
         )
         for usage in capped:
             with self.subTest(usage=usage):
                 self.assertEqual(policy.stop_reason(usage, 0), "BUDGET_EXHAUSTED")
 
-        below = UsageSnapshot(2, 3, 4, 5.9, rounds=1, model_cost_usd=6.9)
-        self.assertIsNone(policy.stop_reason(below, 1))
-        self.assertEqual(policy.stop_reason(below, 2), "NO_PROGRESS")
+        below = UsageSnapshot(2, 30_000, 40_000, 50_000.0, rounds=1, model_cost_usd=60_000.0)
+        self.assertIsNone(policy.stop_reason(below, 1_000))
 
     def test_stop_reason_hard_cap_precedes_no_progress_and_validates_counter(self) -> None:
         from wqb_cli.agent.policy import UsageSnapshot
@@ -209,16 +200,6 @@ class AgentPolicyTests(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     self.policy.stop_reason(UsageSnapshot(0, 0, 0, 0.0), value)  # type: ignore[arg-type]
-
-    def test_zero_cost_cap_is_a_hard_cap(self) -> None:
-        from wqb_cli.agent.policy import AgentPolicy, UsageSnapshot
-        from wqb_cli.agent.types import Budget
-
-        policy = AgentPolicy(Budget(max_model_cost_usd=0))
-        self.assertEqual(
-            policy.stop_reason(UsageSnapshot(0, 0, 0, 0.0), 0),
-            "BUDGET_EXHAUSTED",
-        )
 
     def test_default_command_allowlist_enforces_exact_node_prefixes(self) -> None:
         from wqb_cli.agent.policy import PolicyViolation
@@ -282,6 +263,7 @@ class AgentPolicyTests(unittest.TestCase):
                 ("user", "pyramid-multipliers"),
                 ("user", "user-diversity"),
                 ("data", "categories"),
+                ("data", "dataset"),
             ),
             WorkflowNode.F: (
                 ("scope", "files"),

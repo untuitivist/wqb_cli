@@ -82,6 +82,14 @@ arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum fac
 - 对 `MODEL` 塔，优先保留描述明确的传统机制字段，如估值、成长、surprise、分析师修正、质量、动量
 - 对纯 `dl/nugget/predict` 风格字段保持谨慎，除非已有很强的 H/K 证据链
 
+## 机制质量规则
+
+- 每条机制只能包含 1 到 2 个字段
+- 两字段机制必须解释字段之间的经济关系，不能只是把两个独立收益信号放在一起
+- 假设必须说明预期的方向、关系或状态条件，不能只写“字段可能包含稳定信息”
+- Planner 连续修复后仍无法形成证据明确的机制时，H 必须暂停，不得生成通用锁定字段计划
+- 优先形成可由 I 翻译为时间变化、异常度、关系量或条件门控的机制
+
 ## 判断问题
 
 对每个候选字段，H 至少要回答四个问题：
@@ -96,6 +104,7 @@ arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum fac
 - `mechanism_hypotheses.json` 中每条机制都明确绑定到具体字段
 - 每条机制都有来自 G 的社区证据、文档或平台证据、论文或研报证据
 - H 输出后，I 可以在不重新解释经济学含义的前提下直接构造表达式
+- 不存在通用字段 fallback；每条进入 I 的机制都必须通过证据与具体假设校验
 
 ## 明确边界
 
@@ -114,3 +123,10 @@ H 不负责：
 ## 下一跳
 
 - `I 表达式候选集`
+
+# Runtime lifecycle invariants
+
+- Initial H planning uses only the selected dataset fields and the verified G evidence bundle.
+- When K routes `ECONOMIC_MECHANISM` back to H, H also receives a compact diagnostic summary: failure class, metric failure counts, representative metrics, template density, and anti-pattern actions.
+- Diagnostic metric IDs guide refinement but are not citable source evidence. Every revised mechanism must still cite only the verified G artifact references.
+- H produces a new immutable plan version and independent idea records. It never emits concrete FASTEXPR expressions or simulation settings.

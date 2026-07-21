@@ -11,11 +11,12 @@ from typing import Any
 from ..models.base import ModelRequest
 from ..runner import RunnerError
 from ..schemas import validate_model_output
-from ..types import ModelRole, NodeResult, WorkflowNode
+from ..types import ModelRole, NodeResult, RunState, WorkflowNode
 
 
 DATA_SOURCE_MISSING = "DATA_SOURCE_MISSING"
 _EVIDENCE_CLASSES = ("community", "official_docs", "platform", "paper")
+REQUIRED_EVIDENCE_CLASSES = ("official_docs", "platform")
 _IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _FASTEXPR_WORDS = frozenset({"true", "false", "null", "nan"})
 _BASE_PRICE_VOLUME_FIELDS = frozenset(
@@ -66,6 +67,10 @@ def keyword_evidence_coverage(
 
 class EvidenceError(ValueError):
     """Raised when collected evidence is not a trustworthy command result."""
+
+
+class EvidenceAuthenticationRequired(EvidenceError):
+    """Raised when a remote evidence command requires a fresh login."""
 
 
 def screen_fields(
@@ -148,9 +153,13 @@ class EvidenceNodes:
         scope: Mapping[str, Any],
         target_tower: Mapping[str, Any],
         *,
+        dataset_id: str | None = None,
         local_data_root: Path | None = None,
     ) -> NodeResult:
         normalized_scope = _scope(scope)
+        if dataset_id is not None and (type(dataset_id) is not str or not dataset_id.strip()):
+            raise EvidenceError("selected dataset id is invalid")
+        selected_dataset_id = None if dataset_id is None else dataset_id.strip().lower()
         scope_key = f"{normalized_scope['region']}_{normalized_scope['delay']}"
         files_result = self._run(
             run_id, WorkflowNode.F, ("scope", "files"), "scope_files.json"
@@ -161,6 +170,7 @@ class EvidenceNodes:
         files_body = self._body(files_payload, "scope files", local=True)
         if not _scope_files_present(files_body):
             return self._data_source_missing(run_id, (files_result,), scope_key)
+        os_detail_available = _scope_pickle_present(files_body)
 
         local_commands = (
             (("scope", "list"), "scope_list.json"),
@@ -183,9 +193,12 @@ class EvidenceNodes:
         top_body = remaining_local_bodies[2]
         top_rows = _top_field_rows(top_body, scope_key)
 
+        field_command = ["data", "fields", "--region", normalized_scope["region"], "--delay", str(normalized_scope["delay"]), "--universe", normalized_scope["universe"], "--limit", "50", "--offset", "0"]
+        if selected_dataset_id is not None:
+            field_command.extend(("--dataset", selected_dataset_id))
         remote_commands = (
-            (("data", "fields", "--region", normalized_scope["region"], "--delay", str(normalized_scope["delay"]), "--universe", normalized_scope["universe"], "--category", normalized_scope["category"], "--limit", "100", "--offset", "0"), "data_fields.json"),
-            (("data", "datasets", "--region", normalized_scope["region"], "--delay", str(normalized_scope["delay"]), "--universe", normalized_scope["universe"], "--category", normalized_scope["category"], "--limit", "100", "--offset", "0"), "data_datasets.json"),
+            (tuple(field_command), "data_fields.json"),
+            (("data", "datasets", "--region", normalized_scope["region"], "--delay", str(normalized_scope["delay"]), "--universe", normalized_scope["universe"], "--limit", "50", "--offset", "0"), "data_datasets.json"),
             (("alpha", "list", "--type", "REGULAR", "--settings-region", normalized_scope["region"], "--settings-delay", str(normalized_scope["delay"]), "--settings-instrument-type", "EQUITY", "--limit", "100", "--offset", "0", "--order=-dateSubmitted", "--status", "ACTIVE", "--tag", f"{normalized_scope['region']}/D{normalized_scope['delay']}/{normalized_scope['category'].upper()}"), "tag_alphas.json"),
         )
         remote_results = [
@@ -196,17 +209,42 @@ class EvidenceNodes:
             self._body(self._payload(result), name)
             for result, (_, name) in zip(remote_results, remote_commands, strict=True)
         ]
+        dataset_page_results: list[Any] = []
+        datasets = _dataset_ids(remote_bodies[1])
+        if selected_dataset_id is not None and selected_dataset_id not in datasets:
+            for page in range(1, 100):
+                offset = page * 50
+                result = self._run(
+                    run_id,
+                    WorkflowNode.F,
+                    (
+                        "data", "datasets",
+                        "--region", normalized_scope["region"],
+                        "--delay", str(normalized_scope["delay"]),
+                        "--universe", normalized_scope["universe"],
+                        "--limit", "50", "--offset", str(offset),
+                    ),
+                    f"data_datasets_page{page + 1}.json",
+                )
+                body = self._body(self._payload(result), "data datasets page")
+                page_ids = _dataset_ids(body)
+                dataset_page_results.append(result)
+                datasets.update(page_ids)
+                if selected_dataset_id in datasets or _dataset_page_is_complete(body, offset, len(page_ids)):
+                    break
+            else:
+                raise EvidenceError("data datasets pagination exceeds the page limit")
         alpha_results: list[Any] = []
         tag_rows = _record_page(remote_bodies[2], "tag alpha search")
         if not tag_rows:
             for page in range(20):
-                offset = page * 100
+                offset = page * 20
                 argv = (
                     "alpha", "list",
                     "--settings-region", normalized_scope["region"],
                     "--settings-delay", str(normalized_scope["delay"]),
                     "--settings-instrument-type", "EQUITY",
-                    "--limit", "100", "--offset", str(offset),
+                    "--limit", "20", "--offset", str(offset),
                     "--order=-dateSubmitted", "--status", "ACTIVE",
                 )
                 result = self._run(
@@ -222,19 +260,27 @@ class EvidenceNodes:
                 raise EvidenceError("scope alpha pagination exceeds the page limit")
         alpha_row_results: list[Any] = []
         poor_os: set[str] = set()
-        for field_id in [row["name"] for row in top_rows]:
-            rows, page_results = self._collect_os_rows(
-                run_id, scope_key, field_id
-            )
-            # Preserve the prior authoritative meaning: a field is poor only
-            # when it has OS rows and none of them meets the required metrics.
-            if rows and not any(_os_row_passes(row) for row in rows):
-                poor_os.add(field_id.lower())
-            alpha_row_results.extend(page_results)
+        if os_detail_available:
+            for field_id in [row["name"] for row in top_rows]:
+                rows, page_results = self._collect_os_rows(
+                    run_id, scope_key, field_id
+                )
+                # A field is poor only when it has OS rows and none passes.
+                if rows and not any(_os_row_passes(row) for row in rows):
+                    poor_os.add(field_id.lower())
+                alpha_row_results.extend(page_results)
 
-        results = [*local_results, *remote_results, *alpha_results, *alpha_row_results]
+        results = [*local_results, *remote_results, *dataset_page_results, *alpha_results, *alpha_row_results]
         fields = _field_rows(remote_bodies[0])
-        datasets = _dataset_ids(remote_bodies[1])
+        if selected_dataset_id is not None and selected_dataset_id not in datasets:
+            raise EvidenceError("selected dataset is unavailable for the locked scope")
+        if selected_dataset_id is not None:
+            dataset_index = _field_dataset_index(fields)
+            fields = [
+                field for field in fields
+                if type(field.get("id")) is str
+                and dataset_index.get(field["id"].strip().lower()) == selected_dataset_id
+            ]
         used = _used_fields(target_tower)
         field_datasets = _field_dataset_index(fields)
         used_datasets = {
@@ -250,6 +296,7 @@ class EvidenceNodes:
         candidate_ids = [field["id"] for field in screened.candidate_fields]
         authoritative = {
             "scope": normalized_scope,
+            "selected_dataset_id": selected_dataset_id,
             "target_tower_id": _tower_id(target_tower),
             "candidate_fields": candidate_ids,
             "banned_fields": list(screened.banned_fields),
@@ -257,6 +304,7 @@ class EvidenceNodes:
             "base_price_volume_fields": base_fields,
             "used_dataset_ids": sorted(used_datasets),
             "poor_os_fields": sorted(poor_os),
+            "os_detail_available": os_detail_available,
             "experience_failures": experiences[:20],
             "artifact_ids": list(self._artifact_ids(*results)),
         }
@@ -329,7 +377,8 @@ class EvidenceNodes:
             WorkflowNode.F,
             {"failure_class": DATA_SOURCE_MISSING, "setup_paths": setup_paths},
             self._artifact_ids(*results),
-            next_node=WorkflowNode.F,
+            next_node=None,
+            run_state=RunState.NEEDS_DATA,
             payload={"failure_class": DATA_SOURCE_MISSING, "setup_paths": list(setup_paths)},
         )
 
@@ -341,21 +390,30 @@ class EvidenceNodes:
         artifacts: list[str] = []
         paper_unavailable = False
         for keyword in keywords:
-            community = self._run(
-                run_id, WorkflowNode.G, ("community", "search", keyword),
-                f"{keyword}_community_search.json",
-            )
-            community_body = self._body(self._payload(community), "community search", local=True)
-            community_artifacts = self._artifact_ids(community)
-            artifacts.extend(community_artifacts)
-            lesson = _lesson(
-                "community",
-                community_artifacts[0] if community_artifacts else None,
-                community_body,
-                keyword,
-            )
-            if lesson is not None:
-                lessons.append(lesson)
+            try:
+                community = self._run(
+                    run_id, WorkflowNode.G, ("community", "search", keyword),
+                    f"{keyword}_community_search.json",
+                )
+            except RunnerError:
+                community = None
+            if community is not None:
+                community_artifacts = self._artifact_ids(community)
+                artifacts.extend(community_artifacts)
+                try:
+                    community_body = self._body(
+                        self._payload(community), "community search", local=True
+                    )
+                    lesson = _lesson(
+                        "community",
+                        community_artifacts[0] if community_artifacts else None,
+                        community_body,
+                        keyword,
+                    )
+                except EvidenceError:
+                    lesson = None
+                if lesson is not None:
+                    lessons.append(lesson)
 
             docs = self._run(
                 run_id, WorkflowNode.G, ("docs", "list"),
@@ -411,10 +469,15 @@ class EvidenceNodes:
             except RunnerError:
                 paper_unavailable = True
                 continue
-            body = self._body(self._payload(result), "papers", local=True)
             artifact_id = self._artifact_ids(result)
             artifacts.extend(artifact_id)
-            lesson = _lesson("paper", artifact_id[0] if artifact_id else None, body, keyword)
+            try:
+                body = self._body(self._payload(result), "papers", local=True)
+                lesson = _lesson(
+                    "paper", artifact_id[0] if artifact_id else None, body, keyword
+                )
+            except EvidenceError:
+                lesson = None
             if lesson is None:
                 paper_unavailable = True
             else:
@@ -425,7 +488,11 @@ class EvidenceNodes:
             for source in _EVIDENCE_CLASSES
             if any(source in item["missing_sources"] for item in per_keyword.values())
         ]
-        complete = not missing_sources
+        required_missing = [
+            source for source in REQUIRED_EVIDENCE_CLASSES
+            if source in missing_sources
+        ]
+        complete = not required_missing
         paper_unavailable = any(
             "paper" in item["missing_sources"] for item in per_keyword.values()
         )
@@ -501,9 +568,13 @@ class EvidenceNodes:
                 raise EvidenceError(f"{label} did not return a successful local response")
             return {key: value for key, value in payload.items() if key != "ok"}
         response = payload.get("response")
+        status = response.get("status_code") if type(response) is dict else None
+        if status in {401, 403}:
+            raise EvidenceAuthenticationRequired(
+                f"{label} authentication required"
+            )
         if payload.get("ok") is not True or type(response) is not dict:
             raise EvidenceError(f"{label} did not return a successful response")
-        status = response.get("status_code")
         body = response.get("body")
         if type(status) is not int or not 200 <= status <= 299 or type(body) is not dict:
             raise EvidenceError(f"{label} did not return a successful response body")
@@ -601,6 +672,13 @@ def _page_is_complete(body: dict[str, Any], offset: int, page_size: int) -> bool
     return page_size < 100
 
 
+def _dataset_page_is_complete(body: dict[str, Any], offset: int, page_size: int) -> bool:
+    count = body.get("count")
+    if type(count) is int and count >= 0:
+        return offset + page_size >= count
+    return page_size < 50
+
+
 def _field_rows(body: dict[str, Any]) -> list[dict[str, Any]]:
     rows = body.get("results", body.get("fields"))
     if not isinstance(rows, list) or not all(isinstance(row, Mapping) for row in rows):
@@ -648,7 +726,14 @@ def _scope_files_present(body: dict[str, Any]) -> bool:
     all_data = body.get("all_data")
     if not isinstance(info, Mapping) or not isinstance(all_data, Mapping):
         raise EvidenceError("scope files response has invalid file statuses")
-    return info.get("exists") is True and all_data.get("exists") is True
+    return info.get("exists") is True
+
+
+def _scope_pickle_present(body: dict[str, Any]) -> bool:
+    all_data = body.get("all_data")
+    if not isinstance(all_data, Mapping):
+        raise EvidenceError("scope files response has invalid all_data status")
+    return all_data.get("exists") is True
 
 
 def _top_field_rows(body: dict[str, Any], scope_key: str) -> list[dict[str, Any]]:
@@ -747,8 +832,10 @@ def _used_fields(tower: Mapping[str, Any]) -> set[str]:
     if code is None and isinstance(tower.get("regular"), Mapping):
         regular = tower["regular"]
         code = regular.get("code", regular.get("expression"))
-    if type(code) is not str or not code.strip():
-        raise EvidenceError("target tower has no parseable code")
+    if code is None or type(code) is str and not code.strip():
+        return set()
+    if type(code) is not str:
+        raise EvidenceError("target tower has invalid code")
     without_strings = re.sub(r"'(?:\\.|[^'\\])*'|\"(?:\\.|[^\"\\])*\"", "", code)
     operators = {match.group(1).lower() for match in re.finditer(r"([A-Za-z_][A-Za-z0-9_]*)\s*\(", without_strings)}
     return {token.lower() for token in _IDENTIFIER.findall(without_strings) if token.lower() not in operators | _FASTEXPR_WORDS}
@@ -803,9 +890,46 @@ def platform_search_lesson(
     body: Mapping[str, Any], artifact_id: str, keyword: str
 ) -> dict[str, str] | None:
     query = body.get("query")
-    if not isinstance(query, list) or not all(type(item) is str for item in query):
+    if query is not None and (
+        not isinstance(query, list) or not all(type(item) is str for item in query)
+    ):
         raise EvidenceError("platform search response has invalid query inventory")
-    statement = next((item.strip() for item in query if item.strip()), None)
+    statement = (
+        next((item.strip() for item in query if item.strip()), None)
+        if isinstance(query, list)
+        else None
+    )
+    section_order = (
+        "faq",
+        "recommendedReading",
+        "reference",
+        "tutorialPage",
+        "video",
+        "event",
+        "competition",
+        "message",
+    )
+    if statement is None:
+        for section in section_order:
+            bucket = body.get(section)
+            if bucket is None:
+                continue
+            if not isinstance(bucket, Mapping) or not isinstance(
+                bucket.get("results"), list
+            ):
+                raise EvidenceError("platform search response has invalid result groups")
+            for row in bucket["results"]:
+                if not isinstance(row, Mapping):
+                    raise EvidenceError("platform search response has invalid result")
+                for field in ("question", "title", "description"):
+                    value = row.get(field)
+                    if type(value) is str and value.strip():
+                        statement = value.strip()
+                        break
+                if statement is not None:
+                    break
+            if statement is not None:
+                break
     if statement is None:
         return None
     if type(artifact_id) is not str or not artifact_id.startswith("artifact:"):

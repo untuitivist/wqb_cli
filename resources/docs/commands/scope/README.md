@@ -7,12 +7,12 @@ Data source boundary:
 - This command does not call `api.worldquantbrain.com`.
 - It reads local dataset-analysis files produced for the WebDataScope browser plugin.
 - Source plugin: [leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)
-- The plugin README states that the `data` folder is not included in the repository; these files should be obtained from the plugin-provided network-disk data package.
+- The plugin repository does not currently publish a stable download location for its local data files.
 
 The local files are:
 
 - `info_data.bin`: compressed msgpack quick index for scope summaries and ranking.
-- `all_data.pickle`: large pickle with per-scope alpha base/settings/IS/OS dataframes.
+- `all_data.pickle`: optional large pickle with per-scope alpha base/settings/IS/OS dataframes.
 - `main.ipynb`: original loader notes.
 
 Expected local layout:
@@ -20,8 +20,8 @@ Expected local layout:
 ```text
 wqb_cli/local/data_all/
   info_data.bin
-  all_data.pickle
-  main.ipynb
+  all_data.pickle  # optional
+  main.ipynb       # optional
 ```
 
 Commands:

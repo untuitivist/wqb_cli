@@ -5,7 +5,7 @@ import re
 from copy import deepcopy
 from dataclasses import dataclass, field
 from math import isfinite
-from time import perf_counter
+from time import perf_counter, sleep
 from typing import Any, Protocol, runtime_checkable
 
 import requests
@@ -14,8 +14,8 @@ from ..config import ModelConfig
 from ..types import ModelRole, WorkflowNode
 
 
-HTTP_TIMEOUT_SECONDS = 60
 MAX_HTTP_RETRIES = 2
+HTTP_RETRY_BACKOFF_SECONDS = (1.0, 2.0)
 MAX_PROVIDER_REQUEST_ID_LENGTH = 255
 
 _PROVIDER_REQUEST_ID_PATTERN = re.compile(
@@ -34,6 +34,38 @@ class ModelError(RuntimeError):
 
 class ModelTransportError(ModelError):
     """A retryable provider or network failure exhausted its retry budget."""
+
+
+class ModelNetworkError(ModelTransportError):
+    """Network failures exhausted the retry budget."""
+
+
+class ModelConnectError(ModelNetworkError):
+    """Connection failures exhausted the retry budget."""
+
+
+class ModelReadTimeoutError(ModelNetworkError):
+    """A submitted request exceeded its response wait limit."""
+
+
+class ModelProxyError(ModelNetworkError):
+    """Proxy failures exhausted the retry budget."""
+
+
+class ModelTLSError(ModelNetworkError):
+    """TLS failures exhausted the retry budget."""
+
+
+class ModelRateLimitError(ModelTransportError):
+    """Provider rate limiting exhausted the retry budget."""
+
+
+class ModelServerError(ModelTransportError):
+    """Provider 5xx responses exhausted the retry budget."""
+
+
+class ModelUpstreamError(ModelTransportError):
+    """A transient provider dependency response exhausted the retry budget."""
 
 
 class ModelResponseError(ModelError):
@@ -213,12 +245,27 @@ def elapsed_ms(started_at: float) -> int:
     return max(0, int((perf_counter() - started_at) * 1000))
 
 
+def create_model_session(config: ModelConfig) -> requests.Session:
+    if type(config) is not ModelConfig:
+        raise TypeError("config must be a ModelConfig")
+    session = requests.Session()
+    if config.proxy_mode == "direct":
+        session.trust_env = False
+    elif config.proxy_mode == "custom":
+        session.trust_env = False
+        session.proxies.update(
+            {"http": config.proxy_url, "https": config.proxy_url}
+        )
+    return session
+
+
 def post_json_with_retries(
     session: requests.Session,
     url: str,
     *,
     headers: dict[str, str],
     body: dict[str, object],
+    timeout: tuple[int, int],
 ) -> requests.Response:
     for attempt in range(MAX_HTTP_RETRIES + 1):
         try:
@@ -226,23 +273,114 @@ def post_json_with_retries(
                 url,
                 headers=headers,
                 json=body,
-                timeout=HTTP_TIMEOUT_SECONDS,
+                timeout=timeout,
             )
-        except requests.RequestException:
+        except requests.exceptions.ReadTimeout:
+            raise ModelReadTimeoutError(
+                f"model provider read timed out after {timeout[1]} seconds"
+            ) from None
+        except requests.exceptions.ProxyError:
             if attempt == MAX_HTTP_RETRIES:
-                raise ModelTransportError("model provider network retries exhausted") from None
+                raise ModelProxyError("model provider proxy retries exhausted") from None
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
             continue
-        status = response.status_code
-        if status == 429 or 500 <= status <= 599:
+        except requests.exceptions.SSLError:
             if attempt == MAX_HTTP_RETRIES:
-                raise ModelTransportError(
-                    f"model provider retryable HTTP {status} retries exhausted"
+                raise ModelTLSError("model provider TLS retries exhausted") from None
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
+            continue
+        except requests.exceptions.ConnectTimeout:
+            if attempt == MAX_HTTP_RETRIES:
+                raise ModelConnectError(
+                    f"model provider connect retries exhausted after {timeout[0]} seconds"
+                ) from None
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
+            continue
+        except requests.exceptions.ConnectionError:
+            if attempt == MAX_HTTP_RETRIES:
+                raise ModelConnectError("model provider connection retries exhausted") from None
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
+            continue
+        except requests.exceptions.Timeout:
+            raise ModelReadTimeoutError(
+                f"model provider timed out after {timeout[1]} seconds"
+            ) from None
+        except requests.exceptions.RequestException:
+            raise ModelNetworkError("model provider request failed") from None
+        status = response.status_code
+        if status == 429:
+            if attempt == MAX_HTTP_RETRIES:
+                raise ModelRateLimitError("model provider HTTP 429 retries exhausted")
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
+            continue
+        if 500 <= status <= 599:
+            if attempt == MAX_HTTP_RETRIES:
+                error = ModelServerError(
+                    f"model provider HTTP {status} retries exhausted"
                 )
+                error.model_http_status = status  # type: ignore[attr-defined]
+                raise error
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
+            continue
+        if status in {408, 409, 424}:
+            if attempt == MAX_HTTP_RETRIES:
+                error = ModelUpstreamError(
+                    _provider_http_error_summary(response, status, retries_exhausted=True)
+                )
+                error.model_http_status = status  # type: ignore[attr-defined]
+                _attach_provider_error_fields(error, response)
+                raise error
+            sleep(HTTP_RETRY_BACKOFF_SECONDS[attempt])
             continue
         if not 200 <= status <= 299:
-            raise ModelResponseError(f"model provider rejected request with HTTP {status}")
+            error = ModelResponseError(_provider_http_error_summary(response, status))
+            error.model_http_status = status  # type: ignore[attr-defined]
+            _attach_provider_error_fields(error, response)
+            raise error
         return response
     raise ModelTransportError("model provider retries exhausted")
+
+
+def _provider_error_fields(response: requests.Response) -> dict[str, str]:
+    try:
+        payload = response.json()
+    except (ValueError, TypeError, RecursionError):
+        return {}
+    if type(payload) is not dict or type(payload.get("error")) is not dict:
+        return {}
+    error = payload["error"]
+    fields: dict[str, str] = {}
+    for name in ("type", "code", "param"):
+        value = error.get(name)
+        if type(value) is not str:
+            continue
+        normalized = " ".join(value.split())
+        if normalized and len(normalized) <= 128 and re.fullmatch(
+            r"[A-Za-z0-9][A-Za-z0-9._ /\[\]-]*", normalized, re.ASCII
+        ):
+            fields[name] = normalized
+    return fields
+
+
+def _attach_provider_error_fields(error: Exception, response: requests.Response) -> None:
+    for name, value in _provider_error_fields(response).items():
+        setattr(error, f"model_provider_error_{name}", value)
+
+
+def _provider_http_error_summary(
+    response: requests.Response,
+    status: int,
+    *,
+    retries_exhausted: bool = False,
+) -> str:
+    fields = _provider_error_fields(response)
+    details = ", ".join(f"{name}={value}" for name, value in fields.items())
+    summary = f"model provider HTTP {status}"
+    if details:
+        summary += f" ({details})"
+    if retries_exhausted:
+        summary += " retries exhausted"
+    return summary
 
 
 def response_object(response: requests.Response) -> dict[str, Any]:

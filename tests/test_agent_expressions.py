@@ -8,6 +8,12 @@ from wqb_cli.agent.expressions import (
     normalize_expression,
     validate_candidate,
 )
+from wqb_cli.agent.strategies import (
+    materialize_strategy_templates,
+    profile_research_strategy,
+    strategy_catalog,
+    validate_research_strategy,
+)
 
 
 class AgentExpressionTests(unittest.TestCase):
@@ -199,6 +205,137 @@ class AgentExpressionTests(unittest.TestCase):
                         banned_fields=set(),
                         operators=self.operators,
                     )
+
+    def test_research_strategy_rejects_cosmetic_only_and_operator_stacking(self) -> None:
+        cosmetic = validate_candidate(
+            self.candidate("rank(volume)"),
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators={"rank": {"arity": 1}},
+        )
+        with self.assertRaisesRegex(ExpressionViolation, "cosmetic-only"):
+            validate_research_strategy(cosmetic)
+
+        stacked = validate_candidate(
+            self.candidate("ts_zscore(ts_rank(volume,22),63)"),
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators={"ts_rank": {"arity": 2}, "ts_zscore": {"arity": 2}},
+        )
+        with self.assertRaisesRegex(ExpressionViolation, "stacks"):
+            validate_research_strategy(stacked)
+
+    def test_research_strategy_profiles_meaningful_binary_relation(self) -> None:
+        validated = validate_candidate(
+            self.candidate("ts_corr(volume,close,63)"),
+            allowed_fields={"volume", "close"},
+            banned_fields=set(),
+            operators={"ts_corr": {"arity": 3}},
+        )
+        profile = validate_research_strategy(validated)
+        self.assertEqual(profile.template_id, "binary:ts_corr")
+        self.assertEqual(profile.strategy_family, "relational")
+        self.assertEqual(profile.field_ids, ("volume", "close"))
+
+    def test_expression_allows_more_than_two_authorized_fields(self) -> None:
+        validated = validate_candidate(
+            self.candidate("add(add(volume,close),group)"),
+            allowed_fields={"volume", "close", "group"},
+            banned_fields=set(),
+            operators={"add": {"arity": 2}},
+        )
+
+        profile = profile_research_strategy(validated)
+
+        self.assertEqual(set(profile.field_ids), {"volume", "close", "group"})
+        self.assertEqual(profile.template_type, "multivariate")
+
+    def test_strategy_catalog_uses_only_live_operators_and_field_capacity(self) -> None:
+        operators = {
+            "ts_delta": {"arity": 2},
+            "ts_corr": {"arity": 3},
+            "ts_regression": {"arity": 3},
+        }
+        unary = strategy_catalog(operators, field_count=1)
+        binary = strategy_catalog(operators, field_count=2)
+        self.assertEqual([item["strategy_id"] for item in unary], ["change_delta"])
+        self.assertEqual(
+            [item["strategy_id"] for item in binary],
+            ["change_delta", "relationship_correlation", "relationship_regression"],
+        )
+
+    def test_local_template_expansion_round_robins_strategy_families(self) -> None:
+        candidates = materialize_strategy_templates(
+            {
+                "ts_delta": {"arity": 2},
+                "ts_zscore": {"arity": 2},
+                "days_from_last_change": {"arity": 1},
+                "ts_corr": {"arity": 3},
+                "ts_regression": {"arity": 3},
+                "if_else": {"arity": 3},
+                "ts_mean": {"arity": 2},
+            },
+            ["volume", "close"],
+            limit=6,
+        )
+
+        self.assertEqual(
+            [item["strategy_id"] for item in candidates],
+            [
+                "change_delta",
+                "temporal_abnormality",
+                "change_recency",
+                "relationship_correlation",
+                "relationship_regression",
+                "conditional_regime",
+            ],
+        )
+
+    def test_vector_field_requires_direct_vector_reducer(self) -> None:
+        operators = {
+            "ts_delta": {"arity": 2},
+            "vec_avg": {"arity": 1},
+        }
+        with self.assertRaisesRegex(ExpressionViolation, "vec_\\*"):
+            validate_candidate(
+                self.candidate("ts_delta(volume,22)"),
+                allowed_fields={"volume"},
+                banned_fields=set(),
+                operators=operators,
+                field_types={"volume": "VECTOR"},
+            )
+
+        validated = validate_candidate(
+            self.candidate("ts_delta(vec_avg(volume),22)"),
+            allowed_fields={"volume"},
+            banned_fields=set(),
+            operators=operators,
+            field_types={"volume": "VECTOR"},
+        )
+
+        self.assertEqual(validated.operators, ("ts_delta", "vec_avg"))
+
+    def test_local_template_expansion_reduces_vector_fields(self) -> None:
+        candidates = materialize_strategy_templates(
+            {"ts_delta": {"arity": 2}, "vec_avg": {"arity": 1}},
+            ["event_signal"],
+            strategy_ids=["change_delta"],
+            limit=1,
+            field_types={"event_signal": "VECTOR"},
+        )
+
+        self.assertEqual(
+            candidates[0]["expression"],
+            "ts_delta(vec_avg(event_signal), 22)",
+        )
+        catalog = strategy_catalog(
+            {"ts_delta": {"arity": 2}, "vec_avg": {"arity": 1}},
+            field_count=1,
+            field_types={"event_signal": "VECTOR"},
+        )
+        self.assertEqual(
+            catalog[0]["required_operators"], ["ts_delta", "vec_avg"]
+        )
 
 
 if __name__ == "__main__":

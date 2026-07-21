@@ -8,6 +8,7 @@ import json
 from math import isfinite
 from typing import Any
 
+from ..expressions import ExpressionViolation, normalize_expression
 from ..models.base import ModelRequest
 from ..schemas import DIAGNOSIS_ROUTES, validate_model_output
 from ..store import StoreConflict, StoreRecordNotFound
@@ -124,6 +125,39 @@ def select_passing_candidate(
     return dict(selected)
 
 
+def template_density_report(
+    candidates: Sequence[Mapping[str, object]],
+) -> dict[str, dict[str, object]]:
+    buckets: dict[str, dict[str, object]] = {}
+    for candidate in candidates:
+        template_id = candidate.get("template_id", "unclassified")
+        if type(template_id) is not str or not template_id.strip():
+            template_id = "unclassified"
+        bucket = buckets.setdefault(
+            template_id,
+            {
+                "template_id": template_id,
+                "template_type": candidate.get("template_type", "unknown"),
+                "strategy_family": candidate.get("strategy_family", "unknown"),
+                "tested": 0,
+                "promising": 0,
+                "passed": 0,
+            },
+        )
+        bucket["tested"] = int(bucket["tested"]) + 1
+        if _promising_signal(candidate):
+            bucket["promising"] = int(bucket["promising"]) + 1
+        if classify_hard_metrics(candidate).passed:
+            bucket["passed"] = int(bucket["passed"]) + 1
+    for bucket in buckets.values():
+        tested = int(bucket["tested"])
+        bucket["factor_density"] = (
+            float(bucket["promising"]) / tested if tested else 0.0
+        )
+        bucket["pass_rate"] = float(bucket["passed"]) / tested if tested else 0.0
+    return dict(sorted(buckets.items()))
+
+
 def classify_final_checks(report: Mapping[str, object]) -> CheckClassification:
     if not isinstance(report, Mapping):
         raise TypeError("report must be a mapping")
@@ -196,8 +230,14 @@ def build_simulation_batches(
                     "region": normalized_scope["region"],
                     "universe": normalized_scope["universe"],
                     "delay": normalized_scope["delay"],
+                    "decay": 0,
                     "neutralization": normalized_scope["neutralization"],
+                    "pasteurization": "ON",
+                    "nanHandling": "ON",
+                    "truncation": 0.08,
+                    "unitHandling": "VERIFY",
                     "language": "FASTEXPR",
+                    "visualization": False,
                 },
                 "regular": expression.strip(),
             }
@@ -225,54 +265,124 @@ class EvaluationNodes:
         candidates: Sequence[Mapping[str, object]],
         *,
         resume_simulation_ids: Sequence[str] = (),
+        idea_id: str | None = None,
+        create_candidates: Sequence[Mapping[str, object]] | None = None,
     ) -> SimulationBatchResult:
         simulation_ids: list[str] = []
         alpha_results: list[dict[str, object]] = []
         failures: list[dict[str, object]] = []
         new_fingerprints: list[str] = []
         payloads: list[dict[str, object]] = []
+        candidate_profiles = _candidate_profiles(candidates)
+        artifact_token = _artifact_token(idea_id) if idea_id else "batch"
 
         for simulation_id in _required_names(resume_simulation_ids):
             result = self._run(
                 run_id,
                 WorkflowNode.J,
                 ("sim", "get", simulation_id, "--max-wait-seconds", "900"),
-                f"resume_{simulation_id}.json",
+                f"idea_{artifact_token}_resume_{_artifact_token(simulation_id)}.json",
             )
             payload = _result_payload(result)
+            normalized, standalone_child = _normalize_retrieved_simulation(
+                simulation_id, payload
+            )
             simulation_ids.append(simulation_id)
-            payloads.append(payload)
-            self._persist_simulation_payload(run_id, payload, simulation_id, result)
+            payloads.append(normalized)
+            self._persist_simulation_payload(
+                run_id,
+                normalized,
+                None if standalone_child else simulation_id,
+                result,
+            )
 
-        if candidates:
+        simulation_candidates = list(
+            ([] if simulation_ids else candidates)
+            if create_candidates is None
+            else create_candidates
+        )
+        if simulation_candidates:
             budget = getattr(getattr(self._runner, "policy", None), "budget", None)
             per_round = getattr(budget, "candidates_per_round", 8)
+            remaining = self._remaining_simulation_capacity(run_id, budget)
+            simulation_candidates = simulation_candidates[:remaining]
             batches = build_simulation_batches(
-                candidates, scope, candidates_per_round=per_round
+                simulation_candidates, scope, candidates_per_round=per_round
             )
             offset = 0
             for index, batch in enumerate(batches, start=1):
+                batch_candidates = simulation_candidates[offset : offset + len(batch)]
                 input_path = self._stage_simulation_input(run_id, batch)
                 result = self._run(
                     run_id,
                     WorkflowNode.J,
                     ("sim", "create", "--input", str(input_path)),
-                    f"simulation_batch_{index}_result.json",
+                    f"idea_{artifact_token}_simulation_{index}_result.json",
                 )
                 payload = _result_payload(result)
                 payloads.append(payload)
                 parent = _simulation_id(payload)
                 if parent:
                     simulation_ids.append(parent)
-                self._persist_simulation_payload(run_id, payload, parent, result)
+                self._persist_simulation_payload(
+                    run_id,
+                    payload,
+                    parent,
+                    result,
+                    candidate_ids=self._candidate_record_ids(
+                        run_id, batch_candidates
+                    ),
+                )
                 if payload.get("ok") is not True:
                     failures.append({"stage": "simulation", "raw": deepcopy(payload)})
                 else:
-                    for candidate in candidates[offset : offset + len(batch)]:
+                    for candidate in batch_candidates:
                         fingerprint = candidate.get("fingerprint")
                         if type(fingerprint) is str and fingerprint not in new_fingerprints:
                             new_fingerprints.append(fingerprint)
                 offset += len(batch)
+
+        child_ids = list(
+            dict.fromkeys(
+                child_id
+                for payload in payloads
+                for child_id in _child_simulation_ids(payload)
+            )
+        )
+        resolved_child_ids = {
+            child_id
+            for payload in payloads
+            for child_id in _resolved_child_simulation_ids(payload)
+        }
+        for child_id in child_ids:
+            if child_id in resolved_child_ids:
+                continue
+            result = self._run(
+                run_id,
+                WorkflowNode.J,
+                ("sim", "get", child_id, "--max-wait-seconds", "900"),
+                f"idea_{artifact_token}_child_{_artifact_token(child_id)}.json",
+            )
+            child_payload = _result_payload(result)
+            wrapped = {
+                "children": [
+                    {"simulation_id": child_id, "result": child_payload}
+                ]
+            }
+            payloads.append(wrapped)
+            self._persist_simulation_payload(run_id, wrapped, None, result)
+            child = wrapped["children"][0]
+            if (
+                child_payload.get("ok") is not True
+                or _child_status(child) not in {"COMPLETE", "WARNING"}
+            ):
+                failures.append(
+                    {
+                        "stage": "child_simulation",
+                        "simulation_id": child_id,
+                        "raw": deepcopy(child_payload),
+                    }
+                )
 
         alpha_ids: list[str] = []
         for payload in payloads:
@@ -298,14 +408,26 @@ class EvaluationNodes:
                     failures.append({"stage": label, "alpha_id": alpha_id, "raw": deepcopy(raw)})
             alpha_body = _successful_body(records["alpha"])
             check_body = _successful_body(records["checks"])
-            merged = dict(alpha_body or {})
+            merged = _normalized_alpha(alpha_body)
             merged["alpha_id"] = alpha_id
+            expression = _alpha_expression(alpha_body)
+            if expression is not None:
+                merged["expression"] = expression
+                profile = candidate_profiles.get(_canonical_or_raw(expression))
+                if profile is not None:
+                    merged.update(profile)
             if check_body is not None:
                 merged["checks"] = check_body.get("checks", check_body.get("results", check_body))
             merged["raw"] = records
             alpha_results.append(merged)
             for simulation_id in _child_simulation_ids_for_alpha(payloads, alpha_id):
-                self._update_simulation(run_id, simulation_id, "COMPLETE", alpha_id=alpha_id)
+                existing = self._store.get_simulation(run_id, simulation_id)
+                self._update_simulation(
+                    run_id,
+                    simulation_id,
+                    existing.status,
+                    alpha_id=alpha_id,
+                )
         return SimulationBatchResult(
             tuple(simulation_ids), tuple(alpha_results), tuple(new_fingerprints), tuple(failures)
         )
@@ -330,9 +452,57 @@ class EvaluationNodes:
             ),
             reverse=True,
         )
+        candidate_summaries = [
+            _candidate_artifact_summary(item) for item in ranked
+        ]
         artifact_ids = self._write_json(
-            run_id, WorkflowNode.K, "best_alpha_candidates.json", {"candidates": ranked}
+            run_id,
+            WorkflowNode.K,
+            "best_alpha_candidates.json",
+            {"candidates": candidate_summaries},
         )
+        densities = template_density_report(ranked)
+        anti_patterns = _anti_patterns(ranked, densities)
+        artifact_ids += self._write_json(
+            run_id,
+            WorkflowNode.K,
+            "template_density.json",
+            {"templates": list(densities.values())},
+        )
+        artifact_ids += self._write_json(
+            run_id,
+            WorkflowNode.K,
+            "anti_patterns.json",
+            {"anti_patterns": anti_patterns},
+        )
+        if not ranked:
+            diagnosis = {
+                "failure_class": "EXPRESSION",
+                "next_node": WorkflowNode.I.value,
+                "evidence_ids": [],
+            }
+            self._store.record_diagnosis(
+                run_id,
+                "EXPRESSION",
+                WorkflowNode.I,
+                {"diagnosis": diagnosis, "metrics": []},
+                node_attempt_id=node_attempt_id,
+            )
+            artifact_ids += self._write_json(
+                run_id, WorkflowNode.K, "diagnosis.json", {"diagnosis": diagnosis}
+            )
+            return NodeResult(
+                WorkflowNode.K,
+                {"decision": "EXPRESSION", "reason": "no simulated alpha results"},
+                artifact_ids,
+                next_node=WorkflowNode.I,
+                payload={
+                    "diagnosis": diagnosis,
+                    "metrics": [],
+                    "template_density": densities,
+                    "anti_patterns": anti_patterns,
+                },
+            )
         selected = select_passing_candidate(
             ranked, required_visualizations=required_visualizations
         )
@@ -349,10 +519,15 @@ class EvaluationNodes:
             {
                 "evidence_id": f"metric:{_alpha_id(item)}",
                 "alpha_id": _alpha_id(item),
-                "metrics": {key: item.get(key) for key in ("sharpe", "fitness", "turnover", "margin", "checks")},
-                "failures": classify_hard_metrics(
-                    item, required_visualizations=required_visualizations
-                ).failures,
+                "metrics": _hard_metric_summary(item),
+                "template_id": item.get("template_id", "unclassified"),
+                "template_type": item.get("template_type", "unknown"),
+                "strategy_family": item.get("strategy_family", "unknown"),
+                "failures": list(
+                    classify_hard_metrics(
+                        item, required_visualizations=required_visualizations
+                    ).failures
+                ),
             }
             for item in ranked
         ]
@@ -360,13 +535,22 @@ class EvaluationNodes:
             ModelRole.OPERATOR,
             WorkflowNode.K,
             "Organize supplied deterministic metric failures only; do not choose a route.",
-            {"metrics": metrics},
+            {
+                "metrics": metrics,
+                "template_density": densities,
+                "anti_patterns": anti_patterns,
+            },
         )
         planner = self._invoke(
             ModelRole.PLANNER,
             WorkflowNode.K,
             "Diagnose one failure class using supplied evidence IDs and return its exact schema route.",
-            {"metrics": metrics, "operator": operator},
+            {
+                "metrics": metrics,
+                "operator": operator,
+                "template_density": densities,
+                "anti_patterns": anti_patterns,
+            },
         )
         allowed = set(_required_names(evidence_ids)) | {item["evidence_id"] for item in metrics}
         diagnosis_value = dict(planner["diagnosis"])
@@ -377,7 +561,7 @@ class EvaluationNodes:
             run_id,
             str(diagnosis["failure_class"]),
             next_node,
-            {"diagnosis": diagnosis, "operator": operator, "planner": planner, "metrics": metrics},
+            {"diagnosis": diagnosis, "operator": operator, "planner": planner, "metrics": metrics, "template_density": densities, "anti_patterns": anti_patterns},
             node_attempt_id=node_attempt_id,
         )
         artifact_ids += self._write_json(
@@ -388,7 +572,7 @@ class EvaluationNodes:
             {"decision": diagnosis["failure_class"]},
             artifact_ids,
             next_node=next_node,
-            payload={"diagnosis": diagnosis, "metrics": metrics},
+            payload={"diagnosis": diagnosis, "metrics": metrics, "template_density": densities, "anti_patterns": anti_patterns},
         )
 
     def run_l(self, run_id: str, alpha_id: str) -> NodeResult:
@@ -440,30 +624,107 @@ class EvaluationNodes:
             payload=payload,
         )
 
-    def _persist_simulation_payload(self, run_id: str, payload: Mapping[str, object], parent_id: str | None, result: Any) -> None:
+    def _persist_simulation_payload(
+        self,
+        run_id: str,
+        payload: Mapping[str, object],
+        parent_id: str | None,
+        result: Any,
+        *,
+        candidate_ids: Sequence[int | None] = (),
+    ) -> None:
         artifact_id = getattr(getattr(result, "artifact", None), "id", None)
         if parent_id:
             status = _simulation_status(payload)
             self._record_or_update_simulation(run_id, parent_id, status, result_artifact_id=artifact_id)
-        for child in payload.get("children", ()) if isinstance(payload.get("children"), list) else ():
-            if not isinstance(child, Mapping):
-                continue
-            child_id = child.get("simulation_id")
+        children = _simulation_children(payload)
+        for index, child in enumerate(children):
+            child_id = (
+                child
+                if type(child) is str
+                else child.get("simulation_id", child.get("id"))
+                if isinstance(child, Mapping)
+                else None
+            )
             if type(child_id) is not str or not child_id.strip():
                 continue
-            status = _child_status(child)
-            alpha_ids = extract_alpha_ids({"children": [child]})
+            status = _child_status(child) if isinstance(child, Mapping) else "PENDING"
+            alpha_ids = (
+                extract_alpha_ids({"children": [child]})
+                if isinstance(child, Mapping)
+                else ()
+            )
             self._record_or_update_simulation(
-                run_id, child_id, status, alpha_id=alpha_ids[0] if alpha_ids else None, result_artifact_id=artifact_id
+                run_id,
+                child_id,
+                status,
+                candidate_id=(
+                    candidate_ids[index] if index < len(candidate_ids) else None
+                ),
+                alpha_id=alpha_ids[0] if alpha_ids else None,
+                result_artifact_id=artifact_id,
             )
 
-    def _record_or_update_simulation(self, run_id: str, simulation_id: str, status: str, *, alpha_id: str | None = None, result_artifact_id: int | None = None) -> None:
+    def _record_or_update_simulation(self, run_id: str, simulation_id: str, status: str, *, candidate_id: int | None = None, alpha_id: str | None = None, result_artifact_id: int | None = None) -> None:
         try:
-            self._store.get_simulation(run_id, simulation_id)
+            existing = self._store.get_simulation(run_id, simulation_id)
         except (StoreRecordNotFound, KeyError):
-            self._store.record_simulation(run_id, simulation_id, status, alpha_id=alpha_id, result_artifact_id=result_artifact_id)
+            self._store.record_simulation(run_id, simulation_id, status, candidate_id=candidate_id, alpha_id=alpha_id, result_artifact_id=result_artifact_id)
         else:
-            self._update_simulation(run_id, simulation_id, status, alpha_id=alpha_id, result_artifact_id=result_artifact_id)
+            # A resumed J node can retrieve the same completed simulation again.
+            # Its new command artifact is diagnostic only; the first persisted
+            # result artifact remains the simulation's immutable identity.
+            persisted_artifact_id = getattr(existing, "result_artifact_id", None)
+            artifact_to_update = (
+                result_artifact_id if persisted_artifact_id is None else None
+            )
+            self._update_simulation(
+                run_id,
+                simulation_id,
+                status,
+                alpha_id=alpha_id,
+                result_artifact_id=artifact_to_update,
+            )
+
+    def _candidate_record_ids(
+        self,
+        run_id: str,
+        candidates: Sequence[Mapping[str, object]],
+    ) -> tuple[int | None, ...]:
+        identifiers: list[int | None] = []
+        getter = getattr(self._store, "get_candidate_by_fingerprint", None)
+        for candidate in candidates:
+            fingerprint = candidate.get("fingerprint")
+            if type(fingerprint) is not str or not callable(getter):
+                identifiers.append(None)
+                continue
+            try:
+                record = getter(run_id, fingerprint)
+            except (StoreRecordNotFound, KeyError):
+                identifiers.append(None)
+                continue
+            identifier = getattr(record, "id", None)
+            identifiers.append(identifier if type(identifier) is int else None)
+        return tuple(identifiers)
+
+    def _remaining_simulation_capacity(self, run_id: str, budget: object) -> int:
+        limit = getattr(budget, "total_simulations", None)
+        if type(limit) is not int or limit <= 0:
+            return 0
+        connect = getattr(self._store, "connect", None)
+        if not callable(connect):
+            return limit
+        connection = connect()
+        try:
+            used = connection.execute(
+                "SELECT COUNT(*) FROM simulations "
+                "WHERE run_id = ? "
+                "AND (candidate_id IS NOT NULL OR alpha_id IS NOT NULL)",
+                (run_id,),
+            ).fetchone()[0]
+        finally:
+            connection.close()
+        return max(0, limit - int(used))
 
     def _update_simulation(self, run_id: str, simulation_id: str, status: str, *, alpha_id: str | None = None, result_artifact_id: int | None = None) -> None:
         try:
@@ -490,8 +751,11 @@ class EvaluationNodes:
         stage = getattr(self._artifacts, "stage_input", None)
         if not callable(stage):
             raise EvaluationError("artifact writer must provide stage_input")
+        if not batch:
+            raise EvaluationError("simulation batch must not be empty")
+        payload: object = batch[0] if len(batch) == 1 else batch
         content = json.dumps(
-            batch,
+            payload,
             ensure_ascii=True,
             allow_nan=False,
             sort_keys=True,
@@ -510,6 +774,119 @@ def _finite_number(value: object) -> bool:
     return type(value) in {int, float} and isfinite(float(value))
 
 
+def _artifact_token(value: str) -> str:
+    token = "".join(character if character.isalnum() else "_" for character in value)
+    token = token.strip("_")[:64]
+    return token or hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+
+
+def _candidate_profiles(
+    candidates: Sequence[Mapping[str, object]],
+) -> dict[str, dict[str, object]]:
+    profiles: dict[str, dict[str, object]] = {}
+    keys = (
+        "field_id",
+        "field_ids",
+        "mechanism_id",
+        "operator_names",
+        "plan_hash",
+        "plan_version",
+        "strategy_family",
+        "template_id",
+        "template_type",
+    )
+    for item in candidates:
+        if not isinstance(item, Mapping):
+            continue
+        candidate = item.get("candidate", item)
+        if not isinstance(candidate, Mapping):
+            continue
+        expression = candidate.get("expression")
+        if type(expression) is not str or not expression.strip():
+            continue
+        profiles[_canonical_or_raw(expression)] = {
+            key: deepcopy(candidate[key]) for key in keys if key in candidate
+        }
+    return profiles
+
+
+def _canonical_or_raw(expression: str) -> str:
+    try:
+        return normalize_expression(expression)
+    except (ExpressionViolation, TypeError, ValueError):
+        return expression.strip()
+
+
+def _alpha_expression(alpha: Mapping[str, object] | None) -> str | None:
+    if not isinstance(alpha, Mapping):
+        return None
+    regular = alpha.get("regular")
+    if isinstance(regular, Mapping):
+        code = regular.get("code")
+        if type(code) is str and code.strip():
+            return code.strip()
+    expression = alpha.get("expression")
+    return expression.strip() if type(expression) is str and expression.strip() else None
+
+
+def _normalized_alpha(alpha: Mapping[str, object] | None) -> dict[str, object]:
+    if not isinstance(alpha, Mapping):
+        return {}
+    normalized = dict(alpha)
+    in_sample = alpha.get("is")
+    if isinstance(in_sample, Mapping):
+        normalized.update(deepcopy(dict(in_sample)))
+    return normalized
+
+
+def _promising_signal(candidate: Mapping[str, object]) -> bool:
+    sharpe = candidate.get("sharpe")
+    fitness = candidate.get("fitness")
+    pnl = candidate.get("pnl")
+    long_count = candidate.get("longCount", candidate.get("long_count"))
+    short_count = candidate.get("shortCount", candidate.get("short_count"))
+    return (
+        _finite_number(sharpe)
+        and abs(float(sharpe)) > 0.7
+        and _finite_number(fitness)
+        and abs(float(fitness)) > 0.7
+        and _finite_number(pnl)
+        and abs(float(pnl)) > 3_000_000
+        and _finite_number(long_count)
+        and _finite_number(short_count)
+        and float(long_count) + float(short_count) > 100
+    )
+
+
+def _anti_patterns(
+    candidates: Sequence[Mapping[str, object]],
+    densities: Mapping[str, Mapping[str, object]],
+) -> list[dict[str, object]]:
+    if not candidates:
+        return [
+            {
+                "code": "NO_EVALUABLE_ALPHA",
+                "template_id": "unclassified",
+                "action": "return_to_expression_generation",
+            }
+        ]
+    patterns: list[dict[str, object]] = []
+    for template_id, density in densities.items():
+        tested = int(density.get("tested", 0))
+        factor_density = float(density.get("factor_density", 0.0))
+        pass_rate = float(density.get("pass_rate", 0.0))
+        if tested and factor_density == 0.0 and pass_rate == 0.0:
+            patterns.append(
+                {
+                    "code": "LOW_FACTOR_DENSITY",
+                    "template_id": template_id,
+                    "tested": tested,
+                    "action": "replace_template_or_revisit_mechanism",
+                }
+            )
+    return patterns
+
+
 def _required_names(values: Iterable[str]) -> tuple[str, ...]:
     try:
         copied = tuple(values)
@@ -523,9 +900,82 @@ def _required_names(values: Iterable[str]) -> tuple[str, ...]:
 def _checks(value: object) -> tuple[Mapping[str, object], ...]:
     if value is None:
         return ()
-    if not isinstance(value, list):
+    if isinstance(value, list):
+        return tuple(item for item in value if isinstance(item, Mapping))
+    if not isinstance(value, Mapping):
         return ()
-    return tuple(item for item in value if isinstance(item, Mapping))
+    for key in ("checks", "results"):
+        nested = value.get(key)
+        if isinstance(nested, list):
+            return tuple(item for item in nested if isinstance(item, Mapping))
+    for key in ("is", "train", "test", "os"):
+        nested = _checks(value.get(key))
+        if nested:
+            return nested
+    return ()
+
+
+def _check_summaries(value: object) -> list[dict[str, object]]:
+    return [
+        {
+            key: deepcopy(check[key])
+            for key in ("name", "result", "status", "value", "limit")
+            if key in check
+        }
+        for check in _checks(value)
+    ]
+
+
+def _hard_metric_summary(candidate: Mapping[str, object]) -> dict[str, object]:
+    summary = {
+        key: candidate.get(key)
+        for key in ("sharpe", "fitness", "turnover", "margin")
+    }
+    checks = _check_summaries(candidate.get("checks"))
+    if checks:
+        summary["checks"] = checks
+    return summary
+
+
+def _candidate_artifact_summary(
+    candidate: Mapping[str, object],
+) -> dict[str, object]:
+    fields = (
+        "alpha_id",
+        "id",
+        "expression",
+        "sharpe",
+        "fitness",
+        "turnover",
+        "margin",
+        "returns",
+        "drawdown",
+        "pnl",
+        "longCount",
+        "shortCount",
+        "field_id",
+        "field_ids",
+        "mechanism_id",
+        "operator_names",
+        "plan_hash",
+        "plan_version",
+        "strategy_family",
+        "template_id",
+        "template_type",
+        "status",
+    )
+    summary = {
+        key: deepcopy(candidate[key])
+        for key in fields
+        if key in candidate
+    }
+    summary["hard_metric_failures"] = list(
+        classify_hard_metrics(candidate).failures
+    )
+    checks = _check_summaries(candidate.get("checks"))
+    if checks:
+        summary["checks"] = checks
+    return summary
 
 
 def _check_result(check: Mapping[str, object]) -> str:
@@ -602,6 +1052,12 @@ def _result_payload(result: Any) -> dict[str, object]:
 def _successful_body(payload: object) -> dict[str, object] | None:
     if not isinstance(payload, Mapping) or payload.get("ok") is not True:
         return None
+    return _response_body(payload)
+
+
+def _response_body(payload: object) -> dict[str, object] | None:
+    if not isinstance(payload, Mapping):
+        return None
     response = payload.get("response")
     if not isinstance(response, Mapping):
         return None
@@ -618,16 +1074,63 @@ def _simulation_id(payload: Mapping[str, object]) -> str | None:
 
 
 def _child_simulation_ids(payload: Mapping[str, object]) -> tuple[str, ...]:
-    children = payload.get("children")
-    if not isinstance(children, list):
-        return ()
     values: list[str] = []
-    for child in children:
-        if not isinstance(child, Mapping):
-            continue
-        value = child.get("simulation_id", child.get("id"))
+    for child in _simulation_children(payload):
+        value = (
+            child
+            if type(child) is str
+            else child.get("simulation_id", child.get("id"))
+            if isinstance(child, Mapping)
+            else None
+        )
         if type(value) is str and value.strip() and value not in values:
             values.append(value.strip())
+    return tuple(values)
+
+
+def _simulation_children(payload: Mapping[str, object]) -> list[object]:
+    children = payload.get("children")
+    if isinstance(children, list):
+        return list(children)
+    body = _response_body(payload)
+    nested = body.get("children") if body else None
+    return list(nested) if isinstance(nested, list) else []
+
+
+def _normalize_retrieved_simulation(
+    simulation_id: str, payload: Mapping[str, object]
+) -> tuple[dict[str, object], bool]:
+    body = _response_body(payload)
+    if body is not None and type(body.get("parent")) is str:
+        return (
+            {
+                "children": [
+                    {"simulation_id": simulation_id, "result": dict(payload)}
+                ]
+            },
+            True,
+        )
+    return dict(payload), False
+
+
+def _resolved_child_simulation_ids(
+    payload: Mapping[str, object],
+) -> tuple[str, ...]:
+    values: list[str] = []
+    for child in _simulation_children(payload):
+        if not isinstance(child, Mapping):
+            continue
+        child_id = child.get("simulation_id", child.get("id"))
+        result = child.get("result")
+        body = _response_body(result)
+        status = body.get("status") if body else None
+        if (
+            type(child_id) is str
+            and child_id.strip()
+            and type(status) is str
+            and status.upper() in {"COMPLETE", "WARNING", "ERROR", "FAILED"}
+        ):
+            values.append(child_id.strip())
     return tuple(values)
 
 
@@ -643,7 +1146,7 @@ def _child_status(child: Mapping[str, object]) -> str:
     if isinstance(classification, Mapping) and type(classification.get("status")) is str:
         return str(classification["status"]).upper()
     result = child.get("result")
-    body = _successful_body(result)
+    body = _response_body(result)
     status = body.get("status") if body else None
     return str(status).upper() if type(status) is str else "FAILED"
 

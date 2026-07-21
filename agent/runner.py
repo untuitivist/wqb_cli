@@ -12,6 +12,7 @@ from math import isfinite
 from pathlib import Path
 from typing import Any
 
+from . import artifacts as artifact_limits
 from .artifacts import (
     ArtifactError,
     ArtifactWriter,
@@ -22,7 +23,7 @@ from .artifacts import (
 )
 from .context import _is_secret_key
 from .policy import AgentPolicy, PolicyViolation
-from .types import WorkflowNode
+from .types import RunState, WorkflowNode
 
 
 PACKAGE_ROOT = Path(__file__).resolve().parent.parent
@@ -38,6 +39,27 @@ FILE_INPUT_FLAGS = {
     ("scope", "alpha-rows"): frozenset({"--info", "--pickle"}),
     ("community", "search"): frozenset({"--sqlite"}),
 }
+DEFAULT_FILE_PROBES = {
+    ("scope", "files"): (
+        ("--info", "local/data_all/info_data.bin"),
+        ("--pickle", "local/data_all/all_data.pickle"),
+    ),
+}
+AUTH_SENSITIVE_READ_PREFIXES = (
+    ("auth", "status"),
+    ("user",),
+    ("event",),
+    ("data",),
+    ("alpha", "list"),
+    ("alpha", "get"),
+    ("alpha", "check"),
+    ("alpha", "recordsets"),
+    ("alpha", "correlation"),
+    ("alpha", "performance-comparison"),
+    ("sim", "get"),
+    ("sim", "options"),
+    ("search",),
+)
 EXTERNAL_NODE_COMMANDS = {
     WorkflowNode.G: (("arxiv", "search", "query"), ("arxiv", "search", "raw"))
 }
@@ -113,6 +135,16 @@ def sanitized_environment() -> dict[str, str]:
     return result
 
 
+def _contains_http_status(value: object, statuses: set[int]) -> bool:
+    if isinstance(value, dict):
+        if value.get("status_code") in statuses:
+            return True
+        return any(_contains_http_status(item, statuses) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return any(_contains_http_status(item, statuses) for item in value)
+    return False
+
+
 def _capture_file_argument(token: str, *, cwd: Path) -> tuple[dict[str, Any], bytes] | None:
     candidate = Path(token).expanduser()
     if not candidate.is_absolute():
@@ -178,6 +210,38 @@ def _fingerprint_from_normalized(node: WorkflowNode, normalized: list[Any]) -> s
     return hashlib.sha256(canonical).hexdigest()
 
 
+def _default_file_probe_identities(
+    argv: tuple[str, ...], *, cwd: Path
+) -> list[dict[str, Any]]:
+    explicit = {token.partition("=")[0].casefold() for token in argv}
+    identities: list[dict[str, Any]] = []
+    probes = list(DEFAULT_FILE_PROBES.get(argv[:2], ()))
+    if any(argv[: len(prefix)] == prefix for prefix in AUTH_SENSITIVE_READ_PREFIXES):
+        probes.append(("--auth-cookie", "local/auth/cookies.json"))
+    for flag, relative_path in probes:
+        if flag.casefold() in explicit:
+            continue
+        path = cwd / relative_path
+        try:
+            if _is_link(path):
+                raise RunnerError("default command file must not be a symbolic link")
+            details = path.stat()
+        except FileNotFoundError:
+            identity: dict[str, Any] = {"exists": False}
+        except OSError:
+            raise RunnerError("default command file cannot be inspected") from None
+        else:
+            if not stat.S_ISREG(details.st_mode):
+                raise RunnerError("default command file must be a regular file")
+            identity = {
+                "exists": True,
+                "size": details.st_size,
+                "mtime_ns": details.st_mtime_ns,
+            }
+        identities.append({"default_file": flag, "identity": identity})
+    return identities
+
+
 def command_fingerprint(
     node: WorkflowNode, argv: tuple[str, ...], *, cwd: Path = REPO_ROOT
 ) -> str:
@@ -200,6 +264,7 @@ def command_fingerprint(
         else:
             normalized.append(token)
         index += 1
+    normalized.extend(_default_file_probe_identities(argv, cwd=cwd))
     return _fingerprint_from_normalized(node, normalized)
 
 
@@ -381,6 +446,8 @@ class AgentRunner:
         *,
         external: bool,
     ) -> RunnerResult:
+        if self.store.get_run(run_id).state is RunState.STOPPED:
+            raise RunnerError("run has been manually stopped")
         prebound_resource_id = self._prebound_resource_id(argv)
         prepared = self._prepare_invocation(run_id, node, argv)
         fingerprint = prepared.fingerprint
@@ -392,9 +459,21 @@ class AgentRunner:
                 raise RunnerError("completed command has no artifact")
             artifact = self.store.get_artifact(command.artifact_id)
             payload = self.artifacts.read_json(artifact)
-            return RunnerResult(
-                payload, artifact, True, command.id, getattr(command, "exit_code", None) or 0
-            )
+            if self._retryable_completed_auth_rejection(argv, command, payload):
+                try:
+                    command = self.store.restart_rejected_command(command.id)
+                except Exception:
+                    raise RunnerError(
+                        "rejected command could not be reopened after authentication"
+                    ) from None
+            else:
+                return RunnerResult(
+                    payload,
+                    artifact,
+                    True,
+                    command.id,
+                    getattr(command, "exit_code", None) or 0,
+                )
 
         effective_argv = prepared.argv
         if external:
@@ -510,8 +589,27 @@ class AgentRunner:
                 )
             raise
 
+        confirmed_simulation_rejection = (
+            argv[:2] == ("sim", "create")
+            and completed.returncode != 0
+            and payload.get("ok") is False
+            and "simulation_id" in payload
+            and payload["simulation_id"] is None
+        )
+        confirmed_read_rejection = (
+            not self._is_mutation(effective_argv)
+            and completed.returncode != 0
+            and payload.get("ok") is False
+        )
+        recovery_read_rejection = (
+            command.status == "RECOVERY_REQUIRED" and confirmed_read_rejection
+        )
+        resource_payload = payload
+        if confirmed_simulation_rejection:
+            resource_payload = dict(payload)
+            resource_payload.pop("simulation_id")
         try:
-            resource_id = self._resource_id(argv, payload)
+            resource_id = self._resource_id(argv, resource_payload)
         except RunnerError:
             if self._is_mutation(argv):
                 self._recoverable_log(
@@ -547,7 +645,12 @@ class AgentRunner:
                 )
             raise RunnerError("command resource conflicts with its ledger binding")
 
-        if completed.returncode != 0:
+        confirmed_simulation_rejection = (
+            confirmed_simulation_rejection and resource_id is None
+        )
+        if completed.returncode != 0 and not (
+            confirmed_simulation_rejection or confirmed_read_rejection
+        ):
             if self._is_mutation(argv):
                 self._recoverable_log(
                     command,
@@ -584,13 +687,20 @@ class AgentRunner:
                 node,
                 argv,
                 fingerprint,
-                "COMPLETED",
+                "RECOVERY_REQUIRED" if recovery_read_rejection else "COMPLETED",
                 completed.returncode,
                 completed.stderr,
                 artifact,
                 resource_id or command.resource_id,
             )
-            self.store.complete_command(command.id, completed.returncode, artifact_id=artifact.id)
+            if recovery_read_rejection:
+                self.store.record_command_recovery_artifact(
+                    command.id, completed.returncode, artifact.id
+                )
+            else:
+                self.store.complete_command(
+                    command.id, completed.returncode, artifact_id=artifact.id
+                )
         except Exception:
             if not self._is_mutation(argv):
                 try:
@@ -672,6 +782,9 @@ class AgentRunner:
                 normalized.append(token)
                 effective.append(token)
             index += 1
+        normalized.extend(
+            _default_file_probe_identities(argv, cwd=self.command_cwd)
+        )
         return _PreparedInvocation(
             tuple(effective),
             _fingerprint_from_normalized(node, normalized),
@@ -698,13 +811,16 @@ class AgentRunner:
 
     @staticmethod
     def _parse_stdout(stdout: str) -> dict[str, Any]:
+        if len(stdout) > artifact_limits.MAX_JSON_CHARS:
+            raise RunnerError("command output exceeds the JSON character limit")
         decoder = _strict_json_decoder()
         try:
             start = len(stdout) - len(stdout.lstrip())
             value, end = decoder.raw_decode(stdout, start)
             if stdout[end:].strip() or type(value) is not dict:
                 raise ValueError("extra output")
-        except (json.JSONDecodeError, ValueError):
+            value = redact_json(value)
+        except (ArtifactError, json.JSONDecodeError, ValueError):
             raise RunnerError("command output must be exactly one JSON object") from None
         return value
 
@@ -720,10 +836,13 @@ class AgentRunner:
                 raise RunnerError(
                     "command resource conflicts with its ledger binding: invalid field"
                 )
-        value: Any = None
         if argv[:2] == ("sim", "create"):
             value = payload.get("simulation_id", payload.get("id"))
-        elif argv[:2] == ("alpha", "submit"):
+            if value is None:
+                return None
+            return value
+        value: Any = None
+        if argv[:2] == ("alpha", "submit"):
             if "alpha_id" in payload:
                 value = payload["alpha_id"]
             elif "id" in payload:
@@ -743,6 +862,20 @@ class AgentRunner:
     @staticmethod
     def _is_mutation(argv: tuple[str, ...]) -> bool:
         return argv[:2] in {("sim", "create"), ("alpha", "submit")}
+
+    @staticmethod
+    def _retryable_completed_auth_rejection(
+        argv: tuple[str, ...], command: Any, payload: object
+    ) -> bool:
+        return (
+            argv[:2] == ("sim", "create")
+            and getattr(command, "resource_id", None) is None
+            and getattr(command, "exit_code", None) not in {None, 0}
+            and isinstance(payload, dict)
+            and payload.get("ok") is False
+            and payload.get("simulation_id") is None
+            and _contains_http_status(payload, {401, 403})
+        )
 
     def _recoverable_log(
         self,

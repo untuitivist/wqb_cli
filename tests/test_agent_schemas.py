@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import unittest
 
 import wqb_cli.agent.schemas as agent_schemas
@@ -8,6 +9,7 @@ from wqb_cli.agent.schemas import (
     ModelRefusal,
     SchemaViolation,
     has_open_object_schema,
+    has_unsupported_strict_output_schema,
     parse_json_text,
     schema_for,
     validate_model_output,
@@ -24,10 +26,31 @@ class AgentSchemaTests(unittest.TestCase):
     }
 
     PLANNER_PAYLOADS = {
-        WorkflowNode.D: ("scope_decision", {}),
+        WorkflowNode.D: ("scope_decision", {"candidate_id": "USA_D1_PV"}),
         WorkflowNode.F: ("evidence_requirements", {}),
         WorkflowNode.G: ("evidence_requirements", {}),
-        WorkflowNode.H: ("research_plan", {}),
+        WorkflowNode.H: (
+            "research_plan",
+            {
+                "mechanisms": [
+                    {
+                        "mechanism_id": "m1",
+                        "tower_id": "tower-1",
+                        "field_ids": ["vwap"],
+                        "field_bindings": [
+                            {
+                                "field_id": "vwap",
+                                "role": "primary_signal",
+                                "rationale": "Volume-weighted price measures persistent price discovery pressure.",
+                                "evidence_refs": ["artifact:a"],
+                            }
+                        ],
+                        "evidence_refs": ["artifact:a"],
+                        "hypothesis": "Persistent price-volume divergence may reveal delayed price discovery.",
+                    }
+                ]
+            },
+        ),
         WorkflowNode.I: ("candidate_plan", {}),
         WorkflowNode.K: (
             "diagnosis",
@@ -64,7 +87,7 @@ class AgentSchemaTests(unittest.TestCase):
             value["task_result"] = {"status": "COMPLETED", "payload": {}}
         elif node in self.PLANNER_PAYLOADS:
             name, payload = self.PLANNER_PAYLOADS[node]
-            value[name] = payload
+            value[name] = deepcopy(payload)
         return value
 
     def test_supported_role_and_node_combinations_have_valid_schemas(self) -> None:
@@ -103,17 +126,15 @@ class AgentSchemaTests(unittest.TestCase):
         self.assertEqual(second["properties"]["decision"]["minLength"], 1)
 
     def test_open_object_detection_matches_supported_schema_matrix(self) -> None:
-        for node in (WorkflowNode.B, WorkflowNode.K):
+        for node in (WorkflowNode.B, WorkflowNode.D, WorkflowNode.H, WorkflowNode.K):
             with self.subTest(role=ModelRole.PLANNER, node=node):
                 self.assertFalse(
                     has_open_object_schema(schema_for(ModelRole.PLANNER, node))
                 )
 
         for node in (
-            WorkflowNode.D,
             WorkflowNode.F,
             WorkflowNode.G,
-            WorkflowNode.H,
             WorkflowNode.I,
             WorkflowNode.L,
         ):
@@ -127,6 +148,18 @@ class AgentSchemaTests(unittest.TestCase):
                 self.assertTrue(
                     has_open_object_schema(schema_for(ModelRole.OPERATOR, node))
                 )
+
+    def test_h_schema_requires_local_fallback_for_unsupported_unique_items(self) -> None:
+        self.assertTrue(
+            has_unsupported_strict_output_schema(
+                schema_for(ModelRole.PLANNER, WorkflowNode.H)
+            )
+        )
+        self.assertFalse(
+            has_unsupported_strict_output_schema(
+                schema_for(ModelRole.PLANNER, WorkflowNode.K)
+            )
+        )
 
     def test_open_object_detection_recurses_through_schema_containers(self) -> None:
         open_schemas = (
@@ -367,6 +400,78 @@ class AgentSchemaTests(unittest.TestCase):
                 with self.subTest(node=node, value=value):
                     with self.assertRaisesRegex(SchemaViolation, payload_name):
                         validate_model_output(ModelRole.PLANNER, node, value)
+
+    def test_h_research_plan_requires_closed_mechanism_shape(self) -> None:
+        invalid_mechanisms = (
+            {},
+            {
+                "mechanism_id": "m1",
+                "tower_id": "tower-1",
+                "field_ids": "vwap",
+                "evidence_refs": ["artifact:a"],
+                "hypothesis": "Persistent price-volume divergence may reveal delayed price discovery.",
+            },
+            {
+                "mechanism_id": "m1",
+                "tower_id": "tower-1",
+                "field_ids": ["vwap"],
+                "evidence_refs": ["artifact:a"],
+                "hypothesis": "Persistent price-volume divergence may reveal delayed price discovery.",
+                "expression": "rank(vwap)",
+            },
+        )
+        for mechanism in invalid_mechanisms:
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.H)
+            value["research_plan"] = {"mechanisms": [mechanism]}
+            with self.subTest(mechanism=mechanism):
+                with self.assertRaises(SchemaViolation):
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.H, value)
+
+    def test_h_research_plan_accepts_more_than_two_strictly_bound_fields(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.H)
+        mechanism = value["research_plan"]["mechanisms"][0]
+        mechanism["field_ids"] = ["price_signal", "volume_confirmation", "risk_regime"]
+        mechanism["field_bindings"] = [
+            {
+                "field_id": field_id,
+                "role": "primary_signal" if index == 0 else "confirmation",
+                "rationale": f"{field_id} has a specific economic role in this mechanism.",
+                "evidence_refs": ["artifact:a"],
+            }
+            for index, field_id in enumerate(mechanism["field_ids"])
+        ]
+
+        validated = validate_model_output(ModelRole.PLANNER, WorkflowNode.H, value)
+
+        self.assertEqual(len(validated["research_plan"]["mechanisms"][0]["field_ids"]), 3)
+
+    def test_h_research_plan_accepts_twenty_ideas_and_rejects_twenty_one(self) -> None:
+        value = self.valid_value(ModelRole.PLANNER, WorkflowNode.H)
+        seed = value["research_plan"]["mechanisms"][0]
+        mechanisms = []
+        for index in range(20):
+            mechanism = deepcopy(seed)
+            field_id = f"field_{index}"
+            mechanism["mechanism_id"] = f"mechanism-{index}"
+            mechanism["field_ids"] = [field_id]
+            mechanism["field_bindings"][0]["field_id"] = field_id
+            mechanisms.append(mechanism)
+        value["research_plan"] = {"mechanisms": mechanisms}
+
+        validated = validate_model_output(ModelRole.PLANNER, WorkflowNode.H, value)
+
+        self.assertEqual(len(validated["research_plan"]["mechanisms"]), 20)
+        value["research_plan"]["mechanisms"].append(deepcopy(mechanisms[0]))
+        with self.assertRaisesRegex(SchemaViolation, "research_plan.mechanisms"):
+            validate_model_output(ModelRole.PLANNER, WorkflowNode.H, value)
+
+    def test_d_scope_decision_requires_only_a_candidate_id(self) -> None:
+        for decision in ({}, {"candidate_id": ""}, {"candidate_id": "scope", "region": "USA"}):
+            value = self.valid_value(ModelRole.PLANNER, WorkflowNode.D)
+            value["scope_decision"] = decision
+            with self.subTest(decision=decision):
+                with self.assertRaises(SchemaViolation):
+                    validate_model_output(ModelRole.PLANNER, WorkflowNode.D, value)
 
     def test_operator_task_result_has_an_exact_envelope(self) -> None:
         base = self.valid_value(ModelRole.OPERATOR, WorkflowNode.I)

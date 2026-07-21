@@ -103,6 +103,7 @@ NODE_COMMANDS = MappingProxyType(
             ("user", "pyramid-multipliers"),
             ("user", "user-diversity"),
             ("data", "categories"),
+            ("data", "dataset"),
         ),
         WorkflowNode.F: (
             ("scope", "files"),
@@ -268,16 +269,9 @@ class AgentPolicy:
         hard_cap_reached = (
             usage.rounds >= self.budget.rounds
             or usage.simulations >= self.budget.total_simulations
-            or usage.planner_calls >= self.budget.planner_calls
-            or usage.operator_calls >= self.budget.operator_calls
-            or usage.elapsed_minutes >= self.budget.max_runtime_minutes
-            or self.budget.max_model_cost_usd is not None
-            and usage.model_cost_usd >= self.budget.max_model_cost_usd
         )
         if hard_cap_reached:
             return "BUDGET_EXHAUSTED"
-        if consecutive_no_progress >= 2:
-            return "NO_PROGRESS"
         return None
 
     def require_command(self, node: WorkflowNode, argv: tuple[str, ...]) -> None:

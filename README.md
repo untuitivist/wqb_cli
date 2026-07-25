@@ -148,7 +148,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.3.1"
+version = "0.3.2"
 ```
 
 ## Authentication
@@ -533,9 +533,9 @@ python -m wqb_cli --help
 
 ## Release
 
-Current release:
+Package release:
 
-[wqb-cli 0.3.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.1)
+[wqb-cli 0.3.2](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.2)
 
 Release checklist:
 
@@ -543,9 +543,33 @@ Release checklist:
 2. Run editable install.
 3. Run tests.
 4. Commit changes.
-5. Tag the release, for example `v0.3.1`.
+5. Tag the release, for example `v0.3.2`.
 6. Push the branch and tag.
 7. Publish a GitHub Release.
+
+## Version History
+
+The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
+
+### 0.3.2 - 2026-07-16
+
+- Added: generic competition and consultant leaderboard scopes; competition Guidelines and FAQ helpers; complete SPC prompt-submission list/create/history/update commands; canonical endpoint inventory, examples, and tests.
+- Changed: API inventory grew from 104 endpoints and 126 method cases to 109 endpoints and 134 method cases without dropping existing registrations; alpha requests can retry with Basic Auth after a cookie-session `401`; workflow constraints and README release documentation were expanded; runtime and package versions are now synchronized.
+- Removed: obsolete analyst/PV vector sample JSON files and one redundant workflow document. No published CLI command or registered endpoint was removed.
+
+### 0.3.1 - 2026-05-22
+
+- Added: the agent-first `wqb` console command, package-local auth/config/community/scope/shortcut tools, bundled API inventory, generated command docs, alpha submit polling, smoke tests, bilingual README files, and project branding.
+- Changed: package layout and metadata were rebuilt around `wqb_cli`; workflow and local-data documentation were expanded; licensing changed from MIT to GPL-3.0-only plus Commons Clause.
+- Removed: the legacy `wqb_core` package-discovery/test layout and unused legacy resources.
+
+### 0.2.5 - 2026-05-13
+
+- Added: the initial packaged WorldQuant BRAIN API wrapper and agent-oriented workflow baseline with `requests`, `pandas`, and `msgpack` dependencies.
+- Changed: none; this was the initial package-metadata baseline.
+- Removed: none.
+
+See [CHANGELOG.md](CHANGELOG.md) for the maintained release log.
 
 ## License
 

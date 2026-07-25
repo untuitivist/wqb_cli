@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-18T16:48:35.770130+00:00",
+  "generated_at": "2026-07-16T08:57:52+00:00",
   "base_url": "https://api.worldquantbrain.com",
   "safety_policy": {
     "auto_probed_methods": [
@@ -20,9 +20,9 @@
     "event_id": "zO8y3jm",
     "user_id": "JL40454"
   },
-  "endpoint_count": 102,
-  "probed_count": 56,
-  "usable_get_count": 26,
+  "endpoint_count": 107,
+  "probed_count": 61,
+  "usable_get_count": 31,
   "endpoints": [
     {
       "path": "/achievements",
@@ -1642,6 +1642,237 @@
       }
     },
     {
+      "path": "/competitions/{competition_id}/boards/{board_type}",
+      "url_template": "https://api.worldquantbrain.com/competitions/{competition_id}/boards/{board_type}",
+      "methods": [
+        "GET"
+      ],
+      "source": [
+        "observed_platform",
+        "platform_frontend"
+      ],
+      "description": "Generic competition leaderboard. Use OPTIONS to discover the fields, filters, and aggregations available for a competition and board type.",
+      "safe_probe": false,
+      "params": {
+        "limit": "optional integer; pagination size",
+        "offset": "optional integer; pagination offset",
+        "aggregate": "optional choice returned by OPTIONS, commonly user or team",
+        "order": "optional field name; prefix with - for descending order",
+        "property": "optional field selected for prefix filtering",
+        "<property>~": "optional prefix filter; supported properties are returned by OPTIONS",
+        "board": "optional board period or region where advertised by OPTIONS"
+      },
+      "request_body": null,
+      "notes": [
+        "Authentication is required.",
+        "Common frontend board types are leader, university, prize, referral, and power-pool; availability varies by competition.",
+        "Consultant leaderboards use the separate generic path /consultant/boards/{board_type}."
+      ],
+      "probe": {
+        "probed": true,
+        "probe_url": "https://api.worldquantbrain.com/competitions/PAC2026/boards/leader?limit=1&offset=0",
+        "usable": true,
+        "options": {
+          "status_code": 200,
+          "allow": "GET, HEAD, OPTIONS",
+          "content_type": "application/json"
+        },
+        "allowed_methods": [
+          "GET",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "status_code": 200,
+        "reason": "OK",
+        "response_shape": {
+          "count": "int",
+          "next": "str",
+          "previous": "null",
+          "results": [
+            {
+              "rank": "int",
+              "user": "str",
+              "alphas": "int",
+              "score": "float",
+              "isScore": "float",
+              "osScore": "float",
+              "university": "str",
+              "country": "str"
+            }
+          ]
+        },
+        "response_sample": null,
+        "headers": {
+          "Content-Type": "application/json",
+          "Allow": "GET, HEAD, OPTIONS",
+          "Content-Language": "en"
+        },
+        "error": null,
+        "elapsed_ms": 416
+      }
+    },
+    {
+      "path": "/competitions/spc/submissions",
+      "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "source": [
+        "observed_platform",
+        "platform_frontend"
+      ],
+      "description": "List or create Systematic Predictions Challenge prompt submissions.",
+      "safe_probe": true,
+      "params": {
+        "limit": "optional integer; pagination size",
+        "offset": "optional integer; pagination offset"
+      },
+      "request_body": {
+        "POST": {
+          "required": [
+            "name",
+            "prompt",
+            "sampleOutput",
+            "model",
+            "modelVersion",
+            "weight",
+            "updateFrequency"
+          ],
+          "properties": {
+            "name": "string, max 200",
+            "prompt": "string, max 10000",
+            "sampleOutput": "string, max 10000",
+            "model": "choice returned by OPTIONS",
+            "modelVersion": "string, max 100",
+            "weight": "decimal from 0 to 1, rounded to 2 places",
+            "updateFrequency": "quarterly, monthly, weekly, or daily"
+          }
+        }
+      },
+      "notes": [
+        "Authentication is required.",
+        "POST creates a remote submission and was documented from OPTIONS and frontend code but not executed during inventory validation."
+      ],
+      "probe": {
+        "probed": true,
+        "probe_url": "https://api.worldquantbrain.com/competitions/spc/submissions?limit=1&offset=0",
+        "usable": true,
+        "options": {
+          "status_code": 200,
+          "allow": "GET, POST, HEAD, OPTIONS",
+          "content_type": "application/json"
+        },
+        "allowed_methods": [
+          "GET",
+          "POST",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "status_code": 200,
+        "reason": "OK",
+        "response_shape": {
+          "count": "int",
+          "next": "null",
+          "previous": "null",
+          "results": [
+            {
+              "id": "str",
+              "name": "str",
+              "prompt": "str",
+              "sampleOutput": "str",
+              "model": "str",
+              "modelVersion": "str",
+              "weight": "str",
+              "updateFrequency": "str",
+              "lastModified": "str",
+              "status": "str"
+            }
+          ]
+        },
+        "response_sample": null,
+        "headers": {
+          "Content-Type": "application/json",
+          "Allow": "GET, POST, HEAD, OPTIONS",
+          "Content-Language": "en"
+        },
+        "error": null,
+        "elapsed_ms": 243
+      }
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions/{submission_id}",
+      "methods": [
+        "GET",
+        "PUT",
+        "PATCH"
+      ],
+      "source": [
+        "observed_platform",
+        "platform_frontend"
+      ],
+      "description": "Read SPC submission weight history or replace/partially update a prompt submission.",
+      "safe_probe": false,
+      "params": {
+        "limit": "optional integer; weight-history pagination size",
+        "offset": "optional integer; weight-history pagination offset"
+      },
+      "request_body": {
+        "PUT": "Full submission object using the POST fields from /competitions/spc/submissions.",
+        "PATCH": {
+          "partial": true,
+          "frontend_observed_body": {
+            "weight": "decimal from 0 to 1"
+          }
+        }
+      },
+      "notes": [
+        "Authentication is required.",
+        "GET returns a paginated weight history with date and weight fields, not the collection's submission object.",
+        "PUT and PATCH mutate remote state and were not executed during inventory validation.",
+        "DELETE is not advertised by the current Allow header."
+      ],
+      "probe": {
+        "probed": true,
+        "probe_url": "https://api.worldquantbrain.com/competitions/spc/submissions/{redacted}?limit=1&offset=0",
+        "usable": true,
+        "options": {
+          "status_code": 200,
+          "allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+          "content_type": "application/json"
+        },
+        "allowed_methods": [
+          "GET",
+          "PUT",
+          "PATCH",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "status_code": 200,
+        "reason": "OK",
+        "response_shape": {
+          "count": "int",
+          "next": "null",
+          "previous": "null",
+          "results": [
+            {
+              "date": "str",
+              "weight": "float"
+            }
+          ]
+        },
+        "response_sample": null,
+        "headers": {
+          "Content-Type": "application/json",
+          "Allow": "GET, PUT, PATCH, HEAD, OPTIONS",
+          "Content-Language": "en"
+        },
+        "error": null,
+        "elapsed_ms": 240
+      }
+    },
+    {
       "path": "/competitions/{competition_id}/agreement",
       "url_template": "https://api.worldquantbrain.com/competitions/{competition_id}/agreement",
       "methods": [
@@ -2365,6 +2596,141 @@
           }
         }
       ]
+    },
+    {
+      "path": "/consultant/boards/{board_type}",
+      "url_template": "https://api.worldquantbrain.com/consultant/boards/{board_type}",
+      "methods": [
+        "GET"
+      ],
+      "source": [
+        "observed_platform",
+        "platform_frontend"
+      ],
+      "description": "Generic consultant leaderboard. The board type selects resources such as leader, spc, power-pool, or referral.",
+      "safe_probe": false,
+      "params": {
+        "limit": "optional integer; pagination size",
+        "offset": "optional integer; pagination offset",
+        "board": "optional or required board period/region as reported by OPTIONS",
+        "aggregate": "optional aggregation reported by OPTIONS",
+        "order": "optional field name; prefix with - for descending order",
+        "property": "optional field selected for prefix filtering",
+        "<property>~": "optional prefix filter"
+      },
+      "request_body": null,
+      "notes": [
+        "Authentication and consultant permission are required.",
+        "Live GET and OPTIONS probes returned 200 for leader, spc, power-pool, and referral.",
+        "Use `wqb competition leaderboard BOARD_TYPE --scope consultant --method OPTIONS` to discover each board's schema."
+      ],
+      "probe": {
+        "probed": true,
+        "probe_url": "https://api.worldquantbrain.com/consultant/boards/spc?limit=1&offset=0",
+        "usable": true,
+        "options": {
+          "status_code": 200,
+          "allow": "GET, HEAD, OPTIONS",
+          "content_type": "application/json"
+        },
+        "allowed_methods": [
+          "GET",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "status_code": 200,
+        "reason": "OK",
+        "response_shape": {
+          "count": "int",
+          "next": "str",
+          "previous": "null",
+          "results": [
+            {
+              "rank": "int",
+              "user": "str",
+              "prompts": "int",
+              "dailyRankChange": "int",
+              "scaledDailyPnl": "float",
+              "university": "str",
+              "country": "str"
+            }
+          ]
+        },
+        "response_sample": null,
+        "headers": {
+          "Content-Type": "application/json",
+          "Allow": "GET, HEAD, OPTIONS",
+          "Content-Language": "en"
+        },
+        "error": null,
+        "elapsed_ms": 693
+      }
+    },
+    {
+      "path": "/consultant/boards/spc",
+      "url_template": "https://api.worldquantbrain.com/consultant/boards/spc",
+      "methods": [
+        "GET"
+      ],
+      "source": [
+        "observed_platform",
+        "platform_frontend"
+      ],
+      "description": "Systematic Predictions Challenge leaderboard. OPTIONS advertises the currently available board periods and aggregation choices.",
+      "safe_probe": true,
+      "params": {
+        "limit": "optional integer; pagination size",
+        "offset": "optional integer; pagination offset",
+        "board": "required board period returned by OPTIONS",
+        "aggregate": "optional aggregation returned by OPTIONS",
+        "order": "optional field name; prefix with - for descending order"
+      },
+      "request_body": null,
+      "notes": [
+        "Authentication and consultant permission are required.",
+        "Use `wqb competition leaderboard spc --scope consultant --method OPTIONS` to discover the current board value."
+      ],
+      "probe": {
+        "probed": true,
+        "probe_url": "https://api.worldquantbrain.com/consultant/boards/spc?limit=1&offset=0&board={from_options}",
+        "usable": true,
+        "options": {
+          "status_code": 200,
+          "allow": "GET, HEAD, OPTIONS",
+          "content_type": "application/json"
+        },
+        "allowed_methods": [
+          "GET",
+          "HEAD",
+          "OPTIONS"
+        ],
+        "status_code": 200,
+        "reason": "OK",
+        "response_shape": {
+          "count": "int",
+          "next": "str",
+          "previous": "null",
+          "results": [
+            {
+              "rank": "int",
+              "user": "str",
+              "prompts": "int",
+              "dailyRankChange": "int",
+              "scaledDailyPnl": "float",
+              "university": "str",
+              "country": "str"
+            }
+          ]
+        },
+        "response_sample": null,
+        "headers": {
+          "Content-Type": "application/json",
+          "Allow": "GET, HEAD, OPTIONS",
+          "Content-Language": "en"
+        },
+        "error": null,
+        "elapsed_ms": 693
+      }
     },
     {
       "path": "/consultant/summary",

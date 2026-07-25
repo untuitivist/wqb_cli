@@ -34,6 +34,7 @@ def save_cookie_payload(session: requests.Session, cookie_path: str | None = Non
 
 def session_from_cookies(cookie_path: str | None = None) -> requests.Session:
     session = requests.Session()
+    session.trust_env = False
     session.headers.update({"User-Agent": "wqb-cli/0.1"})
     payload = load_cookie_payload(cookie_path)
     for key, value in (payload.get("cookies") or {}).items():
@@ -42,6 +43,26 @@ def session_from_cookies(cookie_path: str | None = None) -> requests.Session:
         session.cookies.set(key, value, domain=".worldquantbrain.com")
         session.cookies.set(key, value, domain="api.worldquantbrain.com")
     return session
+
+
+def resolve_basic_auth_credentials(
+    *,
+    email: str | None = None,
+    password: str | None = None,
+    config_path: str | None = None,
+) -> tuple[str, str] | None:
+    payload = resolve_login_payload(
+        input_payload=None,
+        email=email,
+        password=password,
+        expiry=3600,
+        config_path=config_path,
+    )
+    resolved_email = str(payload.get("email") or "").strip()
+    resolved_password = str(payload.get("password") or "")
+    if not resolved_email or not resolved_password:
+        return None
+    return resolved_email, resolved_password
 
 
 def resolve_login_payload(

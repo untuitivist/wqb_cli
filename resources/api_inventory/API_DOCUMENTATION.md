@@ -1,34 +1,35 @@
 # WorldQuant BRAIN API Documentation
 
 - Base URL: `https://api.worldquantbrain.com`
-- Generated at: `2026-05-18T17:00:35.247432+00:00`
-- Endpoint count: `104`
-- Method case count: `126`
+- Generated at: `2026-07-16T08:57:52+00:00`
+- Endpoint count: `109`
+- Method case count: `134`
 - 测试边界：`GET/HEAD/OPTIONS` 实际请求；`POST/PATCH/PUT/DELETE` 只记录为危险动作，不执行。
 - 响应内容只记录结构，不记录 cookie、JWT 或完整业务数据。
 
 ## Test Summary
 
-- Executed safe cases: `105`
-- Tested cases: `105`
+- Executed safe cases: `110`
+- Tested cases: `110`
 - Request errors: `0`
-- Skipped mutating cases: `21`
+- Skipped mutating cases: `24`
 - Skipped missing sample cases: `0`
-- HTTP 2xx/3xx: `66`
+- HTTP 2xx/3xx: `71`
 - HTTP 4xx/5xx: `39`
 
 ## Method Coverage
 
 - `DELETE`: `1`
-- `GET`: `101`
+- `GET`: `106`
 - `HEAD`: `1`
 - `OPTIONS`: `3`
-- `PATCH`: `2`
-- `POST`: `18`
+- `PATCH`: `3`
+- `POST`: `19`
+- `PUT`: `1`
 
 ## HTTP Status Coverage
 
-- `200`: `63`
+- `200`: `68`
 - `302`: `3`
 - `400`: `3`
 - `404`: `24`
@@ -36,10 +37,10 @@
 
 ## Source Coverage
 
-- `observed_platform`: `24`
+- `observed_platform`: `29`
 - `official_doc_snippet`: `2`
 - `platform_dynamic_capture`: `31`
-- `platform_frontend`: `60`
+- `platform_frontend`: `65`
 - `rocky-d/wqb`: `15`
 
 ## Sample Values
@@ -93,7 +94,10 @@
 - `/competition-levels/{competition_level_id}/icon` -> `endpoints/competition-levels/competition_level_id/icon/endpoint.md`
 - `/competitions` -> `endpoints/competitions/endpoint.md`
 - `/competitions/{competition_id}` -> `endpoints/competitions/competition_id/endpoint.md`
+- `/competitions/{competition_id}/boards/{board_type}` -> `endpoints/competitions/competition_id/boards/board_type/endpoint.md`
 - `/competitions/{competition_id}/agreement` -> `endpoints/competitions/competition_id/agreement/endpoint.md`
+- `/competitions/spc/submissions` -> `endpoints/competitions/spc/submissions/endpoint.md`
+- `/competitions/spc/submissions/{submission_id}` -> `endpoints/competitions/spc/submissions/submission_id/endpoint.md`
 - `/configuration` -> `endpoints/configuration/endpoint.md`
 - `/consultant` -> `endpoints/consultant/endpoint.md`
 - `/consultant-datasets` -> `endpoints/consultant-datasets/endpoint.md`
@@ -105,6 +109,8 @@
 - `/consultant-program/{language}` -> `endpoints/consultant-program/language/endpoint.md`
 - `/consultant/boards` -> `endpoints/consultant/boards/endpoint.md`
 - `/consultant/boards/leader` -> `endpoints/consultant/boards/leader/endpoint.md`
+- `/consultant/boards/spc` -> `endpoints/consultant/boards/spc/endpoint.md`
+- `/consultant/boards/{board_type}` -> `endpoints/consultant/boards/board_type/endpoint.md`
 - `/consultant/summary` -> `endpoints/consultant/summary/endpoint.md`
 - `/data-categories` -> `endpoints/data-categories/endpoint.md`
 - `/data-fields` -> `endpoints/data-fields/endpoint.md`

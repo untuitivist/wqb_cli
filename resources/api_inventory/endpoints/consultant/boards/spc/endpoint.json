@@ -1,0 +1,100 @@
+{
+  "path": "/consultant/boards/spc",
+  "url_template": "https://api.worldquantbrain.com/consultant/boards/spc",
+  "methods": [
+    "GET"
+  ],
+  "source": [
+    "observed_platform",
+    "platform_frontend"
+  ],
+  "description": "Systematic Predictions Challenge leaderboard. OPTIONS advertises the currently available board periods and aggregation choices.",
+  "safe_probe": true,
+  "params": {
+    "limit": "optional integer; pagination size",
+    "offset": "optional integer; pagination offset",
+    "board": "required board period returned by OPTIONS",
+    "aggregate": "optional aggregation returned by OPTIONS",
+    "order": "optional field name; prefix with - for descending order"
+  },
+  "request_body": null,
+  "notes": [
+    "Authentication and consultant permission are required.",
+    "Use `wqb competition leaderboard spc --scope consultant --method OPTIONS` to discover the current board value."
+  ],
+  "probe": {
+    "probed": true,
+    "probe_url": "https://api.worldquantbrain.com/consultant/boards/spc?limit=1&offset=0&board={from_options}",
+    "usable": true,
+    "options": {
+      "status_code": 200,
+      "allow": "GET, HEAD, OPTIONS",
+      "content_type": "application/json"
+    },
+    "allowed_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "status_code": 200,
+    "reason": "OK",
+    "response_shape": {
+      "count": "int",
+      "next": "str",
+      "previous": "null",
+      "results": [
+        {
+          "rank": "int",
+          "user": "str",
+          "prompts": "int",
+          "dailyRankChange": "int",
+          "scaledDailyPnl": "float",
+          "university": "str",
+          "country": "str"
+        }
+      ]
+    },
+    "response_sample": null,
+    "headers": {
+      "Content-Type": "application/json",
+      "Allow": "GET, HEAD, OPTIONS",
+      "Content-Language": "en"
+    },
+    "error": null,
+    "elapsed_ms": 693
+  },
+  "test_results": [
+    {
+      "path": "/consultant/boards/spc",
+      "method": "GET",
+      "resolved_path": "/consultant/boards/spc",
+      "url": "https://api.worldquantbrain.com/consultant/boards/spc?limit=1&offset=0&board={from_options}",
+      "executed": true,
+      "status": "tested",
+      "status_code": 200,
+      "reason": "OK",
+      "ok": true,
+      "elapsed_ms": 693,
+      "content_type": "application/json",
+      "response_shape": {
+        "count": "int",
+        "next": "str",
+        "previous": "null",
+        "results": [
+          {
+            "rank": "int",
+            "user": "str",
+            "prompts": "int",
+            "dailyRankChange": "int",
+            "scaledDailyPnl": "float",
+            "university": "str",
+            "country": "str"
+          }
+        ]
+      },
+      "allow": "GET, HEAD, OPTIONS",
+      "retry_after": null,
+      "location_present": false
+    }
+  ]
+}

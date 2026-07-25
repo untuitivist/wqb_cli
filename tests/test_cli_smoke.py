@@ -159,6 +159,42 @@ class CliSmokeTests(unittest.TestCase):
         self.assertIn("fundamental", result.stdout)
         self.assertIn(">=5", result.stdout)
 
+    def test_competition_help_exposes_generic_resources_and_spc_submissions(self) -> None:
+        result = run_wqb("competition", "--help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for command in ["leaderboard", "guidelines", "faq", "spc"]:
+            self.assertIn(command, result.stdout)
+
+        leaderboard = run_wqb("competition", "leaderboard", "--help")
+        self.assertEqual(leaderboard.returncode, 0, leaderboard.stderr)
+        self.assertIn("--scope", leaderboard.stdout)
+        self.assertIn("competition", leaderboard.stdout)
+        self.assertIn("consultant", leaderboard.stdout)
+        self.assertIn("--board-type", leaderboard.stdout)
+        self.assertIn("--method", leaderboard.stdout)
+        self.assertIn("--param", leaderboard.stdout)
+
+        spc = run_wqb("competition", "spc", "--help")
+        self.assertEqual(spc.returncode, 0, spc.stderr)
+        for command in [
+            "submissions",
+            "submission-history",
+            "submission-options",
+            "create-submission",
+            "update-submission",
+        ]:
+            self.assertIn(command, spc.stdout)
+
+        create = run_wqb("competition", "spc", "create-submission", "--help")
+        self.assertEqual(create.returncode, 0, create.stderr)
+        self.assertIn("--input", create.stdout)
+        self.assertIn("--json", create.stdout)
+
+        update = run_wqb("competition", "spc", "update-submission", "--help")
+        self.assertEqual(update.returncode, 0, update.stderr)
+        self.assertIn("PUT", update.stdout)
+        self.assertIn("PATCH", update.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

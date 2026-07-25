@@ -147,7 +147,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.3.1"
+version = "0.3.2"
 ```
 
 ## 认证
@@ -530,9 +530,9 @@ python -m wqb_cli --help
 
 ## Release
 
-当前 release：
+软件包 release：
 
-[wqb-cli 0.3.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.1)
+[wqb-cli 0.3.2](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.2)
 
 发布 checklist：
 
@@ -540,9 +540,33 @@ python -m wqb_cli --help
 2. 运行 editable install。
 3. 运行测试。
 4. 提交改动。
-5. 创建 tag，例如 `v0.3.1`。
+5. 创建 tag，例如 `v0.3.2`。
 6. 推送 branch 和 tag。
 7. 发布 GitHub Release。
+
+## 版本记录
+
+以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
+
+### 0.3.2 - 2026-07-16
+
+- 新增：通用 competition/consultant 排行榜 scope；比赛 Guidelines 与 FAQ 命令；完整的 SPC prompt submission 列表、创建、历史和更新命令；对应的规范 endpoint inventory、示例和测试。
+- 变更：在不移除旧注册项的前提下，完整 API inventory 从 104 个 endpoint、126 个 method case 扩展到 109 个 endpoint、134 个 method case；alpha 请求在 cookie 会话收到 `401` 后可回退 Basic Auth；补强 workflow 运行约束和 README 发布文档；运行时版本与软件包版本保持一致。
+- 移除：过时的 analyst/PV vector 示例 JSON 和一份冗余 workflow 文档；没有移除已发布 CLI 命令或已注册 endpoint。
+
+### 0.3.1 - 2026-05-22
+
+- 新增：面向 agent 的 `wqb` 控制台命令；包内 auth/config/community/scope/shortcut 工具；随包 API inventory、生成式命令文档、alpha submit 轮询、冒烟测试、中英文 README 和项目品牌资源。
+- 变更：围绕 `wqb_cli` 重建包结构与元数据；扩展 workflow 和本地数据文档；许可证从 MIT 改为 GPL-3.0-only plus Commons Clause。
+- 移除：旧的 `wqb_core` package discovery/test 布局和未使用的旧资源。
+
+### 0.2.5 - 2026-05-13
+
+- 新增：最初的软件包化 WorldQuant BRAIN API wrapper 和面向 agent 的 workflow 基线，依赖 `requests`、`pandas`、`msgpack`。
+- 变更：无；这是最初的软件包元数据基线。
+- 移除：无。
+
+持续维护的完整发布记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证
 

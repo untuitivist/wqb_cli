@@ -1,6 +1,6 @@
 {
-  "endpoint_count": 104,
-  "method_case_count": 126,
+  "endpoint_count": 109,
+  "method_case_count": 134,
   "missing_count": 0,
   "rows": [
     {
@@ -184,6 +184,31 @@
       "command": "wqb competition list --limit 1"
     },
     {
+      "path": "/competitions/spc/submissions",
+      "method": "GET",
+      "command": "wqb competition spc submissions --limit 1"
+    },
+    {
+      "path": "/competitions/spc/submissions",
+      "method": "POST",
+      "command": "wqb competition spc create-submission --input spc-submission.json"
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "GET",
+      "command": "wqb competition spc submission-history SUBMISSION_ID --limit 1"
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "PATCH",
+      "command": "wqb competition spc update-submission SUBMISSION_ID --method PATCH --input weight.json"
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "PUT",
+      "command": "wqb competition spc update-submission SUBMISSION_ID --method PUT --input spc-submission.json"
+    },
+    {
       "path": "/competitions/{competition_id}",
       "method": "GET",
       "command": "wqb competition get challenge"
@@ -197,6 +222,11 @@
       "path": "/competitions/{competition_id}/agreement",
       "method": "POST",
       "command": "wqb competition agreement challenge --method POST"
+    },
+    {
+      "path": "/competitions/{competition_id}/boards/{board_type}",
+      "method": "GET",
+      "command": "wqb competition leaderboard PAC2026 --board-type leader --limit 1"
     },
     {
       "path": "/configuration",
@@ -252,6 +282,16 @@
       "path": "/consultant/boards/leader",
       "method": "GET",
       "command": "wqb consultant boards leader"
+    },
+    {
+      "path": "/consultant/boards/spc",
+      "method": "GET",
+      "command": "wqb competition leaderboard spc --scope consultant --board BOARD_FROM_OPTIONS --limit 1"
+    },
+    {
+      "path": "/consultant/boards/{board_type}",
+      "method": "GET",
+      "command": "wqb competition leaderboard spc --scope consultant --limit 1"
     },
     {
       "path": "/consultant/summary",

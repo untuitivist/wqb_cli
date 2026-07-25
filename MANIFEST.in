@@ -1,3 +1,7 @@
+include README.md
+include README_CN.md
+include CHANGELOG.md
+include LICENSE
 recursive-include resources/api_inventory *.json *.md *.txt *.html
 recursive-exclude resources/api_inventory/_raw *
 recursive-include resources/docs *.md *.json

@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import argparse
 import time
+from dataclasses import replace
 from typing import Any
 
-from ..core.auth import session_from_cookies
+from ..core.auth import resolve_basic_auth_credentials, session_from_cookies
 from ..core.client import WqbClient
 from ..core.io import parse_key_values, read_json_file, write_json
 from ..core.registry import EndpointRegistry
@@ -228,6 +229,7 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    basic_auth = resolve_basic_auth_credentials()
     simple_paths = {
         "distribution": "/alphas/distribution",
         "lists": "/alphas/lists",
@@ -239,7 +241,7 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         endpoint = registry.get(simple_paths[args.alpha_command])
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET")
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command == "all":
@@ -288,21 +290,21 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             "GET",
             path_vars={"alpha_id": args.alpha_id, "record_set_name": args.name},
         )
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command in {"pnl", "sharpe", "yearly-stats"}:
         endpoint = registry.get(f"/alphas/{{alpha_id}}/recordsets/{args.alpha_command}")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command == "related":
         endpoint = registry.get("/alphas/{alpha_id}/alphas")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command == "patch":
@@ -335,14 +337,14 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         endpoint = registry.get("/alphas/{alpha_id}/check")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command == "recordsets":
         endpoint = registry.get("/alphas/{alpha_id}/recordsets")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     if args.alpha_command == "correlation":
@@ -350,28 +352,28 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
             endpoint = registry.get("/alphas/{alpha_id}/correlations")
             client = WqbClient(registry, session_from_cookies(args.cookies))
             prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
             write_json(result, args.output)
             return 0 if result.get("ok") else 1
         if args.correlation_command == "self":
             endpoint = registry.get("/alphas/{alpha_id}/correlations/self")
             client = WqbClient(registry, session_from_cookies(args.cookies))
             prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
             write_json(result, args.output)
             return 0 if result.get("ok") else 1
         if args.correlation_command == "prod":
             endpoint = registry.get("/alphas/{alpha_id}/correlations/prod")
             client = WqbClient(registry, session_from_cookies(args.cookies))
             prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
             write_json(result, args.output)
             return 0 if result.get("ok") else 1
         if args.correlation_command == "power-pool":
             endpoint = registry.get("/alphas/{alpha_id}/correlations/power-pool")
             client = WqbClient(registry, session_from_cookies(args.cookies))
             prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+            result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
             write_json(result, args.output)
             return 0 if result.get("ok") else 1
         raise AssertionError(args.correlation_command)
@@ -379,7 +381,7 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         endpoint = registry.get("/alphas/{alpha_id}/performance-comparison")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"alpha_id": args.alpha_id})
-        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
+        result = _call_waiting_alpha(client, prepared, args.max_wait_seconds, basic_auth=basic_auth)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
     raise AssertionError(args.alpha_command)
@@ -394,11 +396,38 @@ def _add_wait_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def _call_waiting_alpha(client: WqbClient, prepared: Any, max_wait_seconds: float) -> dict[str, Any]:
+def _call_waiting_alpha(
+    client: WqbClient,
+    prepared: Any,
+    max_wait_seconds: float,
+    *,
+    basic_auth: tuple[str, str] | None = None,
+) -> dict[str, Any]:
     result = client.call(prepared, wait_retry_after=True, max_wait_seconds=max_wait_seconds)
+    if _should_retry_alpha_with_basic_auth(result, prepared, basic_auth):
+        result = client.call(
+            replace(prepared, auth=basic_auth),
+            wait_retry_after=True,
+            max_wait_seconds=max_wait_seconds,
+        )
     result["classification"] = _classify_waiting_alpha_result(result)
     result["ok"] = bool(result.get("ok") and result["classification"]["ok"])
     return result
+
+
+def _should_retry_alpha_with_basic_auth(
+    result: dict[str, Any],
+    prepared: Any,
+    basic_auth: tuple[str, str] | None,
+) -> bool:
+    if basic_auth is None:
+        return False
+    if getattr(prepared, "auth", None) is not None:
+        return False
+    if not str(getattr(prepared, "endpoint", "")).startswith("/alphas/"):
+        return False
+    response = result.get("response", {})
+    return response.get("status_code") == 401
 
 
 def _classify_waiting_alpha_result(result: dict[str, Any]) -> dict[str, Any]:

@@ -20,6 +20,7 @@ class PreparedRequest:
     params: dict[str, Any]
     json_body: Any
     headers: dict[str, str]
+    auth: tuple[str, str] | None
     mutating: bool
     executable: bool
     reason: str | None = None
@@ -38,6 +39,7 @@ class WqbClient:
         path_vars: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json_body: Any = None,
+        auth: tuple[str, str] | None = None,
     ) -> PreparedRequest:
         method = method.upper()
         path_vars = path_vars or {}
@@ -61,6 +63,7 @@ class WqbClient:
             params=params or {},
             json_body=json_body,
             headers={},
+            auth=auth,
             mutating=mutating,
             executable=executable,
             reason=reason,
@@ -84,9 +87,9 @@ class WqbClient:
         wait_events: list[dict[str, Any]] = []
         wait_timed_out = False
         while True:
-            auth = None
+            auth = prepared.auth
             json_body = prepared.json_body
-            if prepared.endpoint == "/authentication" and prepared.method == "POST" and isinstance(json_body, dict):
+            if auth is None and prepared.endpoint == "/authentication" and prepared.method == "POST" and isinstance(json_body, dict):
                 email = json_body.get("email")
                 password = json_body.get("password")
                 if email and password:

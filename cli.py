@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import sys
-from typing import Any
+from typing import Any, Iterable
 
 from .core.auth import resolve_login_payload, save_cookie_payload, session_from_cookies
 from .core.client import WqbClient
@@ -25,10 +25,12 @@ from .commands.suggest import add_suggest_parser, handle_suggest
 from .commands.tutorial import add_tutorial_parser, handle_tutorial
 from .commands.user import add_user_parser, handle_user
 from .core.io import parse_key_values, read_json_file, write_json
+from .core.plugins import PluginLoadError, discover_plugins, register_plugins
 from .core.registry import EndpointRegistry
+from .sdk import CliPlugin, PluginContext
 
 
-def build_parser() -> argparse.ArgumentParser:
+def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="wqb", description="Agent-first WorldQuant BRAIN API CLI")
     parser.add_argument("--registry", help="Path to api_inventory_complete.json")
     parser.add_argument("--cookies", help="Path to cookies.json; default is wqb_cli/local/auth/cookies.json")
@@ -90,6 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_suggest_parser(sub)
     add_tutorial_parser(sub)
     add_user_parser(sub)
+    register_plugins(sub, discover_plugins() if plugins is None else plugins)
     return parser
 
 
@@ -211,10 +214,20 @@ def handle_auth(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = build_parser()
+    try:
+        parser = build_parser()
+    except PluginLoadError as exc:
+        write_json({"ok": False, "error_type": type(exc).__name__, "detail": str(exc)})
+        sys.exit(1)
     args = parser.parse_args(argv)
     try:
-        if args.command == "api":
+        plugin = getattr(args, "_wqb_plugin", None)
+        if plugin is not None:
+            code = plugin.handle(
+                args,
+                PluginContext(registry_path=args.registry, cookies_path=args.cookies),
+            )
+        elif args.command == "api":
             code = handle_api(args)
         elif args.command == "account":
             code = handle_account(args, load_registry(args))

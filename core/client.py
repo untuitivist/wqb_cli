@@ -69,6 +69,11 @@ class WqbClient:
             reason=reason,
         )
 
+    def call_once(self, prepared: PreparedRequest) -> dict[str, Any]:
+        """Execute exactly one HTTP request without following Retry-After."""
+
+        return self.call(prepared, wait_retry_after=False)
+
     def call(
         self,
         prepared: PreparedRequest,

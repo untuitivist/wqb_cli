@@ -28,6 +28,7 @@ from .core.io import parse_key_values, read_json_file, write_json
 from .core.plugins import PluginLoadError, discover_plugins, register_plugins
 from .core.registry import EndpointRegistry
 from .sdk import CliPlugin, PluginContext
+from .sqlitesimu.plugin import plugin as sqlitesimu_plugin
 
 
 def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.ArgumentParser:
@@ -92,7 +93,8 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     add_suggest_parser(sub)
     add_tutorial_parser(sub)
     add_user_parser(sub)
-    register_plugins(sub, discover_plugins() if plugins is None else plugins)
+    resolved_plugins = discover_plugins((sqlitesimu_plugin,)) if plugins is None else plugins
+    register_plugins(sub, resolved_plugins)
     return parser
 
 

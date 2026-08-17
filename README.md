@@ -275,6 +275,18 @@ For REGULAR FASTEXPR multi-simulation, the shared settings requirement is limite
 - `instrumentType`
 - `language`
 
+### Durable SQLite Batch Simulations
+
+To let a workflow generate candidates while the CLI independently submits, polls, retries, and persists results:
+
+```powershell
+wqb sqlitesimu run candidates.json --output run-result.json
+```
+
+The workflow can also call `enqueue` first and then `resume` the returned `run_id`. The default database is `local/sqlitesimu/simulations.sqlite3`; it exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code.
+
+See `resources/docs/sqlitesimu.md` for the manifest contract, recovery states, exit codes, and explicit differences from the three legacy workers.
+
 ## Submit Workflow
 
 Submit an alpha:

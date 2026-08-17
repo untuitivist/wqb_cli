@@ -4,7 +4,13 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 ## Unreleased
 
-- No unreleased changes.
+### Added
+
+- Added a command-plugin SDK and a built-in `sqlitesimu` plugin for durable batch simulation, crash recovery, result enrichment, and legacy `simued_alpha_is_pnl` analysis compatibility.
+
+### Changed
+
+- Added one-shot API calls so workflow runtimes can persist `Retry-After` scheduling instead of sleeping inside the HTTP client.
 
 ## 0.3.2 - 2026-07-16
 

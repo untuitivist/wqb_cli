@@ -284,6 +284,22 @@ REGULAR FASTEXPR multi-simulation 必须相同的设置范围限定为：
 - `instrumentType`
 - `language`
 
+### SQLite 批量回测
+
+工作流只生成批量表达式、由 CLI 独立完成提交、轮询、重试和结果入库时：
+
+```powershell
+wqb sqlitesimu run candidates.json --output run-result.json
+```
+
+也可以先 `enqueue`，再用返回的 `run_id` 执行 `resume`。默认数据库位于 `local/sqlitesimu/simulations.sqlite3`，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。
+
+manifest、状态恢复、退出码以及相对旧三个脚本的行为变动见：
+
+```text
+resources/docs/sqlitesimu.md
+```
+
 ## Submit 流程
 
 提交 alpha：

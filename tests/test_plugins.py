@@ -25,6 +25,11 @@ class InvalidPlugin:
 
 
 class PluginTests(unittest.TestCase):
+    def test_builtin_sqlitesimu_plugin_is_registered(self) -> None:
+        args = build_parser().parse_args(["sqlitesimu", "status"])
+
+        self.assertEqual(args._wqb_plugin.name, "sqlitesimu")
+
     def test_parser_binds_plugin_instance(self) -> None:
         plugin = DemoPlugin()
         parser = build_parser(plugins=[plugin])

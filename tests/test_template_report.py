@@ -15,8 +15,8 @@ from wqb_cli.sqlitesimu.template_report import (
 
 SETTINGS = {
     "instrumentType": "EQUITY",
-    "region": "CHN",
-    "universe": "TOP2000U",
+    "region": "EUR",
+    "universe": "TOP2500",
     "delay": 1,
     "decay": 5,
     "neutralization": "INDUSTRY",
@@ -25,7 +25,7 @@ SETTINGS = {
 }
 
 EXPRESSION = """# [Search Attention Persistence]
-# [20260818] - [CHN search attention] - [epoch 2]
+# [20260818] - [EUR search attention] - [epoch 2]
 attention_matrix_variable = vec_avg(mobile_search_engagement_score);
 template_LLM = ts_mean(attention_matrix_variable, 32);
 template_LLM"""
@@ -84,6 +84,24 @@ class TemplateFormatTests(unittest.TestCase):
             "unresolved_placeholder",
             {row["code"] for row in result["violations"]},
         )
+
+    def test_template_manifest_rejects_excluded_regions(self) -> None:
+        for region in ("CHN", "USA"):
+            with self.subTest(region=region):
+                settings = {**SETTINGS, "region": region}
+                metadata = template_metadata(EXPRESSION, settings=settings)
+                manifest = parse_manifest(
+                    [{"expression": EXPRESSION, "settings": settings, **metadata}]
+                )
+
+                result = validate_template_manifest(manifest)
+
+                self.assertFalse(result["ok"])
+                self.assertIn(
+                    "excluded_region",
+                    {row["code"] for row in result["violations"]},
+                )
+                self.assertEqual(result["excluded_regions"], ["CHN", "USA"])
 
     def test_template_manifest_rejects_settings_drift_and_duplicate_calculation(self) -> None:
         second_expression = EXPRESSION.replace(
@@ -195,7 +213,12 @@ class TemplateReportTests(unittest.TestCase):
         self.assertNotIn("SUBMIT_UNKNOWN", report["summary"]["state_counts"])
 
 
-def template_metadata(expression: str) -> dict[str, object]:
+def template_metadata(
+    expression: str,
+    *,
+    settings: dict[str, object] | None = None,
+) -> dict[str, object]:
+    settings = settings or SETTINGS
     return {
         "template_format_version": 1,
         "workflow_run_id": "workflow-run-1",
@@ -214,7 +237,7 @@ def template_metadata(expression: str) -> dict[str, object]:
         "population_ordinal": 1,
         "expression_hash": expression_hash(expression),
         "calculation_hash": calculation_hash(expression),
-        "settings_hash": settings_hash(SETTINGS),
+        "settings_hash": settings_hash(settings),
         "single_mechanism": True,
     }
 

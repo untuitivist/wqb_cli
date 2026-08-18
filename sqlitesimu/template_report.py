@@ -16,6 +16,7 @@ from .models import RUN_TERMINAL_STATES, CandidateSpec, SimulationManifest
 
 TEMPLATE_FORMAT_VERSION = 1
 TEMPLATE_REPORT_FORMAT_VERSION = 1
+BATCHSIMU_EXCLUDED_REGIONS = frozenset({"CHN", "USA"})
 
 _NAME_PATTERN = re.compile(r"# \[([A-Za-z][A-Za-z0-9 .&+:/_-]*)\]")
 _VERSION_PATTERN = re.compile(
@@ -111,6 +112,7 @@ def validate_template_manifest(manifest: SimulationManifest) -> dict[str, Any]:
     family_counts: Counter[str] = Counter()
     first_settings_hash: tuple[str, int] | None = None
     first_workflow_run_id: tuple[str, int] | None = None
+    first_region: tuple[str, int] | None = None
     calculation_identities: dict[tuple[str, str], int] = {}
 
     for index, candidate in enumerate(manifest.candidates):
@@ -121,7 +123,27 @@ def validate_template_manifest(manifest: SimulationManifest) -> dict[str, Any]:
         family_counts[family_id or "UNASSIGNED"] += 1
         expression = candidate.payload.get("regular")
         header = parse_template_header(expression) if isinstance(expression, str) else None
-        actual_settings_hash = settings_hash(candidate.payload["settings"])
+        settings = candidate.payload["settings"]
+        actual_settings_hash = settings_hash(settings)
+        region = str(settings.get("region") or "").strip().upper()
+        if region in BATCHSIMU_EXCLUDED_REGIONS:
+            errors.append(
+                _issue(
+                    index,
+                    "excluded_region",
+                    f"workflow_batchsimu excludes region {region}",
+                )
+            )
+        if first_region is None:
+            first_region = (region, index)
+        elif region != first_region[0]:
+            errors.append(
+                _issue(
+                    index,
+                    "region_drift",
+                    f"Region differs from candidate {first_region[1]}",
+                )
+            )
         workflow_run_id = str(metadata.get("workflow_run_id") or "")
         if first_settings_hash is None:
             first_settings_hash = (actual_settings_hash, index)
@@ -181,6 +203,8 @@ def validate_template_manifest(manifest: SimulationManifest) -> dict[str, Any]:
         "template_count": len(family_counts),
         "family_counts": dict(sorted(family_counts.items())),
         "workflow_run_id": first_workflow_run_id[0] if first_workflow_run_id else None,
+        "region": first_region[0] if first_region else None,
+        "excluded_regions": sorted(BATCHSIMU_EXCLUDED_REGIONS),
         "settings_hash": first_settings_hash[0] if first_settings_hash else None,
         "violation_count": len(errors),
         "violations": errors,
@@ -906,6 +930,7 @@ def _finite_float(value: Any) -> float | None:
 
 
 __all__ = [
+    "BATCHSIMU_EXCLUDED_REGIONS",
     "TEMPLATE_FORMAT_VERSION",
     "TEMPLATE_REPORT_FORMAT_VERSION",
     "TemplateHeader",

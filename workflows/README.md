@@ -24,7 +24,7 @@ workflows/
 
 - 目标是比较多个参数化模板族，而不是寻找某一条 alpha；
 - 首轮需要用固定设置估计每个模板族的有效结果密度；
-- 表达式一次性写入 manifest，随后由 `wqb sqlitesimu` 独立提交、轮询、重登和入库；
+- 表达式一次性写入 manifest，随后由 `wqb sqlitesimu` 独立发起 simulate、轮询、重登和入库；
 - agent 不参与逐条回测，只在 run 终态后读取 SQLite/export 做聚合分析；
 - 使用自己的 A-M 节点、run 目录、SQLite 数据库和产物契约；
 - K 在终态后分析与选候选，L 完成慢速终检，M 是唯一允许执行 Alpha submit 的节点；累计目标未完成时只能从本流程 A 创建新的独立 batch。

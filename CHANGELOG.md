@@ -4,13 +4,24 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## 0.4.0 - 2026-08-18
+
 ### Added
 
-- Added a command-plugin SDK and a built-in `sqlitesimu` plugin for durable batch simulation, crash recovery, result enrichment, and legacy `simued_alpha_is_pnl` analysis compatibility.
+- Added a command-plugin SDK and the built-in `sqlitesimu` plugin with `init`, `enqueue`, `run`, `resume`, `status`, `cancel`, and `export` commands for durable batch simulations.
+- Added SQLite-backed run leases, resumable simulation and enrichment queues, normalized Alpha/PnL persistence, auditable state/event history, and the legacy-compatible `simued_alpha_is_pnl` view.
+- Added strict template-family manifest validation with lineage and identity hashes, plus terminal template reports covering per-family performance, checks, representative Alphas, and READY coverage.
+- Added two physically isolated A-M workflow document sets: bounded adaptive simulation research and agent-independent template-family batch research with slow final checks and explicit Alpha submission gates.
 
 ### Changed
 
-- Added one-shot API calls so workflow runtimes can persist `Retry-After` scheduling instead of sleeping inside the HTTP client.
+- Added one-shot API calls so workflow runtimes persist `Retry-After` scheduling instead of sleeping inside the HTTP client.
+- Reworked authentication recovery to match `WQBSession` behavior for `204`, `401`, and `429`, with bounded global replay, stale-cookie cleanup, concurrent-login coordination, and five additional `sqlitesimu` login attempts.
+- Replaced client-side simulation slot limits with server `429 / Retry-After` backpressure, while prioritizing due simulation and enrichment polling so large queues cannot starve active work.
+- Preserved ambiguous simulation POST outcomes as `SIMULATE_UNKNOWN` instead of blindly replaying mutating requests; cancellation now consumes operational queues without deleting candidate, batch, Alpha, PnL, or event history.
+- Standardized terminology: simulate refers to creating a backtest, while submit refers only to the final `wqb alpha submit` action.
 
 ## 0.3.2 - 2026-07-16
 

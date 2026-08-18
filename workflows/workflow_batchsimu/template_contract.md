@@ -1,6 +1,6 @@
 # BatchSimu 模板与分析格式契约
 
-本文件是 `workflow_batchsimu` 内部的唯一格式基线。H 产出参数化模板，I 产出已实例化 candidate，K 从权威 run export 生成固定分析报告。三者不得用自然语言约定代替机器字段。
+本文件是 `workflow_batchsimu` 内部的唯一格式基线。H 产出参数化模板，I 产出已实例化 candidate，K 从权威 run export 生成固定分析报告与终检候选，L 完成慢速终检，M 记录正式提交。各节点不得用自然语言约定代替机器字段。
 
 ## H：模板定义格式
 
@@ -119,6 +119,14 @@ N. [English Template Name] - 中文模板名
 
 `CANCELLED` run 永远只能描述。若 `BLOCKED` 仅由少数 `SIMULATE_UNKNOWN` 导致，`template-report` 使用 F 在回测前冻结的 `minimum_ready_coverage` 判断 READY 子集能否分析。unknown experiment 必须独立隔离，永远不自动重跑、不选择、不提交。
 
+## L/M：终检与提交格式
+
+- K 的 `best_alpha_candidates.json` 必须携带当前 run 的真实 `alpha_id`、experiment、family、PnL cluster、基础 metrics/checks 和选择理由；描述性 fallback 不得进入该文件。
+- L 对每个候选重新取得完整 check、self/prod correlation、performance comparison、PnL 和 yearly stats，并输出逐候选通过、失败或 inconclusive 证据。只有全部预注册终检通过的候选才能进入 `submission_candidates.json`。
+- M 只能消费 L 的 `submission_candidates.json`。`wqb alpha submit` 返回 `ok = true`、`submit_code = 200` 且提交后 Alpha GET 确认平台状态后，才可计入成功。
+- simulate 只表示 J 创建回测；submit 只表示 M 的正式 Alpha 入库动作。两者的状态、重试和审计字段不得混用。
+- 累计目标未完成时只能在本流程内创建新的独立 batch run，不得向其他 workflow 移交或接收 candidate、Alpha、检查结果或控制流。
+
 ## 禁止降级
 
 - 不使用无 seed 的随机抽样，不进行有放回补数。
@@ -126,4 +134,4 @@ N. [English Template Name] - 中文模板名
 - 不把没有结果的模板从报告中静默删除。
 - 不按单条最大 Sharpe 排模板，不用表达式外观代替实际 PnL correlation。
 - 不从 `CANCELLED`、coverage 不足或完整性不明的 run 选择候选；部分 `BLOCKED` run 只有在 unknown 已隔离且 READY coverage 达到预注册门槛时才可分析 READY 子集。
-- 不在 K/L 修改 expression、manifest 或 J 的 SQLite。
+- 不在 K/L/M 修改 expression、manifest 或 J 的 SQLite。

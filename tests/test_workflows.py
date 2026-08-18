@@ -55,6 +55,28 @@ class WorkflowLayoutTests(unittest.TestCase):
         self.assertIn("alpha_submission_allowed = true | false", batch_graph)
         self.assertIn("M 提交与记录", batch_graph)
 
+    def test_batch_final_checks_and_submit_match_platform_command_contract(self) -> None:
+        simu_l = (SIMU / "nodes" / "L_慢速终检" / "node.md").read_text(encoding="utf-8")
+        batch_l = (BATCH / "nodes" / "L_slow_final_check" / "node.md").read_text(encoding="utf-8")
+        simu_m = (SIMU / "nodes" / "M_提交与记录" / "node.md").read_text(encoding="utf-8")
+        batch_m = (BATCH / "nodes" / "M_submit" / "node.md").read_text(encoding="utf-8")
+
+        for command in (
+            "wqb alpha get",
+            "wqb alpha check",
+            "wqb alpha correlation self",
+            "wqb alpha correlation prod",
+            "wqb alpha performance-comparison",
+            "wqb alpha pnl",
+            "wqb alpha yearly-stats",
+        ):
+            self.assertIn(command, simu_l)
+            self.assertIn(command, batch_l)
+
+        for command in ("wqb alpha patch", "wqb alpha submit", "wqb alpha get"):
+            self.assertIn(command, simu_m)
+            self.assertIn(command, batch_m)
+
     def test_workflow_markdown_is_utf8_without_bom(self) -> None:
         for path in WORKFLOWS.rglob("*.md"):
             content = path.read_bytes()

@@ -6,7 +6,7 @@
 
 [English](README.md) | 简体中文
 
-`wqb-cli` 是一个 agent-native 的 WorldQuant BRAIN 命令行工具，用于把认证、API 查询、alpha 检查、回测提交、正式提交、本地数据筛选和社区数据检索组织成可复用的研究流程。
+`wqb-cli` 是一个 agent-native 的 WorldQuant BRAIN 命令行工具，用于把认证、API 查询、Alpha 检查、回测执行、Alpha 正式提交、本地数据筛选和社区数据检索组织成可复用的研究流程。
 
 它优先服务编码 agent 和长流程研究 agent，而不是只给人手工敲命令使用的薄封装。命令会输出结构化 JSON，保留原始 API 上下文，等待平台异步结果，并自然适配可重复的研究节点流程。
 
@@ -104,7 +104,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.3.2"
+version = "0.4.0"
 ```
 
 ## 认证
@@ -286,13 +286,30 @@ REGULAR FASTEXPR multi-simulation 必须相同的设置范围限定为：
 
 ### SQLite 批量回测
 
-工作流只生成批量表达式、由 CLI 独立完成提交、轮询、重试和结果入库时：
+工作流只生成批量表达式、由 CLI 独立发起 simulate、轮询、重试和结果入库时：
 
 ```powershell
 wqb sqlitesimu run candidates.json --output run-result.json
 ```
 
-也可以先 `enqueue`，再用返回的 `run_id` 执行 `resume`。默认数据库位于 `local/sqlitesimu/simulations.sqlite3`，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。
+需要显式管理进程时，可以初始化数据库、一次性入队，再恢复返回的 run：
+
+```powershell
+wqb sqlitesimu init --db simulations.sqlite3
+wqb sqlitesimu enqueue candidates.json --db simulations.sqlite3 --output enqueue-result.json
+wqb sqlitesimu resume <run_id> --db simulations.sqlite3 --output worker-result.json
+wqb sqlitesimu status <run_id> --db simulations.sqlite3 --output status.json
+wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
+```
+
+默认数据库位于 `local/sqlitesimu/simulations.sqlite3`。每个 run 持久化 candidate、batch、simulation Location、错误、Alpha 详情和 PnL 历史，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。
+
+模板集 manifest 可以在入队前严格校验，并在 run 终态后生成固定分析报告：
+
+```powershell
+wqb sqlitesimu template-validate template-manifest.json --output template-validation.json
+wqb sqlitesimu template-report run-export.json --minimum-ready-coverage 0.95 --output template-report.json --markdown-output template-report.md
+```
 
 manifest、状态恢复、退出码以及相对旧三个脚本的行为变动见：
 
@@ -402,7 +419,7 @@ wqb community search neutralization --scope docs --limit 2
 ```text
 workflows/
   workflow_simu/          A-M 小规模自适应研究，同步使用 wqb sim create
-  workflow_batchsimu/     A-L 模板群筛选，由 sqlitesimu 独立执行回测
+  workflow_batchsimu/     A-M 模板群研究，由 sqlitesimu 独立执行回测
 ```
 
 两套流程各自拥有 A 起点、run 目录、输入输出契约、主图和终止行为，不共享 A-F 产物、SQLite 数据库、节点输入或控制流移交。
@@ -414,7 +431,7 @@ workflows/workflow_simu/workflow_graph.md
 workflows/workflow_batchsimu/workflow_graph.md
 ```
 
-批量流程固定一个 settings cell，对各模板族无放回抽样并保留完整 lineage。只有权威 run 终态后，K/L 才能分析族密度、质量分布、错误类型和真实 IS-PnL 相关性；该流程不提交 Alpha。
+批量流程固定一个 settings cell，对各模板族无放回抽样并保留完整 lineage。只有权威 run 终态后，K 才分析族密度、质量分布、错误类型和真实 IS-PnL 相关性并选择本流候选，L 执行慢速终检，M 是唯一允许调用 `wqb alpha submit` 的节点；候选与结果不会移交给小规模自适应流程。
 
 ## 命令文档
 
@@ -502,7 +519,7 @@ python -m wqb_cli --help
 
 软件包 release：
 
-[wqb-cli 0.3.2](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.2)
+[wqb-cli 0.4.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.4.0)
 
 发布 checklist：
 
@@ -510,13 +527,19 @@ python -m wqb_cli --help
 2. 运行 editable install。
 3. 运行测试。
 4. 提交改动。
-5. 创建 tag，例如 `v0.3.2`。
+5. 创建 tag，例如 `v0.4.0`。
 6. 推送 branch 和 tag。
 7. 发布 GitHub Release。
 
 ## 版本记录
 
 以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
+
+### 0.4.0 - 2026-08-18
+
+- 新增：command-plugin SDK；支持 enqueue/resume/status/cancel/export 的 SQLite 持久化批量回测；模板集 manifest 校验与终态报告；两套物理隔离的 A-M 研究流程。
+- 变更：全局 `204/401/429` 会话续期、批量 worker 额外五次重登、服务器 `429 / Retry-After` 背压、轮询优先队列调度，以及 simulate 与 submit 的明确语义区分。
+- 保留：不确定的 simulation POST、运行历史、Alpha 详情与 PnL 均保持可审计，不盲目重发或删除。
 
 ### 0.3.2 - 2026-07-16
 

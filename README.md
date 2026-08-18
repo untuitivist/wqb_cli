@@ -8,7 +8,7 @@ English | [简体中文](README_CN.md)
 
 `wqb-cli` is an agent-native command line toolkit for working with the WorldQuant BRAIN API and local research data.
 
-It is built for coding agents and long-running research agents first, not as a thin human-only wrapper. Commands produce structured JSON, preserve raw API context, wait for asynchronous platform results, and fit naturally into repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation submission, alpha submission checks, local `data_all` screening, and community-data search.
+It is built for coding agents and long-running research agents first, not as a thin human-only wrapper. Commands produce structured JSON, preserve raw API context, wait for asynchronous platform results, and fit naturally into repeatable research workflows: authentication, API discovery, alpha listing and inspection, simulation execution, Alpha submission checks, local `data_all` screening, and community-data search.
 
 - Repository: [untuitivist/wqb_cli](https://github.com/untuitivist/wqb_cli)
 - Author: [wiz](https://github.com/untuitivist)
@@ -96,7 +96,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.3.2"
+version = "0.4.0"
 ```
 
 ## Authentication
@@ -292,11 +292,28 @@ To let a workflow generate candidates while the CLI independently runs simulatio
 wqb sqlitesimu run candidates.json --output run-result.json
 ```
 
-The workflow can also call `enqueue` first and then `resume` the returned `run_id`. The default database is `local/sqlitesimu/simulations.sqlite3`; it exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code.
+For explicit process control, initialize a database, enqueue once, and resume the returned run:
+
+```powershell
+wqb sqlitesimu init --db simulations.sqlite3
+wqb sqlitesimu enqueue candidates.json --db simulations.sqlite3 --output enqueue-result.json
+wqb sqlitesimu resume <run_id> --db simulations.sqlite3 --output worker-result.json
+wqb sqlitesimu status <run_id> --db simulations.sqlite3 --output status.json
+wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
+```
+
+The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code.
+
+Template-family manifests can be validated before enqueue and rendered into a fixed terminal report:
+
+```powershell
+wqb sqlitesimu template-validate template-manifest.json --output template-validation.json
+wqb sqlitesimu template-report run-export.json --minimum-ready-coverage 0.95 --output template-report.json --markdown-output template-report.md
+```
 
 See `resources/docs/sqlitesimu.md` for the manifest contract, recovery states, exit codes, and explicit differences from the three legacy workers.
 
-The agent-independent template-family lifecycle is defined in `workflows/workflow_batchsimu/`. Its J node enqueues and launches the worker; K/L remain blocked until that exact run reaches a terminal state.
+The agent-independent template-family lifecycle is defined in `workflows/workflow_batchsimu/`. Its J node enqueues and launches the worker; K/L/M remain blocked until that exact run reaches a terminal state.
 
 ## Submit Workflow
 
@@ -400,7 +417,7 @@ Two complete, isolated workflows live under `workflows/`:
 ```text
 workflows/
   workflow_simu/          bounded, adaptive A-M research with synchronous wqb sim create
-  workflow_batchsimu/     template-family A-L screening with agent-independent sqlitesimu execution
+  workflow_batchsimu/     template-family A-M research with agent-independent sqlitesimu execution
 ```
 
 Each workflow has its own A node, run directory, input/output contracts, graph, and terminal behavior. They do not share A-F artifacts, SQLite databases, node inputs, or control-flow handoffs.
@@ -412,7 +429,7 @@ workflows/workflow_simu/workflow_graph.md
 workflows/workflow_batchsimu/workflow_graph.md
 ```
 
-The batch workflow freezes one settings cell, samples each template family without replacement, records full family lineage, and only analyzes density, quality distributions, errors, and actual IS-PnL correlation after the authoritative run is terminal. It never submits Alpha.
+The batch workflow freezes one settings cell, samples each template family without replacement, records full family lineage, and only analyzes density, quality distributions, errors, and actual IS-PnL correlation after the authoritative run is terminal. K selects candidates from the batch's own results, L performs slow final checks, and M is the only node allowed to call `wqb alpha submit`; no candidate or result crosses into the adaptive workflow.
 
 ## Command Documentation
 
@@ -500,7 +517,7 @@ python -m wqb_cli --help
 
 Package release:
 
-[wqb-cli 0.3.2](https://github.com/untuitivist/wqb_cli/releases/tag/v0.3.2)
+[wqb-cli 0.4.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.4.0)
 
 Release checklist:
 
@@ -508,13 +525,19 @@ Release checklist:
 2. Run editable install.
 3. Run tests.
 4. Commit changes.
-5. Tag the release, for example `v0.3.2`.
+5. Tag the release, for example `v0.4.0`.
 6. Push the branch and tag.
 7. Publish a GitHub Release.
 
 ## Version History
 
 The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
+
+### 0.4.0 - 2026-08-18
+
+- Added: command-plugin SDK; durable SQLite batch simulations with enqueue/resume/status/cancel/export; template-family manifest validation and terminal reports; two isolated A-M research workflows.
+- Changed: global `204/401/429` session renewal, five additional batch-worker login attempts, server-driven `429 / Retry-After` backpressure, polling-first queue scheduling, and explicit simulate-versus-submit terminology.
+- Preserved: ambiguous simulation POST outcomes, operational history, Alpha details, and PnL remain auditable instead of being blindly replayed or deleted.
 
 ### 0.3.2 - 2026-07-16
 

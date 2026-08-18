@@ -48,9 +48,10 @@ wqb sqlitesimu status <run_id> --db <node_dir>\simulations.sqlite3 --output <nod
 worker 启动并在 `status_after_launch.json` 中显示非终态进展或已完成后，J 立即交接：
 
 - CoreClient 对 `204 / 401 / 429` 做全局续期与重放，sqlitesimu 耗尽后再补 5 次显式重登。
-- worker 自己提交、按 Retry-After 轮询、恢复、抓取 alpha detail/PnL 和写库。
+- worker 不做客户端并发槽位计数，持续提交并由服务器 `429 / Retry-After` 控制背压。
+- worker 自己轮询、恢复、抓取 alpha detail/PnL 和写库；simulation/enrichment 阶段完成后原子消费对应 queue 行。
 - agent 不读取单条 alpha，不修改 manifest，不根据中间结果新增表达式。
-- 监控只运行 `wqb sqlitesimu status` 并报告紧凑计数；禁止持续打印 worker log。
+- 监控只运行 `wqb sqlitesimu status` 并报告 state、experiment counts 和两级 `queues` 计数；禁止持续打印 worker log。
 - worker 异常退出时只用相同 db/run_id 重启 `resume`；`SUBMIT_UNKNOWN` 不得盲目重发。
 
 ## 成功条件

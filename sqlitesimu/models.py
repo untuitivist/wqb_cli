@@ -18,13 +18,6 @@ EXPERIMENT_TERMINAL_STATES = {
     "CANCELLED",
 }
 
-ACTIVE_BATCH_STATES = {
-    "SUBMITTING",
-    "POLLING",
-    "CHILD_POLLING",
-}
-
-
 @dataclass(frozen=True)
 class CandidateSpec:
     payload: dict[str, Any]
@@ -70,7 +63,6 @@ class BatchRecord:
     id: str
     run_id: str
     state: str
-    slot_class: str
     payload: Any
     attempts: int
     poll_attempts: int

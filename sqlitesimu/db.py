@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 from .models import (
-    ACTIVE_BATCH_STATES,
     EXPERIMENT_TERMINAL_STATES,
     BatchItemRecord,
     BatchRecord,
@@ -21,7 +20,9 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+# Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
+LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
 
 class RunLeaseError(RuntimeError):
@@ -71,6 +72,19 @@ CREATE TABLE IF NOT EXISTS experiments (
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL,
     UNIQUE(run_id, candidate_id)
+);
+
+CREATE TABLE IF NOT EXISTS simulation_queue (
+    experiment_id TEXT PRIMARY KEY REFERENCES experiments(id) ON DELETE CASCADE,
+    run_id TEXT NOT NULL REFERENCES runs(id),
+    enqueued_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS enrichment_queue (
+    experiment_id TEXT PRIMARY KEY REFERENCES experiments(id) ON DELETE CASCADE,
+    run_id TEXT NOT NULL REFERENCES runs(id),
+    alpha_id TEXT NOT NULL,
+    enqueued_at REAL NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS simulation_batches (
@@ -195,6 +209,10 @@ CREATE TABLE IF NOT EXISTS run_leases (
 
 CREATE INDEX IF NOT EXISTS idx_experiments_runnable
     ON experiments(run_id, state, not_before, priority, created_at);
+CREATE INDEX IF NOT EXISTS idx_simulation_queue_run
+    ON simulation_queue(run_id, enqueued_at, experiment_id);
+CREATE INDEX IF NOT EXISTS idx_enrichment_queue_run
+    ON enrichment_queue(run_id, enqueued_at, experiment_id);
 CREATE INDEX IF NOT EXISTS idx_batches_runnable
     ON simulation_batches(run_id, state, not_before, created_at);
 CREATE INDEX IF NOT EXISTS idx_items_runnable
@@ -313,6 +331,28 @@ class SqliteStore:
                     f"Database schema {current} is newer than supported version {SCHEMA_VERSION}"
                 )
             conn.executescript(SCHEMA_SQL)
+            if current < 2:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at)
+                    SELECT id, run_id, created_at
+                    FROM experiments
+                    WHERE state IN (
+                        'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SUBMITTING',
+                        'POLLING', 'CHILD_POLLING'
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO enrichment_queue(
+                        experiment_id, run_id, alpha_id, enqueued_at
+                    )
+                    SELECT id, run_id, alpha_id, updated_at
+                    FROM experiments
+                    WHERE state IN ('SIM_DONE', 'ENRICH_PNL') AND alpha_id IS NOT NULL
+                    """
+                )
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def enqueue(self, manifest: SimulationManifest, *, now: float | None = None) -> EnqueueResult:
@@ -348,7 +388,7 @@ class SqliteStore:
                     candidate_id = f"cand_{fingerprint[:24]}"
                     settings = spec.payload["settings"]
                     language = str(settings.get("language") or "FASTEXPR").upper()
-                    compatibility_key, slot_class, batch_limit = scheduling_profile(spec.payload)
+                    compatibility_key, batch_limit = scheduling_profile(spec.payload)
                     conn.execute(
                         """
                         INSERT INTO candidates(
@@ -364,7 +404,7 @@ class SqliteStore:
                             _json(settings),
                             _json(spec.payload),
                             compatibility_key,
-                            slot_class,
+                            LEGACY_SLOT_CLASS,
                             batch_limit,
                             timestamp,
                         ),
@@ -388,6 +428,13 @@ class SqliteStore:
                 )
                 if cursor.rowcount:
                     accepted += 1
+                    conn.execute(
+                        """
+                        INSERT INTO simulation_queue(experiment_id, run_id, enqueued_at)
+                        VALUES (?, ?, ?)
+                        """,
+                        (experiment_id, run_id, timestamp),
+                    )
                 else:
                     duplicates += 1
             self._event(
@@ -511,35 +558,28 @@ class SqliteStore:
     def create_next_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            candidates = conn.execute(
+            selected_head = conn.execute(
                 """
                 SELECT e.id AS experiment_id, c.*
-                FROM experiments e
+                FROM simulation_queue q
+                JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
-                WHERE e.run_id = ? AND e.state IN ('QUEUED', 'RETRY_WAIT') AND e.not_before <= ?
+                WHERE q.run_id = ?
+                  AND e.state IN ('QUEUED', 'RETRY_WAIT') AND e.not_before <= ?
                 ORDER BY e.priority DESC, e.created_at, e.id
+                LIMIT 1
                 """,
                 (run_id, now),
-            ).fetchall()
-            selected_head: sqlite3.Row | None = None
-            active_states = tuple(sorted(ACTIVE_BATCH_STATES))
-            placeholders = ",".join("?" for _ in active_states)
-            for candidate in candidates:
-                active = conn.execute(
-                    f"SELECT COUNT(*) FROM simulation_batches WHERE slot_class = ? AND state IN ({placeholders})",
-                    (candidate["slot_class"], *active_states),
-                ).fetchone()[0]
-                if int(active) < slot_limit(str(candidate["slot_class"])):
-                    selected_head = candidate
-                    break
+            ).fetchone()
             if selected_head is None:
                 return None
             compatible = conn.execute(
                 """
                 SELECT e.id AS experiment_id, c.payload_json
-                FROM experiments e
+                FROM simulation_queue q
+                JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
-                WHERE e.run_id = ? AND e.state IN ('QUEUED', 'RETRY_WAIT')
+                WHERE q.run_id = ? AND e.state IN ('QUEUED', 'RETRY_WAIT')
                   AND e.not_before <= ? AND c.compatibility_key = ?
                 ORDER BY e.priority DESC, e.created_at, e.id
                 LIMIT ?
@@ -565,7 +605,7 @@ class SqliteStore:
                     batch_id,
                     run_id,
                     selected_head["compatibility_key"],
-                    selected_head["slot_class"],
+                    LEGACY_SLOT_CLASS,
                     _json(request_payload),
                     now,
                     now,
@@ -713,6 +753,16 @@ class SqliteStore:
                 "UPDATE simulation_items SET state = ?, last_error = ? WHERE batch_id = ?",
                 (state, error, batch_id),
             )
+            if state == "PERMANENT_FAILURE":
+                conn.execute(
+                    """
+                    DELETE FROM simulation_queue
+                    WHERE experiment_id IN (
+                        SELECT experiment_id FROM simulation_items WHERE batch_id = ?
+                    )
+                    """,
+                    (batch_id,),
+                )
             self._event(
                 conn,
                 str(row["run_id"]),
@@ -860,6 +910,13 @@ class SqliteStore:
                     """,
                     (alpha_id, now, item["experiment_id"]),
                 )
+                self._advance_to_enrichment(
+                    conn,
+                    experiment_id=str(item["experiment_id"]),
+                    run_id=str(batch["run_id"]),
+                    alpha_id=alpha_id,
+                    now=now,
+                )
                 batch_state = "COMPLETE"
             conn.execute(
                 """
@@ -946,6 +1003,13 @@ class SqliteStore:
                 """,
                 (alpha_id, now, item.experiment_id),
             )
+            self._advance_to_enrichment(
+                conn,
+                experiment_id=item.experiment_id,
+                run_id=str(batch["run_id"]),
+                alpha_id=alpha_id,
+                now=now,
+            )
             self._event(
                 conn,
                 str(batch["run_id"]),
@@ -984,6 +1048,10 @@ class SqliteStore:
                 WHERE id = ?
                 """,
                 (error, now, item.experiment_id),
+            )
+            conn.execute(
+                "DELETE FROM simulation_queue WHERE experiment_id = ?",
+                (item.experiment_id,),
             )
             self._event(
                 conn,
@@ -1043,9 +1111,12 @@ class SqliteStore:
         with self.connect() as conn:
             row = conn.execute(
                 """
-                SELECT * FROM experiments
-                WHERE run_id = ? AND state IN ('SIM_DONE', 'ENRICH_PNL') AND not_before <= ?
-                ORDER BY updated_at, id
+                SELECT e.*
+                FROM enrichment_queue q
+                JOIN experiments e ON e.id = q.experiment_id
+                WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
+                  AND e.not_before <= ?
+                ORDER BY e.updated_at, e.id
                 LIMIT 1
                 """,
                 (run_id, now),
@@ -1163,6 +1234,10 @@ class SqliteStore:
                 """,
                 (now, experiment.id),
             )
+            conn.execute(
+                "DELETE FROM enrichment_queue WHERE experiment_id = ?",
+                (experiment.id,),
+            )
             self._event(
                 conn,
                 experiment.run_id,
@@ -1194,6 +1269,11 @@ class SqliteStore:
                 """,
                 (state, 1 if increment_attempt else 0, not_before, error, now, experiment.id),
             )
+            if terminal:
+                conn.execute(
+                    "DELETE FROM enrichment_queue WHERE experiment_id = ?",
+                    (experiment.id,),
+                )
 
     def set_runtime_float(self, key: str, value: float, *, now: float) -> None:
         with self.connect() as conn:
@@ -1221,6 +1301,7 @@ class SqliteStore:
                     (run_id,),
                 )
             }
+            queues = self._queue_counts(conn, run_id)
             total = sum(counts.values())
             terminal_count = sum(counts.get(state, 0) for state in EXPERIMENT_TERMINAL_STATES)
             if total == terminal_count:
@@ -1238,7 +1319,13 @@ class SqliteStore:
                 (state, now, 1 if terminal else 0, now, run_id),
             )
             if terminal:
-                payload = {"run_id": run_id, "state": state, "counts": counts, "total": total}
+                payload = {
+                    "run_id": run_id,
+                    "state": state,
+                    "counts": counts,
+                    "queues": queues,
+                    "total": total,
+                }
                 conn.execute(
                     """
                     INSERT OR IGNORE INTO outbox_events(run_id, event_type, payload_json, created_at)
@@ -1260,6 +1347,7 @@ class SqliteStore:
                     (run_id,),
                 )
             }
+            queues = self._queue_counts(conn, run_id)
         return {
             "run_id": run_id,
             "name": run["name"],
@@ -1267,6 +1355,7 @@ class SqliteStore:
             "enrichment_profile": run["enrichment_profile"],
             "metadata": json.loads(run["metadata_json"]),
             "counts": counts,
+            "queues": queues,
             "total": sum(counts.values()),
             "created_at": run["created_at"],
             "updated_at": run["updated_at"],
@@ -1364,6 +1453,43 @@ class SqliteStore:
             ]
         return min(float(value) for value in values) if values else None
 
+    @staticmethod
+    def _advance_to_enrichment(
+        conn: sqlite3.Connection,
+        *,
+        experiment_id: str,
+        run_id: str,
+        alpha_id: str,
+        now: float,
+    ) -> None:
+        conn.execute(
+            "DELETE FROM simulation_queue WHERE experiment_id = ?",
+            (experiment_id,),
+        )
+        conn.execute(
+            """
+            INSERT INTO enrichment_queue(experiment_id, run_id, alpha_id, enqueued_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(experiment_id) DO UPDATE SET
+                run_id = excluded.run_id,
+                alpha_id = excluded.alpha_id,
+                enqueued_at = excluded.enqueued_at
+            """,
+            (experiment_id, run_id, alpha_id, now),
+        )
+
+    @staticmethod
+    def _queue_counts(conn: sqlite3.Connection, run_id: str) -> dict[str, int]:
+        simulation = conn.execute(
+            "SELECT COUNT(*) FROM simulation_queue WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()[0]
+        enrichment = conn.execute(
+            "SELECT COUNT(*) FROM enrichment_queue WHERE run_id = ?",
+            (run_id,),
+        ).fetchone()[0]
+        return {"simulation": int(simulation), "enrichment": int(enrichment)}
+
     def _refresh_batch_from_items(self, conn: sqlite3.Connection, batch_id: str, *, now: float) -> None:
         counts = {
             str(row["state"]): int(row["count"])
@@ -1424,20 +1550,17 @@ def candidate_fingerprint(payload: dict[str, Any]) -> str:
     return hashlib.sha256(_json(payload).encode("utf-8")).hexdigest()
 
 
-def scheduling_profile(payload: dict[str, Any]) -> tuple[str, str, int]:
+def scheduling_profile(payload: dict[str, Any]) -> tuple[str, int]:
     simulation_type = str(payload["type"]).upper()
     settings = payload["settings"]
     language = str(settings.get("language") or "FASTEXPR").upper()
     region = str(settings.get("region") or "").upper()
     instrument_type = str(settings.get("instrumentType") or "").upper()
     if simulation_type == "SUPER":
-        slot_class = "SUPER"
         batch_limit = 1
     elif region == "GLB":
-        slot_class = "REGULAR_GLB"
         batch_limit = 5 if language == "FASTEXPR" else 1
     else:
-        slot_class = "REGULAR_OTHER"
         batch_limit = 10 if language == "FASTEXPR" else 1
     compatibility = {
         "type": simulation_type,
@@ -1447,11 +1570,7 @@ def scheduling_profile(payload: dict[str, Any]) -> tuple[str, str, int]:
         "delay": settings.get("delay"),
         "batch_limit": batch_limit,
     }
-    return candidate_fingerprint(compatibility), slot_class, batch_limit
-
-
-def slot_limit(slot_class: str) -> int:
-    return {"REGULAR_OTHER": 8, "REGULAR_GLB": 4, "SUPER": 3}[slot_class]
+    return candidate_fingerprint(compatibility), batch_limit
 
 
 def _extract_metrics(detail: dict[str, Any]) -> dict[str, Any]:
@@ -1518,7 +1637,6 @@ def _batch_from_row(row: sqlite3.Row) -> BatchRecord:
         id=str(row["id"]),
         run_id=str(row["run_id"]),
         state=str(row["state"]),
-        slot_class=str(row["slot_class"]),
         payload=json.loads(row["payload_json"]),
         attempts=int(row["attempts"]),
         poll_attempts=int(row["poll_attempts"]),

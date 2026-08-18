@@ -93,6 +93,16 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
        -> CHILD_POLLING -> SIM_DONE -> ENRICH_PNL -> READY
 ```
 
+运行队列与历史账本分离：
+
+- `simulation_queue` 是表达式待回测队列。只有拿到 alpha id，或已确认该表达式永久失败后，才在同一事务中删除。
+- 拿到 alpha id 时，同一事务会先删除 `simulation_queue` 行，再写入 `enrichment_queue`。
+- `enrichment_queue` 是 alpha 详情/PnL 待处理队列。只有详情和 PnL 都持久化、experiment 进入 `READY` 后才删除。
+- `SUBMIT_UNKNOWN` 可能已经在服务器创建任务，因此不自动删除其 `simulation_queue` 行，必须先人工核对。
+- queue 行会被真实 `DELETE`；`experiments`、batch、Location、API event 和结果表继续保留，因而删除待办不会破坏恢复、导出和审计。
+
+`status` 和最终 run JSON 的 `queues.simulation`、`queues.enrichment` 可直接检查两级待办数量。schema v1 数据库首次由新版本打开时会自动升级为 v2，并根据 experiment 状态回填尚未完成的队列项。
+
 终止状态：
 
 - `READY`：详情和 PnL 都已保存。
@@ -108,6 +118,7 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
 - REGULAR FASTEXPR 仍以 region 和 delay 为主要批次边界，普通区域单批最多 10 条。
 - POST `/simulations` 成功必须是 `201`，并持久化 `Location`。
 - `429` 和服务器并发限制不会消耗失败预算，按 `Retry-After` 继续等待。
+- 客户端不设置 `8 / 4 / 3` 等并发槽位上限；持续提交，由 BRAIN 的 `429` 和 `Retry-After` 提供背压。
 - `204 / 401 / 429` 都按 `wqb.WQBSession` 的异常会话状态处理；即使两层重登耗尽，也只延期当前工作，不会把 experiment 写成永久失败。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
@@ -119,10 +130,10 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
 
 | 位置 | 旧脚本 | sqlitesimu |
 | --- | --- | --- |
-| 源任务 | 随机读取并删除源表行 | candidate 不可变，experiment 用状态推进 |
+| 源任务 | 结果落库后删除源表行，但完成前可能被再次随机抽中 | 两级 queue 真实消费删除；candidate/experiment 作为历史账本保留 |
 | 尾批 | 少于 2 条会跳过 | 单条也提交，避免永久滞留 |
 | 批次安全 | 只按 region、delay 分组，统一最多 10 条 | 额外隔离 instrument type、language；GLB 最多 5 条 |
-| 并发 | 槽位检查已注释，依赖服务端 429 | REGULAR 8、GLB 4、SUPER 3 个槽位 |
+| 并发 | 槽位检查已注释，依赖服务端 429 | 不做客户端槽位计数，依赖服务端 429/Retry-After |
 | 重复提交 | 异常后可能重新 POST | POST 结果不确定时阻塞，禁止盲重发 |
 | 多进程 | 多线程加 SQLite lock | run 租约阻止两个 worker 重复消费 |
 | 认证 | 脚本直接持有 EMAIL/PASSWORD | 使用 wqb-cli cookie/keyring/env；CoreClient 处理 `204 / 401 / 429`，耗尽后 sqlitesimu 再补 5 次重登 |
@@ -154,6 +165,7 @@ alpha 等待与 submit 轮询原先存在直接调用 `requests.Session` 和局�
 规范化结果位于：
 
 - `runs`、`candidates`、`experiments`
+- `simulation_queue`、`enrichment_queue`（只保存未消费待办）
 - `simulation_batches`、`simulation_items`
 - `alphas`、`alpha_metrics`、`alpha_checks`、`alpha_pnl`
 - `api_events`、`outbox_events`

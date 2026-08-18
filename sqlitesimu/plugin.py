@@ -203,6 +203,7 @@ class SqliteSimuPlugin:
                 "results": store.analysis_results(args.run_id),
                 "checks": store.check_results(args.run_id),
                 "simued_alpha_is_pnl": store.compatibility_results(args.run_id),
+                "pnl_paths": store.pnl_paths(args.run_id),
             }
             context.write_json(payload, args.output)
             return 0

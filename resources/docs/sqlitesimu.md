@@ -187,9 +187,9 @@ alpha 等待与 simulation 轮询原先存在直接调用 `requests.Session` 和
 - `analysis_alpha_ready`：带 run/experiment/candidate lineage 的 READY 结果。
 - `simued_alpha_is_pnl`：兼容旧分析代码的 24 列视图，`PnL` 仍为逗号分隔差分序列。
 
-`wqb sqlitesimu export` 还会输出所有 experiment 的 payload、lineage、attempts、state、alpha id 和 last error，以及 READY alpha 的完整 checks，供后续批量诊断和固定格式报告。
+`wqb sqlitesimu export` 还会输出所有 experiment 的 payload、lineage、attempts、state、alpha id 和 last error，以及 READY alpha 的完整 checks。`pnl_paths` 按 Alpha 输出 `experiment_id`、`alpha_id`、来源和结构化 points；每个 point 保留 ordinal、date 和 `pnl_delta`，因此批量相关性分析可以按日期内连接且不填补缺失值。
 
-建议新分析读取 `analysis_alpha_ready` 和规范化 PnL 表；旧 notebook 可以继续读取 `simued_alpha_is_pnl`。
+建议新分析读取 `analysis_alpha_ready` 和 export 的 `pnl_paths`；旧 notebook 可以继续读取 `simued_alpha_is_pnl`。
 
 ## BatchSimu 模板格式与报告
 

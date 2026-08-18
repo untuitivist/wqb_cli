@@ -1845,6 +1845,49 @@ class SqliteStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def pnl_paths(self, run_id: str) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    e.id AS experiment_id,
+                    a.alpha_id,
+                    p.ordinal,
+                    p.date_value,
+                    p.pnl_delta
+                FROM experiments e
+                JOIN alphas a ON a.experiment_id = e.id
+                LEFT JOIN alpha_pnl p ON p.alpha_id = a.alpha_id
+                WHERE e.run_id = ? AND e.state = 'READY'
+                ORDER BY e.id, p.ordinal
+                """,
+                (run_id,),
+            ).fetchall()
+
+        paths: list[dict[str, Any]] = []
+        by_alpha: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            alpha_id = str(row["alpha_id"])
+            path = by_alpha.get(alpha_id)
+            if path is None:
+                path = {
+                    "experiment_id": str(row["experiment_id"]),
+                    "alpha_id": alpha_id,
+                    "source": "alpha_pnl",
+                    "points": [],
+                }
+                by_alpha[alpha_id] = path
+                paths.append(path)
+            if row["ordinal"] is not None:
+                path["points"].append(
+                    {
+                        "ordinal": int(row["ordinal"]),
+                        "date": row["date_value"],
+                        "pnl_delta": row["pnl_delta"],
+                    }
+                )
+        return paths
+
     def next_due_time(self, run_id: str) -> float | None:
         with self.connect() as conn:
             values = [

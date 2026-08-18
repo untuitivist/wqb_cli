@@ -589,6 +589,7 @@ class SqliteSimuTests(unittest.TestCase):
             normalized = store.analysis_results(enqueued.run_id)
             experiments = store.experiment_results(enqueued.run_id)
             legacy = store.compatibility_results(enqueued.run_id)
+            pnl_paths = store.pnl_paths(enqueued.run_id)
             self.assertEqual(len(normalized), 2)
             self.assertEqual(len(experiments), 2)
             self.assertEqual(experiments[0]["state"], "READY")
@@ -626,6 +627,16 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(legacy[0]["settings_maxTrade"], "OFF")
             self.assertEqual(legacy[0]["pyramids"], "USA/D1, ATOM")
             self.assertEqual(legacy[0]["PnL"], "nan, 0.0, 3.5")
+            self.assertEqual(len(pnl_paths), 2)
+            self.assertEqual(pnl_paths[0]["source"], "alpha_pnl")
+            self.assertEqual(
+                pnl_paths[0]["points"],
+                [
+                    {"ordinal": 0, "date": "2024-01-01", "pnl_delta": None},
+                    {"ordinal": 1, "date": "2024-01-02", "pnl_delta": 0.0},
+                    {"ordinal": 2, "date": "2024-01-03", "pnl_delta": 3.5},
+                ],
+            )
 
     def test_server_backpressure_replaces_local_slot_limits(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

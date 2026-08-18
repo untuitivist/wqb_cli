@@ -8,10 +8,9 @@ from wqb_cli.commands.alpha import (
     _call_waiting_alpha,
     _classify_submit_post,
     _classify_submit_wait,
-    _response_body,
-    _should_retry_alpha_with_basic_auth,
     _wait_submit_status,
 )
+from wqb_cli.core.client import PreparedRequest, WqbClient
 
 
 class FakeResponse:
@@ -52,8 +51,30 @@ class FakeSession:
 class AlphaSubmitTests(unittest.TestCase):
     def test_response_body_keeps_full_non_json_text(self) -> None:
         text = "x" * 3000
-        response = FakeResponse(status_code=200, text=text)
-        self.assertEqual(_response_body(response), text)
+        session = FakeSession(
+            [FakeResponse(status_code=200, headers={"Content-Type": "text/plain"}, text=text)]
+        )
+        client = WqbClient(
+            SimpleNamespace(base_url="https://api.worldquantbrain.com"),
+            session,
+            auto_auth=False,
+        )
+        prepared = PreparedRequest(
+            endpoint="/alphas/{alpha_id}/submit",
+            method="GET",
+            url="https://api.worldquantbrain.com/alphas/A/submit",
+            params={},
+            json_body=None,
+            headers={},
+            auth=None,
+            mutating=False,
+            executable=True,
+            reason=None,
+        )
+
+        result = client.call_once(prepared)
+
+        self.assertEqual(result["response"]["body"], text)
 
     def test_classify_regular_submission_failure_as_460(self) -> None:
         result = {
@@ -104,25 +125,24 @@ class AlphaSubmitTests(unittest.TestCase):
         self.assertEqual(classified["reason"], "submit_api_accepted")
 
     def test_wait_submit_status_times_out_on_retry_after(self) -> None:
-        client = SimpleNamespace(
-            session=FakeSession(
-                [
-                    FakeResponse(
-                        status_code=200,
-                        headers={"Retry-After": "1.0", "Content-Type": "text/html"},
-                        text="",
-                    )
-                ]
-            )
+        client = WqbClient(
+            SimpleNamespace(base_url="https://api.worldquantbrain.com"),
+            FakeSession(
+                [FakeResponse(status_code=200, headers={"Retry-After": "1.0"})]
+            ),
+            auto_auth=False,
         )
-        prepared = SimpleNamespace(
+        prepared = PreparedRequest(
             executable=True,
             endpoint="/alphas/{alpha_id}/submit",
             method="GET",
             url="https://api.worldquantbrain.com/alphas/A/submit",
             params={},
             json_body=None,
+            headers={},
+            auth=None,
             mutating=False,
+            reason=None,
         )
 
         with patch("wqb_cli.commands.alpha.time.sleep"):
@@ -134,7 +154,7 @@ class AlphaSubmitTests(unittest.TestCase):
         self.assertEqual(result["response"]["wait_events"][0]["reason"], "max_wait_seconds_exceeded")
         self.assertEqual(_classify_submit_wait(result)["submit_code"], 408)
 
-    def test_alpha_check_retries_with_basic_auth_after_cookie_401(self) -> None:
+    def test_alpha_check_uses_core_client_global_reauthentication(self) -> None:
         session = FakeSession(
             [
                 FakeResponse(
@@ -144,6 +164,12 @@ class AlphaSubmitTests(unittest.TestCase):
                     json_body={"detail": "Incorrect authentication credentials."},
                 ),
                 FakeResponse(
+                    status_code=201,
+                    reason="Created",
+                    headers={"Content-Type": "application/json"},
+                    json_body={},
+                ),
+                FakeResponse(
                     status_code=200,
                     reason="OK",
                     headers={"Content-Type": "application/json"},
@@ -151,11 +177,17 @@ class AlphaSubmitTests(unittest.TestCase):
                 ),
             ]
         )
-        client = SimpleNamespace(session=session, call=None)
-
-        from wqb_cli.core.client import WqbClient, PreparedRequest
-
-        client = WqbClient(SimpleNamespace(base_url="https://api.worldquantbrain.com"), session)
+        client = WqbClient(
+            SimpleNamespace(base_url="https://api.worldquantbrain.com"),
+            session,
+            login_payload_provider=lambda: {
+                "email": "user@example.com",
+                "password": "secret",
+                "expiry": 3600,
+            },
+            cookie_saver=lambda _session, _path: None,
+            sleeper=lambda _seconds: None,
+        )
         prepared = PreparedRequest(
             endpoint="/alphas/{alpha_id}/check",
             method="GET",
@@ -168,23 +200,13 @@ class AlphaSubmitTests(unittest.TestCase):
             executable=True,
             reason=None,
         )
-        result = _call_waiting_alpha(client, prepared, 60.0, basic_auth=("user@example.com", "secret"))
+        result = _call_waiting_alpha(client, prepared, 60.0)
+
         self.assertTrue(result["ok"])
-        self.assertEqual(session.calls, 2)
+        self.assertEqual(session.calls, 3)
         self.assertIsNone(session.kwargs_history[0].get("auth"))
         self.assertEqual(session.kwargs_history[1].get("auth"), ("user@example.com", "secret"))
-
-    def test_alpha_basic_auth_retry_only_for_alpha_401(self) -> None:
-        result = {
-            "ok": False,
-            "response": {"status_code": 401},
-        }
-        prepared = SimpleNamespace(endpoint="/users/self/alphas", auth=None)
-        self.assertFalse(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
-        prepared = SimpleNamespace(endpoint="/alphas/{alpha_id}/check", auth=("u", "p"))
-        self.assertFalse(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
-        prepared = SimpleNamespace(endpoint="/alphas/{alpha_id}/check", auth=None)
-        self.assertTrue(_should_retry_alpha_with_basic_auth(result, prepared, ("u", "p")))
+        self.assertIsNone(session.kwargs_history[2].get("auth"))
 
 
 if __name__ == "__main__":

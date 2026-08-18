@@ -140,6 +140,15 @@ Cookies are stored locally:
 local/auth/cookies.json
 ```
 
+All `WqbClient` calls automatically recover the session when BRAIN returns
+`204`, `401`, or `429`, matching the status predicate used by `wqb.WQBSession`.
+The client reloads credentials from config, keyring, or environment, logs in,
+persists the refreshed cookie, and replays the rejected request with bounded
+retries. Stale BRAIN cookies are cleared before login so old and refreshed
+domain variants cannot be sent together. Calls to `/authentication` are
+excluded from recursive renewal, and `POST /authentication` succeeds only on
+`201`.
+
 Do not commit `local/`, `.env`, or cookie files.
 
 ## Repository Layout

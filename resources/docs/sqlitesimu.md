@@ -108,6 +108,7 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
 - REGULAR FASTEXPR 仍以 region 和 delay 为主要批次边界，普通区域单批最多 10 条。
 - POST `/simulations` 成功必须是 `201`，并持久化 `Location`。
 - `429` 和服务器并发限制不会消耗失败预算，按 `Retry-After` 继续等待。
+- `204 / 401 / 429` 都按 `wqb.WQBSession` 的异常会话状态处理；即使两层重登耗尽，也只延期当前工作，不会把 experiment 写成永久失败。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
 - 旧脚本识别的资源不足、执行异常、运行过久错误会重新排队。
@@ -124,12 +125,29 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
 | 并发 | 槽位检查已注释，依赖服务端 429 | REGULAR 8、GLB 4、SUPER 3 个槽位 |
 | 重复提交 | 异常后可能重新 POST | POST 结果不确定时阻塞，禁止盲重发 |
 | 多进程 | 多线程加 SQLite lock | run 租约阻止两个 worker 重复消费 |
-| 认证 | 脚本直接持有 EMAIL/PASSWORD | 使用 wqb-cli cookie/keyring/env；每个 401 调用最多登录并重放一次 |
+| 认证 | 脚本直接持有 EMAIL/PASSWORD | 使用 wqb-cli cookie/keyring/env；CoreClient 处理 `204 / 401 / 429`，耗尽后 sqlitesimu 再补 5 次重登 |
 | 详情/PnL | 两个线程并行，部分错误无限循环 | 分阶段持久化；普通读取错误受 `max-attempts` 限制 |
 | 结果表 | 单个宽表 | 规范化表为主，保留同名兼容视图 |
 | 输出 | 持续打印日志 | 执行过程静默，结束时输出一份 JSON |
 
 这些变动用于确定性、崩溃恢复和工作流接入，不改变 alpha expression 或 BRAIN simulation payload。
+
+## 自动续期边界
+
+CoreClient 的默认策略参考安装环境中的 `wqb.WQBSession`：
+
+- `204 / 401 / 429` 都触发重新认证，不只处理 `401`。
+- 初始业务请求失败后最多重放 3 次；每次认证最多 POST 3 次，间隔 2 秒。
+- 多线程同时发现失效时通过 generation 和锁共享一次成功登录。
+- 登录前清除当前 session 中旧的 BRAIN cookie；旧版扁平 cookie 文件只加载到 API host 一次，避免父域和 host 域同时发送新旧会话值。
+- 成功登录后立即保存 cookie；cookie 落盘失败会记录诊断，但不丢弃当前内存会话。
+- `/authentication` 自身不递归触发自动认证，登录只有 `201` 视为成功。
+
+`sqlitesimu` 在 CoreClient 耗尽后，再执行最多 5 轮显式登录和业务请求重放，轮间隔 2 秒。额外层的业务重放关闭 CoreClient 自动续期，保证这里严格是 5 轮，而不是递归放大。
+
+若最终仍返回 `204 / 401 / 429`，runtime 会按 `Retry-After` 或默认间隔延期；父任务、child、详情和 PnL 轮询均不增加失败次数，run 保持可恢复。`POST /simulations` 的 `204` 也会重登并重放，这是为了与 `WQBSession` 一致；相较此前仅处理 `401` 且最多重放一次的 gateway，这是有意的行为变化。
+
+alpha 等待与 submit 轮询原先存在直接调用 `requests.Session` 和局部 Basic Auth 重试的路径；现在统一通过 CoreClient，避免绕过全局续期或重复放大认证请求。
 
 ## 结果模型
 

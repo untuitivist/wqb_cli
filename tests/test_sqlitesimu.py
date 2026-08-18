@@ -184,10 +184,65 @@ class RetryableSimulationGateway(SuccessfulGateway):
         )
 
 
+class RecoveringSessionGateway(SuccessfulGateway):
+    def __init__(self, trigger_status: int) -> None:
+        super().__init__()
+        self.trigger_status = trigger_status
+        self.triggered: set[tuple[str, str, str | None]] = set()
+
+    def call(
+        self,
+        method: str,
+        path: str,
+        *,
+        path_vars: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any = None,
+    ) -> dict[str, Any]:
+        identifier = next(iter((path_vars or {}).values()), None)
+        key = (method, path, identifier)
+        if key not in self.triggered:
+            self.triggered.add(key)
+            self.calls.append(
+                {
+                    "method": method,
+                    "path": path,
+                    "path_vars": path_vars,
+                    "params": params,
+                    "json_body": json_body,
+                }
+            )
+            return envelope(
+                self.trigger_status,
+                retry_after="1" if self.trigger_status == 429 else None,
+            )
+        return super().call(
+            method,
+            path,
+            path_vars=path_vars,
+            params=params,
+            json_body=json_body,
+        )
+
+
 class ReauthGateway(WqbApiGateway):
-    def __init__(self, responses: list[dict[str, Any]]) -> None:
-        self.responses = responses
+    def __init__(
+        self,
+        responses: list[dict[str, Any]],
+        *,
+        authentication_results: list[bool] | None = None,
+    ) -> None:
+        self.responses = list(responses)
+        self.authentication_results = (
+            list(authentication_results)
+            if authentication_results is not None
+            else None
+        )
         self.auth_calls = 0
+        self.call_auto_auth: list[bool] = []
+        self.reauth_attempts = 5
+        self.reauth_delay_seconds = 0
+        self.sleeper = lambda _seconds: None
 
     def _call_once(
         self,
@@ -197,16 +252,27 @@ class ReauthGateway(WqbApiGateway):
         path_vars: dict[str, str] | None,
         params: dict[str, Any] | None,
         json_body: Any,
+        auto_auth: bool = True,
     ) -> dict[str, Any]:
+        self.call_auto_auth.append(auto_auth)
         return self.responses.pop(0)
 
-    def _reauthenticate(self) -> bool:
+    def _reauthenticate(self) -> dict[str, Any]:
         self.auth_calls += 1
-        return True
+        succeeded = (
+            self.authentication_results.pop(0)
+            if self.authentication_results is not None
+            else True
+        )
+        return {
+            "ok": succeeded,
+            "reason": "authenticated" if succeeded else "authentication_rejected",
+            "status_code": 201 if succeeded else 401,
+        }
 
 
 class SqliteSimuTests(unittest.TestCase):
-    def test_each_401_call_gets_one_reauthentication_and_replay(self) -> None:
+    def test_each_401_call_gets_reauthentication_and_replay(self) -> None:
         gateway = ReauthGateway(
             [
                 envelope(401),
@@ -222,6 +288,59 @@ class SqliteSimuTests(unittest.TestCase):
         self.assertEqual(first["response"]["status_code"], 200)
         self.assertEqual(second["response"]["status_code"], 200)
         self.assertEqual(gateway.auth_calls, 2)
+
+    def test_gateway_reauthenticates_on_all_wqb_session_statuses(self) -> None:
+        for trigger in (204, 401, 429):
+            with self.subTest(trigger=trigger):
+                gateway = ReauthGateway([envelope(trigger), envelope(200)])
+
+                result = gateway.call("GET", "/simulations/{simulation_id}")
+
+                self.assertEqual(result["response"]["status_code"], 200)
+                self.assertEqual(result["reauthentication"]["trigger_status"], trigger)
+                self.assertFalse(result["reauthentication"]["exhausted"])
+                self.assertEqual(gateway.call_auto_auth, [True, False])
+
+    def test_gateway_replays_mutating_204_like_wqb_session(self) -> None:
+        gateway = ReauthGateway([envelope(204), envelope(201)])
+
+        result = gateway.call("POST", "/simulations", json_body={"type": "REGULAR"})
+
+        self.assertEqual(result["response"]["status_code"], 201)
+        self.assertEqual(gateway.auth_calls, 1)
+
+    def test_gateway_can_recover_on_fifth_login(self) -> None:
+        gateway = ReauthGateway(
+            [envelope(401), envelope(200)],
+            authentication_results=[False, False, False, False, True],
+        )
+
+        result = gateway.call("GET", "/simulations/{simulation_id}")
+
+        self.assertEqual(result["response"]["status_code"], 200)
+        self.assertEqual(gateway.auth_calls, 5)
+        self.assertEqual(len(result["reauthentication"]["attempts"]), 5)
+
+    def test_gateway_exhausts_five_logins_for_each_wqb_session_status(self) -> None:
+        for trigger in (204, 401, 429):
+            with self.subTest(trigger=trigger):
+                gateway = ReauthGateway([envelope(trigger) for _ in range(6)])
+
+                result = gateway.call("GET", "/simulations/{simulation_id}")
+
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["response"]["status_code"], trigger)
+                self.assertTrue(result["reauthentication"]["exhausted"])
+                self.assertEqual(gateway.auth_calls, 5)
+                self.assertEqual(gateway.call_auto_auth, [True, False, False, False, False, False])
+
+    def test_gateway_does_not_recursively_authenticate_authentication_endpoint(self) -> None:
+        gateway = ReauthGateway([envelope(401)])
+
+        result = gateway.call("POST", "/authentication")
+
+        self.assertEqual(result["response"]["status_code"], 401)
+        self.assertEqual(gateway.auth_calls, 0)
 
     def test_manifest_normalizes_expressions_and_rejects_unknown_profiles(self) -> None:
         manifest = parse_manifest(
@@ -482,6 +601,38 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(summary["state"], "COMPLETED")
             self.assertEqual(sum(call["method"] == "POST" for call in gateway.calls), 2)
             self.assertGreaterEqual(clock.value, 1002.0)
+
+    def test_auth_statuses_never_consume_runtime_failure_budget(self) -> None:
+        for trigger in (204, 401, 429):
+            with self.subTest(trigger=trigger), tempfile.TemporaryDirectory() as temp_dir:
+                store = initialized_store(temp_dir)
+                manifest = parse_manifest(
+                    {
+                        "candidates": [
+                            {"expression": "rank(close)", "settings": SETTINGS},
+                            {"expression": "rank(volume)", "settings": SETTINGS},
+                        ]
+                    }
+                )
+                enqueued = store.enqueue(manifest, now=1000.0)
+                gateway = RecoveringSessionGateway(trigger)
+                clock = FakeClock()
+                runtime = SqliteSimuRuntime(
+                    store,
+                    gateway,
+                    policy=RuntimePolicy(
+                        max_attempts=1,
+                        default_retry_seconds=1.0,
+                        idle_sleep_seconds=1.0,
+                    ),
+                    clock=clock,
+                    sleeper=clock.sleep,
+                )
+
+                summary = runtime.run(enqueued.run_id)
+
+                self.assertEqual(summary["state"], "COMPLETED")
+                self.assertEqual(summary["counts"], {"READY": 2})
 
     def test_parent_error_without_children_requeues_like_the_legacy_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

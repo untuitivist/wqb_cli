@@ -32,15 +32,29 @@ def save_cookie_payload(session: requests.Session, cookie_path: str | None = Non
     path.write_text(json.dumps({"cookies": cookies}, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def clear_worldquantbrain_cookies(session: requests.Session) -> None:
+    cookie_jar = getattr(session, "cookies", None)
+    if cookie_jar is None:
+        return
+    for cookie in list(cookie_jar):
+        if "worldquantbrain.com" not in (cookie.domain or "").lower():
+            continue
+        cookie_jar.clear(
+            domain=cookie.domain,
+            path=cookie.path,
+            name=cookie.name,
+        )
+
+
 def session_from_cookies(cookie_path: str | None = None) -> requests.Session:
     session = requests.Session()
     session.trust_env = False
     session.headers.update({"User-Agent": "wqb-cli/0.1"})
+    session._wqb_cookie_path = cookie_path  # type: ignore[attr-defined]
     payload = load_cookie_payload(cookie_path)
     for key, value in (payload.get("cookies") or {}).items():
         if not value:
             continue
-        session.cookies.set(key, value, domain=".worldquantbrain.com")
         session.cookies.set(key, value, domain="api.worldquantbrain.com")
     return session
 

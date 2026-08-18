@@ -8,7 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .db import SqliteStore
-from .gateway import ApiGateway, ApiTransportError
+from .gateway import ApiGateway, ApiTransportError, SQLITESIMU_REAUTH_STATUSES
 from .models import BatchItemRecord, BatchRecord, ExperimentRecord, RUN_TERMINAL_STATES, RuntimePolicy
 
 
@@ -138,19 +138,27 @@ class SqliteSimuRuntime:
             )
             return
 
-        if status_code == 429:
+        if status_code in SQLITESIMU_REAUTH_STATUSES:
             retry_at = observed_at + _retry_seconds(result, self.policy.default_retry_seconds)
-            self.store.set_runtime_float("simulation_submit_not_before", retry_at, now=observed_at)
+            if status_code == 429:
+                self.store.set_runtime_float(
+                    "simulation_submit_not_before",
+                    retry_at,
+                    now=observed_at,
+                )
             self.store.retry_submission(
                 batch.id,
                 response=result,
                 not_before=retry_at,
-                error=_error_detail(result, "submission_throttled"),
+                error=_error_detail(
+                    result,
+                    f"session_recovery_exhausted_{status_code}",
+                ),
                 now=observed_at,
             )
             return
 
-        if status_code in {400, 401, 403, 404, 409, 422}:
+        if status_code in {400, 403, 404, 409, 422}:
             failure_state = "PERMANENT_FAILURE"
         else:
             failure_state = "SUBMIT_UNKNOWN"
@@ -217,22 +225,22 @@ class SqliteSimuRuntime:
                 now=observed_at,
             )
             return
+        if status_code in SQLITESIMU_REAUTH_STATUSES:
+            self.store.defer_parent_poll(
+                batch.id,
+                response=result,
+                not_before=observed_at
+                + _retry_seconds(
+                    result,
+                    self.policy.default_retry_seconds,
+                    batch_size=_payload_size(batch.payload),
+                ),
+                status=status or None,
+                increment_attempt=False,
+                now=observed_at,
+            )
+            return
         if _is_retryable_get(status_code):
-            if status_code == 429:
-                self.store.defer_parent_poll(
-                    batch.id,
-                    response=result,
-                    not_before=observed_at
-                    + _retry_seconds(
-                        result,
-                        self.policy.default_retry_seconds,
-                        batch_size=_payload_size(batch.payload),
-                    ),
-                    status=status or None,
-                    increment_attempt=False,
-                    now=observed_at,
-                )
-                return
             self._defer_or_fail_parent(batch, result, now=observed_at)
             return
         self.store.fail_batch(
@@ -360,16 +368,16 @@ class SqliteSimuRuntime:
                 increment_attempt=False,
             )
             return
+        if status_code in SQLITESIMU_REAUTH_STATUSES:
+            self.store.defer_child_poll(
+                item,
+                response=result,
+                not_before=observed_at
+                + _retry_seconds(result, self.policy.default_retry_seconds),
+                increment_attempt=False,
+            )
+            return
         if _is_retryable_get(status_code):
-            if status_code == 429:
-                self.store.defer_child_poll(
-                    item,
-                    response=result,
-                    not_before=observed_at
-                    + _retry_seconds(result, self.policy.default_retry_seconds),
-                    increment_attempt=False,
-                )
-                return
             self._defer_or_fail_child(item, result, now=observed_at)
             return
         self.store.fail_child(
@@ -426,24 +434,27 @@ class SqliteSimuRuntime:
 
         observed_at = self.clock()
         if _status_code(result) != 200:
-            if _is_retryable_get(_status_code(result)):
-                if _status_code(result) == 429:
-                    self.store.defer_enrichment(
-                        experiment,
-                        not_before=observed_at
-                        + _retry_seconds(result, self.policy.default_retry_seconds),
-                        error=_error_detail(result, "enrichment_throttled"),
-                        terminal=False,
-                        increment_attempt=False,
-                        now=observed_at,
-                    )
-                else:
-                    self._defer_or_fail_enrichment(experiment, result, now=observed_at)
+            status_code = _status_code(result)
+            if status_code in SQLITESIMU_REAUTH_STATUSES:
+                self.store.defer_enrichment(
+                    experiment,
+                    not_before=observed_at
+                    + _retry_seconds(result, self.policy.default_retry_seconds),
+                    error=_error_detail(
+                        result,
+                        f"session_recovery_exhausted_{status_code}",
+                    ),
+                    terminal=False,
+                    increment_attempt=False,
+                    now=observed_at,
+                )
+            elif _is_retryable_get(status_code):
+                self._defer_or_fail_enrichment(experiment, result, now=observed_at)
             else:
                 self.store.defer_enrichment(
                     experiment,
                     not_before=observed_at,
-                    error=_error_detail(result, f"enrichment_status_{_status_code(result)}"),
+                    error=_error_detail(result, f"enrichment_status_{status_code}"),
                     terminal=True,
                     now=observed_at,
                 )

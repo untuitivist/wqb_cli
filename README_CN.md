@@ -302,7 +302,7 @@ wqb sqlitesimu status <run_id> --db simulations.sqlite3 --output status.json
 wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 ```
 
-默认数据库位于 `local/sqlitesimu/simulations.sqlite3`。每个 run 持久化 candidate、batch、simulation Location、错误、Alpha 详情和 PnL 历史，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。run export 还包含带日期与日度增量的结构化 `pnl_paths`，供下游相关性分析按日期对齐且不填补缺失值。
+默认数据库位于 `local/sqlitesimu/simulations.sqlite3`。每个 run 持久化 candidate、batch、simulation Location、错误、Alpha 详情和 PnL 历史，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。run export 还包含去重日期网格与逐 Alpha 日度增量组成的结构化 `pnl_paths`，供下游相关性分析按日期对齐且不填补缺失值。
 
 模板集 manifest 可以在入队前严格校验，并在 run 终态后生成固定分析报告：
 

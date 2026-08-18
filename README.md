@@ -302,7 +302,7 @@ wqb sqlitesimu status <run_id> --db simulations.sqlite3 --output status.json
 wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 ```
 
-The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code. Run exports also include structured `pnl_paths` with dates and daily increments so downstream correlation analysis can align observations by date without filling missing values.
+The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code. Run exports also include structured `pnl_paths` with deduplicated date grids and per-Alpha daily increments so downstream correlation analysis can align observations by date without filling missing values.
 
 Template-family manifests can be validated before enqueue and rendered into a fixed terminal report:
 

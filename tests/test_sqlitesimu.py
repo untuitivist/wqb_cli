@@ -627,16 +627,18 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(legacy[0]["settings_maxTrade"], "OFF")
             self.assertEqual(legacy[0]["pyramids"], "USA/D1, ATOM")
             self.assertEqual(legacy[0]["PnL"], "nan, 0.0, 3.5")
-            self.assertEqual(len(pnl_paths), 2)
-            self.assertEqual(pnl_paths[0]["source"], "alpha_pnl")
+            self.assertEqual(pnl_paths["format_version"], 1)
+            self.assertEqual(len(pnl_paths["date_grids"]), 1)
+            self.assertEqual(len(pnl_paths["paths"]), 2)
+            first_path = pnl_paths["paths"][0]
+            self.assertEqual(first_path["source"], "alpha_pnl")
+            self.assertEqual(first_path["ordinal_start"], 0)
+            self.assertEqual(first_path["ordinal_step"], 1)
             self.assertEqual(
-                pnl_paths[0]["points"],
-                [
-                    {"ordinal": 0, "date": "2024-01-01", "pnl_delta": None},
-                    {"ordinal": 1, "date": "2024-01-02", "pnl_delta": 0.0},
-                    {"ordinal": 2, "date": "2024-01-03", "pnl_delta": 3.5},
-                ],
+                pnl_paths["date_grids"][first_path["date_grid_id"]],
+                ["2024-01-01", "2024-01-02", "2024-01-03"],
             )
+            self.assertEqual(first_path["pnl_deltas"], [None, 0.0, 3.5])
 
     def test_server_backpressure_replaces_local_slot_limits(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

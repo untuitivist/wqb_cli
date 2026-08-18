@@ -1845,7 +1845,7 @@ class SqliteStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
-    def pnl_paths(self, run_id: str) -> list[dict[str, Any]]:
+    def pnl_paths(self, run_id: str) -> dict[str, Any]:
         with self.connect() as conn:
             rows = conn.execute(
                 """
@@ -1862,31 +1862,55 @@ class SqliteStore:
                 ORDER BY e.id, p.ordinal
                 """,
                 (run_id,),
-            ).fetchall()
+            )
 
-        paths: list[dict[str, Any]] = []
-        by_alpha: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            alpha_id = str(row["alpha_id"])
-            path = by_alpha.get(alpha_id)
-            if path is None:
-                path = {
-                    "experiment_id": str(row["experiment_id"]),
-                    "alpha_id": alpha_id,
-                    "source": "alpha_pnl",
-                    "points": [],
-                }
-                by_alpha[alpha_id] = path
-                paths.append(path)
-            if row["ordinal"] is not None:
-                path["points"].append(
-                    {
-                        "ordinal": int(row["ordinal"]),
-                        "date": row["date_value"],
-                        "pnl_delta": row["pnl_delta"],
+            paths: list[dict[str, Any]] = []
+            date_grids: dict[str, list[str | None]] = {}
+            current: dict[str, Any] | None = None
+            ordinals: list[int] = []
+            dates: list[str | None] = []
+            deltas: list[float | None] = []
+
+            def finish_path() -> None:
+                nonlocal current, ordinals, dates, deltas
+                if current is None:
+                    return
+                grid_payload = _json(dates)
+                grid_id = hashlib.sha256(grid_payload.encode("utf-8")).hexdigest()
+                date_grids.setdefault(grid_id, dates)
+                current["date_grid_id"] = grid_id
+                current["pnl_deltas"] = deltas
+                if ordinals and ordinals == list(range(ordinals[0], ordinals[0] + len(ordinals))):
+                    current["ordinal_start"] = ordinals[0]
+                    current["ordinal_step"] = 1
+                elif ordinals:
+                    current["ordinals"] = ordinals
+                paths.append(current)
+                current = None
+                ordinals = []
+                dates = []
+                deltas = []
+
+            for row in rows:
+                alpha_id = str(row["alpha_id"])
+                if current is None or current["alpha_id"] != alpha_id:
+                    finish_path()
+                    current = {
+                        "experiment_id": str(row["experiment_id"]),
+                        "alpha_id": alpha_id,
+                        "source": "alpha_pnl",
                     }
-                )
-        return paths
+                if row["ordinal"] is not None:
+                    ordinals.append(int(row["ordinal"]))
+                    dates.append(row["date_value"])
+                    deltas.append(row["pnl_delta"])
+            finish_path()
+
+        return {
+            "format_version": 1,
+            "date_grids": date_grids,
+            "paths": paths,
+        }
 
     def next_due_time(self, run_id: str) -> float | None:
         with self.connect() as conn:

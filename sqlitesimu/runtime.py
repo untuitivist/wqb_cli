@@ -12,6 +12,11 @@ from .gateway import ApiGateway, ApiTransportError, SQLITESIMU_REAUTH_STATUSES
 from .models import BatchItemRecord, BatchRecord, ExperimentRecord, RUN_TERMINAL_STATES, RuntimePolicy
 
 
+_SIMULATION_SUCCESS_STATUSES = {"COMPLETE", "WARNING"}
+_SIMULATION_FAILURE_STATUSES = {"ERROR", "FAILED", "FAILURE"}
+_SIMULATION_RETRY_STATUSES = {"CANCELED", "CANCELLED"}
+
+
 class SqliteSimuRuntime:
     def __init__(
         self,
@@ -29,6 +34,7 @@ class SqliteSimuRuntime:
         self.clock = clock
         self.sleeper = sleeper
         self.worker_id = worker_id or f"worker_{uuid.uuid4().hex}"
+        self._work_cursor = 0
         if self.policy.max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
         if self.policy.default_retry_seconds <= 0 or self.policy.idle_sleep_seconds <= 0:
@@ -76,29 +82,48 @@ class SqliteSimuRuntime:
             self.store.release_run_lease(run_id, owner=self.worker_id)
 
     def _step(self, run_id: str, *, now: float) -> bool:
+        # The legacy sender and result collector ran independently. Rotate durable
+        # queues so a large due poll set cannot starve enrichment or new simulations.
+        workers = (
+            self._step_parent_poll,
+            self._step_child_poll,
+            self._step_enrichment,
+            self._step_simulation,
+        )
+        for offset in range(len(workers)):
+            index = (self._work_cursor + offset) % len(workers)
+            if workers[index](run_id, now=now):
+                self._work_cursor = (index + 1) % len(workers)
+                return True
+        return False
+
+    def _step_parent_poll(self, run_id: str, *, now: float) -> bool:
         batch = self.store.next_poll_batch(run_id, now=now)
         if batch:
             self._poll_parent(batch, now=now)
             return True
+        return False
 
+    def _step_child_poll(self, run_id: str, *, now: float) -> bool:
         item = self.store.next_child_item(run_id, now=now)
         if item:
             self._poll_child(item, now=now)
             return True
+        return False
 
+    def _step_enrichment(self, run_id: str, *, now: float) -> bool:
         experiment = self.store.next_enrichment(run_id, now=now)
         if experiment:
             self._enrich(experiment, now=now)
             return True
+        return False
 
+    def _step_simulation(self, run_id: str, *, now: float) -> bool:
         batch = self.store.next_simulate_batch(run_id, now=now)
         if batch:
             self._simulate(batch, now=now)
             return True
-
-        if self.store.create_next_batch(run_id, now=now):
-            return True
-        return False
+        return self.store.create_next_batch(run_id, now=now) is not None
 
     def _simulate(self, batch: BatchRecord, *, now: float) -> None:
         self.store.mark_simulate_started(batch.id, now=now)
@@ -194,10 +219,19 @@ class SqliteSimuRuntime:
         status_code = _status_code(result)
         body = _body(result)
         status = _simulation_status(body)
-        if status_code == 200 and status in {"COMPLETE", "WARNING"}:
+        if status_code == 200 and status in _SIMULATION_SUCCESS_STATUSES:
             self._complete_parent(batch, body, result, now=observed_at)
             return
-        if status_code == 200 and status in {"ERROR", "FAILED", "FAILURE"}:
+        if status_code == 200 and status in _SIMULATION_RETRY_STATUSES:
+            self.store.retry_completed_batch(
+                batch.id,
+                error=_error_detail(result, f"parent_status_{status.lower()}"),
+                response=result,
+                not_before=observed_at + self.policy.default_retry_seconds,
+                now=observed_at,
+            )
+            return
+        if status_code == 200 and status in _SIMULATION_FAILURE_STATUSES:
             children = _child_ids(body)
             if children:
                 self._complete_parent(batch, body, result, now=observed_at)
@@ -331,7 +365,7 @@ class SqliteSimuRuntime:
         body = _body(result)
         status = _simulation_status(body)
         alpha_id = _alpha_id(body)
-        if status_code == 200 and status in {"COMPLETE", "WARNING"}:
+        if status_code == 200 and status in _SIMULATION_SUCCESS_STATUSES:
             if alpha_id:
                 self.store.complete_child(item, alpha_id=alpha_id, response=result, now=observed_at)
             else:
@@ -342,7 +376,16 @@ class SqliteSimuRuntime:
                     now=observed_at,
                 )
             return
-        if status_code == 200 and status in {"ERROR", "FAILED", "FAILURE"}:
+        if status_code == 200 and status in _SIMULATION_RETRY_STATUSES:
+            self.store.retry_child(
+                item,
+                error=_error_detail(result, f"child_status_{status.lower()}"),
+                response=result,
+                not_before=observed_at + self.policy.default_retry_seconds,
+                now=observed_at,
+            )
+            return
+        if status_code == 200 and status in _SIMULATION_FAILURE_STATUSES:
             error = _error_detail(result, f"child_status_{status.lower()}")
             if _is_retryable_simulation_error(error):
                 self.store.retry_child(

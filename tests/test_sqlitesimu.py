@@ -121,6 +121,16 @@ class PendingParentGateway:
         return envelope(200, {"status": "PENDING"}, retry_after="5")
 
 
+class FixedResponseGateway:
+    def __init__(self, response: dict[str, Any]) -> None:
+        self.response = response
+        self.calls = 0
+
+    def call(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        self.calls += 1
+        return self.response
+
+
 class ThrottledGateway(SuccessfulGateway):
     def __init__(self) -> None:
         super().__init__()
@@ -1098,6 +1108,120 @@ class SqliteSimuTests(unittest.TestCase):
                     "SELECT COUNT(*) FROM simulation_batches WHERE state = 'RETRIED'"
                 ).fetchone()[0]
             self.assertEqual(retried, 1)
+
+    def test_cancelled_parent_is_requeued_instead_of_polled_forever(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "close", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.accept_simulation(
+                batch.id,
+                location="https://api.worldquantbrain.com/simulations/parent-cancelled",
+                parent_simulation_id="parent-cancelled",
+                response=envelope(201),
+                not_before=1001.0,
+                now=1000.0,
+            )
+            polling = store.next_poll_batch(enqueued.run_id, now=1001.0)
+            assert polling is not None
+            runtime = SqliteSimuRuntime(
+                store,
+                FixedResponseGateway(envelope(200, {"status": "CANCELLED"})),
+            )
+
+            runtime._poll_parent(polling, now=1001.0)
+
+            summary = store.run_summary(enqueued.run_id)
+            self.assertEqual(summary["counts"], {"RETRY_WAIT": 1})
+            with store.connect() as conn:
+                state = conn.execute(
+                    "SELECT state FROM simulation_batches WHERE id = ?", (batch.id,)
+                ).fetchone()[0]
+            self.assertEqual(state, "RETRIED")
+
+    def test_cancelled_child_is_requeued_instead_of_polled_forever(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    [
+                        {"expression": "close", "settings": SETTINGS},
+                        {"expression": "volume", "settings": SETTINGS},
+                    ]
+                ),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.complete_parent(
+                batch.id,
+                alpha_id=None,
+                child_ids=["child-cancelled", "child-pending"],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE"}),
+                now=1001.0,
+            )
+            item = store.next_child_item(enqueued.run_id, now=1001.0)
+            assert item is not None
+            runtime = SqliteSimuRuntime(
+                store,
+                FixedResponseGateway(envelope(200, {"status": "CANCELLED"})),
+            )
+
+            runtime._poll_child(item, now=1001.0)
+
+            summary = store.run_summary(enqueued.run_id)
+            self.assertEqual(summary["counts"], {"CHILD_POLLING": 1, "RETRY_WAIT": 1})
+            with store.connect() as conn:
+                state = conn.execute(
+                    "SELECT state FROM simulation_items WHERE batch_id = ? AND ordinal = 0",
+                    (batch.id,),
+                ).fetchone()[0]
+            self.assertEqual(state, "RETRIED")
+
+    def test_step_rotates_ready_work_classes_to_prevent_starvation(self) -> None:
+        class AlwaysReadyStore:
+            def next_poll_batch(self, run_id: str, *, now: float) -> str:
+                return "parent"
+
+            def next_child_item(self, run_id: str, *, now: float) -> str:
+                return "child"
+
+            def next_enrichment(self, run_id: str, *, now: float) -> str:
+                return "enrichment"
+
+            def next_simulate_batch(self, run_id: str, *, now: float) -> str:
+                return "simulation"
+
+        observed: list[str] = []
+        runtime = SqliteSimuRuntime(AlwaysReadyStore(), NoCallGateway())  # type: ignore[arg-type]
+        runtime._poll_parent = lambda batch, *, now: observed.append(str(batch))  # type: ignore[method-assign]
+        runtime._poll_child = lambda item, *, now: observed.append(str(item))  # type: ignore[method-assign]
+        runtime._enrich = lambda experiment, *, now: observed.append(str(experiment))  # type: ignore[method-assign]
+        runtime._simulate = lambda batch, *, now: observed.append(str(batch))  # type: ignore[method-assign]
+
+        for _ in range(8):
+            self.assertTrue(runtime._step("run", now=1000.0))
+
+        self.assertEqual(
+            observed,
+            [
+                "parent",
+                "child",
+                "enrichment",
+                "simulation",
+                "parent",
+                "child",
+                "enrichment",
+                "simulation",
+            ],
+        )
 
     def test_pnl_points_forward_fills_before_differencing(self) -> None:
         self.assertEqual(

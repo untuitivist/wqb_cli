@@ -4,5 +4,6 @@ include CHANGELOG.md
 include LICENSE
 recursive-include resources/api_inventory *.json *.md *.txt *.html
 recursive-include resources/docs *.md *.json
+recursive-include workflows *.md
 recursive-exclude local *
 prune local

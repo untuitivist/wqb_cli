@@ -41,6 +41,8 @@ wqb_cli = [
     "resources/api_inventory/**/*.html",
     "resources/docs/**/*.md",
     "resources/docs/**/*.json",
+    "workflows/*.md",
+    "workflows/**/*.md",
 ]
 
 [tool.pytest.ini_options]

@@ -21,7 +21,7 @@ It is built for coding agents and long-running research agents first, not as a t
 - Structured command outputs that can be saved with `--output` and consumed by later workflow nodes.
 - Explicit wait semantics for simulations, submit checks, alpha checks, recordsets, and other asynchronous API results.
 - Bundled API inventory and command docs so agents can inspect available endpoints locally.
-- Reusable workflow node documents under `workflow/`, with clear inputs, allowed commands, required outputs, and success criteria.
+- Two isolated workflow document sets under `workflows/`, with clear inputs, allowed commands, required outputs, and success criteria.
 - Local data commands that read stable files under `local/` instead of scraping browser/plugin caches directly.
 - Raw request and response context preserved in command output, including status codes, parameters, locations, retry events, and result bodies.
 - No dry-run branch to confuse automation: commands either call the API, wait for the requested result, or fail clearly.
@@ -35,7 +35,7 @@ It is built for coding agents and long-running research agents first, not as a t
 - Local data commands for `data_all` / `all_data.pickle` screening.
 - Local community-data import and search commands.
 - Bundled endpoint inventory and command documentation.
-- Workflow documents for structured research nodes under `workflow/`.
+- Workflow documents for bounded adaptive simulations and durable template-family batches under `workflows/`.
 
 ## Important Notes
 
@@ -163,7 +163,7 @@ Do not commit `local/`, `.env`, or cookie files.
     docs/
       commands/             Handwritten command docs and examples
       generated/            Generated command references
-  workflow/                 Research workflow node documents
+  workflows/                Isolated simu and batchsimu workflow documents
   tests/                    Test suite
   local/                    User-local runtime data, ignored by Git
   LICENSE
@@ -296,6 +296,8 @@ The workflow can also call `enqueue` first and then `resume` the returned `run_i
 
 See `resources/docs/sqlitesimu.md` for the manifest contract, recovery states, exit codes, and explicit differences from the three legacy workers.
 
+The agent-independent template-family lifecycle is defined in `workflows/workflow_batchsimu/`. Its J node enqueues and launches the worker; K/L remain blocked until that exact run reaches a terminal state.
+
 ## Submit Workflow
 
 Submit an alpha:
@@ -393,27 +395,24 @@ wqb community search neutralization --scope docs --limit 2
 
 ## Research Workflow Documents
 
-The structured workflow is documented under:
+Two complete, isolated workflows live under `workflows/`:
 
 ```text
-workflow/
+workflows/
+  workflow_simu/          bounded, adaptive A-M research with synchronous wqb sim create
+  workflow_batchsimu/     template-family A-L screening with agent-independent sqlitesimu execution
 ```
 
-Each node describes:
+Each workflow has its own A node, run directory, input/output contracts, graph, and terminal behavior. They do not share A-F artifacts, SQLite databases, node inputs, or control-flow handoffs.
 
-- required inputs
-- allowed CLI commands
-- required outputs
-- success criteria
-- next nodes
-
-The main graph is:
+Entry points:
 
 ```text
-workflow/workflow_graph.md
+workflows/workflow_simu/workflow_graph.md
+workflows/workflow_batchsimu/workflow_graph.md
 ```
 
-Node F is responsible for datafield feasibility. It now prefers tower tags such as `CHN/D1/PV` to discover existing ACTIVE REGULAR alphas, then falls back to region/delay full scans and local `pyramids[].name` inspection.
+The batch workflow freezes one settings cell, samples each template family without replacement, records full family lineage, and only analyzes density, quality distributions, errors, and actual IS-PnL correlation after the authoritative run is terminal. It never submits Alpha.
 
 ## Command Documentation
 

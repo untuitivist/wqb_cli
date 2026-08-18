@@ -21,7 +21,7 @@
 - 命令输出结构化结果，可用 `--output` 保存，并交给后续 workflow 节点继续使用。
 - simulation、submit check、alpha check、recordsets 等异步结果都有明确等待语义。
 - 随包提供 API inventory 和命令文档，agent 可以本地检查 endpoint 与参数。
-- `workflow/` 下提供可复用节点文档，明确输入、允许命令、必要输出和成功条件。
+- `workflows/` 下提供两套相互隔离的节点文档，明确输入、允许命令、必要输出和成功条件。
 - 本地数据命令读取 `local/` 下的稳定文件，不直接抓取浏览器或插件缓存。
 - 命令输出保留 request/response 上下文，包括状态码、参数、Location、retry 事件和返回体。
 - 不保留 dry-run 分支，避免自动化流程歧义：命令要么真实调用 API 并等待结果，要么明确失败。
@@ -35,7 +35,7 @@
 - 基于 `data_all` / `all_data.pickle` 的本地字段筛选。
 - WebDataScope 社区数据导入与本地检索。
 - 随包发布的 API endpoint inventory 与命令文档。
-- `workflow/` 下的结构化研究节点文档。
+- `workflows/` 下的小规模自适应流程与模板群批量流程文档。
 
 ## 重要说明
 
@@ -162,7 +162,7 @@ local/auth/cookies.json
     docs/
       commands/             手写命令文档与示例
       generated/            生成的命令参考
-  workflow/                 研究流程节点文档
+  workflows/                相互隔离的 simu 与 batchsimu 流程文档
   tests/                    测试套件
   local/                    用户本地运行数据，Git 忽略
   LICENSE
@@ -397,27 +397,24 @@ wqb community search neutralization --scope docs --limit 2
 
 ## 研究流程文档
 
-结构化研究流程位于：
+`workflows/` 下有两套完整、相互隔离的流程：
 
 ```text
-workflow/
+workflows/
+  workflow_simu/          A-M 小规模自适应研究，同步使用 wqb sim create
+  workflow_batchsimu/     A-L 模板群筛选，由 sqlitesimu 独立执行回测
 ```
 
-每个节点说明：
+两套流程各自拥有 A 起点、run 目录、输入输出契约、主图和终止行为，不共享 A-F 产物、SQLite 数据库、节点输入或控制流移交。
 
-- 必要输入
-- 允许使用的 CLI
-- 必要输出
-- 成功条件
-- 下一节点
-
-主图：
+入口：
 
 ```text
-workflow/workflow_graph.md
+workflows/workflow_simu/workflow_graph.md
+workflows/workflow_batchsimu/workflow_graph.md
 ```
 
-F 节点负责数据字段可行性。它会优先用 `CHN/D1/PV` 这类塔标签查找已有 ACTIVE REGULAR alpha；如果 tag 不可用或不一致，再退回 region/delay 全量查询，并在本地检查 `pyramids[].name`。
+批量流程固定一个 settings cell，对各模板族无放回抽样并保留完整 lineage。只有权威 run 终态后，K/L 才能分析族密度、质量分布、错误类型和真实 IS-PnL 相关性；该流程不提交 Alpha。
 
 ## 命令文档
 

@@ -28,10 +28,15 @@ wqb sim options --output <node_dir>\simulation_options.json
 - `commands.md`
 - `node_summary.md`
 
+## 选区建议（非闸门）
+
+- 优先考虑 `CHN` 和 `USA` 之外的平台支持 region：前者当前质量门槛较高，后者研究拥挤。
+- 该建议只影响候选 region 的排序，不进入 `template-validate`，也不阻断流程。
+- 若实时 tower、倍率或机会、数据覆盖等证据支持 `CHN` 或 `USA`，仍可选择，但必须在 `settings_rationale.md` 记录取舍。
+
 ## 硬规则
 
 - 一个权威 run 只有一个 settings hash。
-- 新 run 的 region 不得为 `CHN` 或 `USA`；从 `wqb sim options` 返回的其余可用 region 中选择，不硬编码未经平台确认的 allowlist。
 - region 选择必须比较目标 tower、倍率或机会、数据覆盖与研究拥挤度，并在 `settings_rationale.md` 记录证据；不得仅沿用上一次 run。
 - region、delay、universe、instrumentType、language、decay、neutralization、truncation、pasteurization、unitHandling、nanHandling、visualization 和 testPeriod 必须显式记录。
 - 本节点不读取提交额度，也不授权提交 Alpha。
@@ -40,7 +45,7 @@ wqb sim options --output <node_dir>\simulation_options.json
 ## 成功条件
 
 - settings 全部来自平台支持值，并与目标 tower 一致。
-- `simulation_settings.json.region` 不属于 `CHN / USA`，且 I 的 `template-validate` 再次通过机器闸门。
+- region 选择符合预注册目标；若选择降优先级 region，理由完整且在生成模板前固定。
 - 后续节点不再修改 settings；任何修改都使当前 run 作废并重新从 C 开始。
 
 ## 下一跳

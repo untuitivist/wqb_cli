@@ -85,7 +85,7 @@ class TemplateFormatTests(unittest.TestCase):
             {row["code"] for row in result["violations"]},
         )
 
-    def test_template_manifest_rejects_excluded_regions(self) -> None:
+    def test_region_recommendations_do_not_block_template_validation(self) -> None:
         for region in ("CHN", "USA"):
             with self.subTest(region=region):
                 settings = {**SETTINGS, "region": region}
@@ -96,12 +96,8 @@ class TemplateFormatTests(unittest.TestCase):
 
                 result = validate_template_manifest(manifest)
 
-                self.assertFalse(result["ok"])
-                self.assertIn(
-                    "excluded_region",
-                    {row["code"] for row in result["violations"]},
-                )
-                self.assertEqual(result["excluded_regions"], ["CHN", "USA"])
+                self.assertTrue(result["ok"])
+                self.assertEqual(result["violation_count"], 0)
 
     def test_template_manifest_rejects_settings_drift_and_duplicate_calculation(self) -> None:
         second_expression = EXPRESSION.replace(

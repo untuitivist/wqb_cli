@@ -14,7 +14,7 @@ B 研究的是 family density 和结构多样性，不以“找到一条最高 S
 ## 必须定义
 
 - primary question：哪些经济上不同的模板族在固定环境下具有更高有效密度。
-- region policy：排除 `CHN` 和 `USA`。`CHN` 的当前 Sharpe 门槛高于 `2.07`；`USA` 研究拥挤、同类参与者多，均不作为本流程的新研究目标。
+- region preference：建议降低 `CHN` 和 `USA` 的优先级。依据是 `CHN` 当前 Sharpe 门槛高于 `2.07`，而 `USA` 研究拥挤、同类参与者多；这是研究建议，不是禁止规则。
 - experimental unit：一个带完整 settings 和 lineage 的 candidate experiment。
 - primary metrics：execution-ready rate、quality density、check-pass density。
 - diversity metric：基于 READY candidate 的 IS-PnL correlation cluster。
@@ -36,7 +36,7 @@ B 研究的是 family density 和结构多样性，不以“找到一条最高 S
 ## 成功条件
 
 - primary metric、denominator、最小有效样本、预算和停止条件全部在回测前固定。
-- `batch_objective.json` 明确记录 `excluded_regions = ["CHN", "USA"]`，且候选 region 不在排除集合内。
+- `batch_objective.json` 记录 `deprioritized_regions = ["CHN", "USA"]` 和 `region_preference_advisory = true`；若仍选择其中之一，必须记录本轮证据和取舍理由。
 - 明确哪些结论只能视为探索性证据。
 - `alpha_submission_allowed` 仍为 `false`。
 

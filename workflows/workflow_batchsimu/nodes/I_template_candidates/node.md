@@ -59,7 +59,7 @@ J 之前必须全部通过：
 - 没有 exact sign twin、可交换重复、反向 antisymmetric duplicate 或 canonical-equivalent AST。
 - 每个 operator 存在于 live inventory，参数和窗口合法。
 - 每个 field、VECTOR reducer、Group input 和 unit 与 E 契约一致。
-- settings region 与 C 冻结值一致，且不属于 `CHN / USA`；`template-validate` 不得出现 `excluded_region`。
+- settings region 与 C 冻结值一致；I 不重新评价或改写 C 的选区决定。
 - 所有 candidate 使用同一个 settings hash。
 - family population 未被有放回采样，未用 wrapper-only 变体补足数量。
 - manifest candidate 数等于 identity index 数，lineage 无空值。

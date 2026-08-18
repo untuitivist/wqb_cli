@@ -77,7 +77,7 @@ I 必须解析全部 placeholder。可入库 expression 不允许残留 `{...}`�
 
 `candidate_identity_index.json` 必须同时按完整 simulation payload fingerprint 和 `calculation_hash + settings_hash` 建索引。前者用于当前 manifest 去重，后者用于跨 version/epoch/run 排除已经计算过的等价正文。
 
-新 manifest 的 settings region 不得为 `CHN` 或 `USA`。这是 `workflow_batchsimu` 的研究目标闸门：历史结果仍可分析，但不能据此生成新 epoch；`template-validate` 会以 `excluded_region` 拒绝入库。
+region 偏好属于 B/C 的研究设计，不属于模板格式契约。`template-validate` 只校验 settings 一致性，不因 `CHN` 或 `USA` 拒绝 manifest。
 
 J 前的强制命令：
 

@@ -34,7 +34,6 @@ research_runs/
 - `authoritative_run = true | false`
 - `source_workflow_graph`
 - `started_at`
-- `excluded_regions = ["CHN", "USA"]`
 
 每个节点只写自己的目录。J 的 `simulations.sqlite3` 是本 run 唯一执行账本，不得与其他 run 共用可写数据库。
 
@@ -61,13 +60,16 @@ flowchart TD
 ## 阶段闸门
 
 1. A-F 未完成时，G 不得定义模板族。
-2. C 选择 `CHN` 或 `USA` 时必须停止；不得生成字段宇宙或模板候选。
-3. G/H 未提供证据、字段角色、placeholder contract、版本/epoch 和对称性规则时，I 不得生成 expression。
-4. I 的 `template-validate` 未通过，或 lineage/hash/去重索引不一致时，J 不得 enqueue。
-5. J 启动 worker 后只写交接信息；不得按单条结果自适应修改 manifest。
-6. run 非终态时，K 不得计算密度、质量排名或相关性聚类。
-7. K 未生成固定三段报告并完成 execution、quality、IS-PnL 三层分析时，L 不得扩展。
-8. `CANCELLED`、`BLOCKED` 或含 `SIMULATE_UNKNOWN` 的 run 只能进入描述性 K 和 `STOP`，不得扩展。
+2. G/H 未提供证据、字段角色、placeholder contract、版本/epoch 和对称性规则时，I 不得生成 expression。
+3. I 的 `template-validate` 未通过，或 lineage/hash/去重索引不一致时，J 不得 enqueue。
+4. J 启动 worker 后只写交接信息；不得按单条结果自适应修改 manifest。
+5. run 非终态时，K 不得计算密度、质量排名或相关性聚类。
+6. K 未生成固定三段报告并完成 execution、quality、IS-PnL 三层分析时，L 不得扩展。
+7. `CANCELLED`、`BLOCKED` 或含 `SIMULATE_UNKNOWN` 的 run 只能进入描述性 K 和 `STOP`，不得扩展。
+
+## 选区建议
+
+`CHN` 因当前 Sharpe 门槛高于 `2.07`、`USA` 因研究拥挤而降低优先级。该建议只用于 B/C 的证据权衡，不是阶段闸门；有充分的实时 tower、倍率或机会及数据证据时仍可选择，`template-validate` 不按 region 拒绝 manifest。
 
 ## 模板群硬规则
 
@@ -80,7 +82,6 @@ flowchart TD
 - 禁止正负孪生、可交换参数重复、反对称关系反向重复、等价 AST、混合独立收益机制和未支持 operator。
 - expression 唯一不代表 PnL 独立；扩展前必须使用实际 IS-PnL 路径做相关性聚类。
 - 一个权威 run 只能有一个 settings cell。不同 region、delay、universe 或其他关键设置必须使用不同 run。
-- 新研究排除 `CHN` 和 `USA`；历史 run 可以保留这两个 region 供审计，但不得作为新 epoch 或扩展 run 的 settings 来源。
 - 诊断、canary 和已退役 run 不得混入权威 run 的 family denominator。
 - 本流程不直接提交 Alpha。
 

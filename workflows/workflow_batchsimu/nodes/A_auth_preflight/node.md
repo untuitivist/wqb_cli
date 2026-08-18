@@ -23,7 +23,7 @@ wqb sqlitesimu --help > <node_dir>\sqlitesimu_help.txt
 
 ## 输出
 
-- `run_manifest.json`：写在 run 根目录，`workflow_type` 固定为 `workflow_batchsimu`，`alpha_submission_allowed` 固定为 `false`，`excluded_regions` 固定为 `["CHN", "USA"]`。
+- `run_manifest.json`：写在 run 根目录，`workflow_type` 固定为 `workflow_batchsimu`，`alpha_submission_allowed` 固定为 `false`。
 - `auth_status.json`
 - `runtime_preflight.json`：Python、wqb-cli、插件可用性和时间戳。
 - `storage_plan.json`：J 将使用的绝对数据库路径及是否为本地磁盘。
@@ -34,7 +34,6 @@ wqb sqlitesimu --help > <node_dir>\sqlitesimu_help.txt
 
 - 已认证，`wqb sqlitesimu` 命令存在。
 - 数据库计划路径位于当前 run 的 `10_J_sqlite_batch`，且未指向网络共享目录。
-- run manifest 已记录区域排除策略，后续节点不得静默移除或覆盖。
 - 没有读取或复用其他 run 的可写 SQLite 数据库。
 
 ## 下一跳

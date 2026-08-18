@@ -54,6 +54,14 @@ _METRICS = (
     ("pnl", "pnl"),
 )
 _CHECK_STATUSES = ("FAIL", "PASS", "PENDING", "WARNING", "ERROR")
+_SUBMISSION_ONLY_CHECKS = frozenset(
+    {
+        "SELF_CORRELATION",
+        "DATA_DIVERSITY",
+        "PROD_CORRELATION",
+        "REGULAR_SUBMISSION",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -188,7 +196,13 @@ def validate_template_manifest(manifest: SimulationManifest) -> dict[str, Any]:
     }
 
 
-def build_template_report(export_payload: dict[str, Any]) -> dict[str, Any]:
+def build_template_report(
+    export_payload: dict[str, Any],
+    *,
+    minimum_ready_coverage: float = 1.0,
+) -> dict[str, Any]:
+    if not 0.0 <= minimum_ready_coverage <= 1.0:
+        raise ValueError("minimum_ready_coverage must be between 0 and 1")
     run = export_payload.get("run")
     experiments = export_payload.get("experiments")
     results = export_payload.get("results")
@@ -277,12 +291,16 @@ def build_template_report(export_payload: dict[str, Any]) -> dict[str, Any]:
             _representatives(identity, ready, checks_by_alpha)
         )
 
+    assigned_count = len(experiments)
+    ready_count = state_counts.get("READY", 0)
+    ready_coverage = ready_count / assigned_count if assigned_count else 0.0
     reasons = _ineligibility_reasons(
         run,
         state_counts,
         family_identity.values(),
-        assigned_count=len(experiments),
+        assigned_count=assigned_count,
         result_count=len(results),
+        minimum_ready_coverage=minimum_ready_coverage,
     )
     assessments = _family_assessments(
         performance,
@@ -300,8 +318,15 @@ def build_template_report(export_payload: dict[str, Any]) -> dict[str, Any]:
             "schema_version": export_payload.get("schema_version"),
         },
         "summary": {
-            "assigned_count": len(experiments),
+            "assigned_count": assigned_count,
             "ready_count": len(results),
+            "ready_coverage": ready_coverage,
+            "minimum_ready_coverage": minimum_ready_coverage,
+            "isolated_experiment_counts": {
+                state: state_counts.get(state, 0)
+                for state in ("SIMULATE_UNKNOWN", "CANCELLED")
+                if state_counts.get(state, 0)
+            },
             "template_count": len(family_keys),
             "state_counts": dict(sorted(state_counts.items())),
             "checks_available": "checks" in export_payload,
@@ -674,9 +699,8 @@ def _representatives(
         clean = [
             row
             for row in candidates
-            if not any(
-                str(check.get("result") or "").upper() in {"FAIL", "ERROR"}
-                for check in checks_by_alpha.get(str(row.get("alpha_id") or ""), [])
+            if not _representative_check_blockers(
+                checks_by_alpha.get(str(row.get("alpha_id") or ""), [])
             )
         ]
         pool = clean or candidates
@@ -688,11 +712,25 @@ def _representatives(
             ),
         )
         alpha_id = str(selected.get("alpha_id") or "")
+        selected_checks = checks_by_alpha.get(alpha_id, [])
         output.append(
             {
                 **identity,
                 "metric": metric,
-                "selection_scope": "no_fail_or_error" if clean else "all_ready_fallback",
+                "selection_scope": (
+                    "simulation_checks_resolved" if clean else "all_ready_fallback"
+                ),
+                "simulation_check_screen_eligible": selected in clean,
+                "simulation_check_blockers": _representative_check_blockers(selected_checks),
+                "deferred_submission_checks": sorted(
+                    {
+                        str(check.get("name") or "").upper()
+                        for check in selected_checks
+                        if str(check.get("result") or "").upper() == "PENDING"
+                        and str(check.get("name") or "").upper()
+                        in _SUBMISSION_ONLY_CHECKS
+                    }
+                ),
                 "alpha_id": alpha_id or None,
                 "experiment_id": selected.get("experiment_id"),
                 "regular_code": selected.get("regular_code"),
@@ -704,10 +742,23 @@ def _representatives(
                 "drawdown": selected.get("drawdown"),
                 "pnl": selected.get("pnl"),
                 "metadata": selected.get("metadata") or {},
-                "checks": checks_by_alpha.get(alpha_id, []),
+                "checks": selected_checks,
             }
         )
     return output
+
+
+def _representative_check_blockers(checks: list[dict[str, Any]]) -> list[str]:
+    blockers = []
+    for check in checks:
+        name = str(check.get("name") or "UNKNOWN").upper()
+        status = str(check.get("result") or "UNKNOWN").upper()
+        if status in {"PASS", "WARNING"}:
+            continue
+        if status == "PENDING" and name in _SUBMISSION_ONLY_CHECKS:
+            continue
+        blockers.append(f"{name}:{status}")
+    return sorted(set(blockers))
 
 
 def _ineligibility_reasons(
@@ -717,15 +768,25 @@ def _ineligibility_reasons(
     *,
     assigned_count: int,
     result_count: int,
+    minimum_ready_coverage: float,
 ) -> list[str]:
     reasons = []
-    if run.get("state") not in {"COMPLETED", "COMPLETED_WITH_ERRORS"}:
-        reasons.append(f"run_state_{str(run.get('state')).lower()}")
-    for state in ("SIMULATE_UNKNOWN", "CANCELLED"):
-        if state_counts.get(state):
-            reasons.append(f"experiment_state_{state.lower()}")
+    run_state = str(run.get("state") or "")
+    unknown_count = state_counts.get("SIMULATE_UNKNOWN", 0)
+    if run_state == "CANCELLED":
+        reasons.append("run_state_cancelled")
+    elif run_state == "BLOCKED" and not unknown_count:
+        reasons.append("run_state_blocked")
+    elif run_state not in {"COMPLETED", "COMPLETED_WITH_ERRORS", "BLOCKED"}:
+        reasons.append(f"run_state_{run_state.lower()}")
+    if state_counts.get("CANCELLED"):
+        reasons.append("experiment_state_cancelled")
     if assigned_count == 0:
         reasons.append("empty_run")
+    elif state_counts.get("READY", 0) == 0:
+        reasons.append("no_ready_results")
+    elif state_counts.get("READY", 0) / assigned_count < minimum_ready_coverage:
+        reasons.append("ready_coverage_below_minimum")
     if state_counts.get("READY", 0) != result_count:
         reasons.append("ready_result_count_mismatch")
     if any(

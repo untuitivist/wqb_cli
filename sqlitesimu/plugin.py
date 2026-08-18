@@ -87,6 +87,15 @@ class SqliteSimuPlugin:
             help="Render the fixed template analysis format from a terminal run export",
         )
         report.add_argument("input", help="JSON path produced by sqlitesimu export")
+        report.add_argument(
+            "--minimum-ready-coverage",
+            type=float,
+            default=1.0,
+            help=(
+                "Pre-registered READY/assigned threshold for partial-run analysis "
+                "(0..1; default: 1)"
+            ),
+        )
         report.add_argument("--output", help="Write the normalized JSON report to a file")
         report.add_argument("--markdown-output", help="Write the three-section report to Markdown")
         return parser
@@ -99,7 +108,10 @@ class SqliteSimuPlugin:
             return 0 if payload["ok"] else 1
         if command == "template-report":
             export_payload = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
-            payload = build_template_report(export_payload)
+            payload = build_template_report(
+                export_payload,
+                minimum_ready_coverage=args.minimum_ready_coverage,
+            )
             if args.markdown_output:
                 markdown_path = Path(args.markdown_output)
                 markdown_path.parent.mkdir(parents=True, exist_ok=True)

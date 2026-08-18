@@ -23,7 +23,7 @@ wqb sqlitesimu --help > <node_dir>\sqlitesimu_help.txt
 
 ## 输出
 
-- `run_manifest.json`：写在 run 根目录，`workflow_type` 固定为 `workflow_batchsimu`，`alpha_submission_allowed` 固定为 `false`。
+- `run_manifest.json`：写在 run 根目录，`workflow_type` 固定为 `workflow_batchsimu`；`alpha_submission_allowed` 必须按本轮用户授权显式写为布尔值，允许提交时同时写入正整数 `submission_target`。
 - `auth_status.json`
 - `runtime_preflight.json`：Python、wqb-cli、插件可用性和时间戳。
 - `storage_plan.json`：J 将使用的绝对数据库路径及是否为本地磁盘。
@@ -35,6 +35,7 @@ wqb sqlitesimu --help > <node_dir>\sqlitesimu_help.txt
 - 已认证，`wqb sqlitesimu` 命令存在。
 - 数据库计划路径位于当前 run 的 `10_J_sqlite_batch`，且未指向网络共享目录。
 - 没有读取或复用其他 run 的可写 SQLite 数据库。
+- 提交授权、目标数量和授权来源已在任何候选生成前冻结；没有授权时不得默认开启提交。
 
 ## 下一跳
 

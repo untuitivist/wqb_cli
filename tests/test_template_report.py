@@ -208,6 +208,60 @@ class TemplateReportTests(unittest.TestCase):
         self.assertEqual(report["summary"]["state_counts"]["SIMULATE_UNKNOWN"], 1)
         self.assertNotIn("SUBMIT_UNKNOWN", report["summary"]["state_counts"])
 
+    def test_report_allows_isolated_unknowns_when_ready_coverage_meets_contract(self) -> None:
+        payload = terminal_export()
+        payload["run"]["state"] = "BLOCKED"
+        payload["experiments"][2]["state"] = "SIMULATE_UNKNOWN"
+        payload["results"] = payload["results"][:2]
+        payload["checks"] = payload["checks"][:2]
+
+        report = build_template_report(payload, minimum_ready_coverage=0.6)
+
+        self.assertTrue(report["summary"]["analysis_eligible"])
+        self.assertAlmostEqual(report["summary"]["ready_coverage"], 2 / 3)
+        self.assertEqual(
+            report["summary"]["isolated_experiment_counts"],
+            {"SIMULATE_UNKNOWN": 1},
+        )
+        self.assertNotIn(
+            "experiment_state_simulate_unknown",
+            report["summary"]["ineligibility_reasons"],
+        )
+
+    def test_report_rejects_partial_run_below_ready_coverage_contract(self) -> None:
+        payload = terminal_export()
+        payload["run"]["state"] = "BLOCKED"
+        payload["experiments"][2]["state"] = "SIMULATE_UNKNOWN"
+        payload["results"] = payload["results"][:2]
+        payload["checks"] = payload["checks"][:2]
+
+        report = build_template_report(payload, minimum_ready_coverage=0.9)
+
+        self.assertFalse(report["summary"]["analysis_eligible"])
+        self.assertIn(
+            "ready_coverage_below_minimum",
+            report["summary"]["ineligibility_reasons"],
+        )
+
+    def test_report_defers_only_submission_pending_checks(self) -> None:
+        payload = terminal_export()
+        payload["results"][0]["sharpe"] = 2.0
+        payload["checks"][0]["result"] = "PENDING"
+        payload["checks"][1]["name"] = "SELF_CORRELATION"
+        payload["checks"][1]["result"] = "PENDING"
+
+        report = build_template_report(payload)
+        best = report["sections"]["template_alphas_best_performance_each_metric"][0]
+
+        self.assertEqual(best["alpha_id"], "alpha-positive")
+        self.assertTrue(best["simulation_check_screen_eligible"])
+        self.assertEqual(best["deferred_submission_checks"], ["SELF_CORRELATION"])
+        self.assertEqual(best["simulation_check_blockers"], [])
+
+    def test_report_rejects_invalid_ready_coverage_contract(self) -> None:
+        with self.assertRaisesRegex(ValueError, "between 0 and 1"):
+            build_template_report(terminal_export(), minimum_ready_coverage=1.01)
+
 
 def template_metadata(
     expression: str,

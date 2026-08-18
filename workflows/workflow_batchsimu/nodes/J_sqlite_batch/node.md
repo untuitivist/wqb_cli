@@ -55,6 +55,7 @@ worker 启动并在 `status_after_launch.json` 中显示非终态进展或已完
 - worker 自己轮询、恢复、抓取 alpha detail/PnL 和写库；simulation/enrichment 阶段完成后原子消费对应 queue 行。
 - agent 不读取单条 alpha，不修改 manifest，不根据中间结果新增表达式。
 - 监控只运行 `wqb sqlitesimu status` 并报告 state、experiment counts 和两级 `queues` 计数；禁止持续打印 worker log。
+- 正常监控间隔为 30--60 分钟；中途质量、Sharpe 或失败分布不得触发取消，只有用户显式废弃或运行完整性风险才进入终止流程。
 - worker 异常退出时只用相同 db/run_id 重启 `resume`；`SIMULATE_UNKNOWN` 不得盲目再次 simulate。
 
 ## 显式终止
@@ -72,8 +73,8 @@ wqb sqlitesimu status <run_id> --db <node_dir>\simulations.sqlite3 --output <nod
 
 - 本 run 数据库、真实 run_id、worker 和恢复命令均可定位。
 - manifest 与 enqueue 计数一致，worker 已接管。
-- `alpha_submission_allowed` 仍为 false。
+- J 不执行任何 Alpha submit；run 级提交授权只供终态后的 L/M 使用。
 
 ## 下一跳
 
-- run 达到终态后进入 K；`CANCELLED/BLOCKED` 只允许描述性报告并在 L 停止，非终态只继续 worker 监控。
+- run 达到终态后进入 K；`CANCELLED/BLOCKED` 只允许描述性 K，非终态只继续 worker 监控。

@@ -26,8 +26,8 @@ workflows/
 - 首轮需要用固定设置估计每个模板族的有效结果密度；
 - 表达式一次性写入 manifest，随后由 `wqb sqlitesimu` 独立提交、轮询、重登和入库；
 - agent 不参与逐条回测，只在 run 终态后读取 SQLite/export 做聚合分析；
-- 使用自己的 A-L 节点、run 目录、SQLite 数据库和产物契约；
-- 流程终点只能是扩展为新的 batch run 或停止，不直接提交 alpha。
+- 使用自己的 A-M 节点、run 目录、SQLite 数据库和产物契约；
+- K 在终态后分析与选候选，L 完成慢速终检，M 是唯一允许执行 Alpha submit 的节点；累计目标未完成时只能从本流程 A 创建新的独立 batch。
 
 候选数量不是唯一判断标准。即使只有几百条，只要研究问题是“哪个模板族更有效”，也必须使用 `workflow_batchsimu`。
 

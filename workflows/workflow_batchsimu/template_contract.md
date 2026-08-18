@@ -94,7 +94,7 @@ K 只接受 `wqb sqlitesimu export` 生成的单个终态 run export。不得按
 固定报告由以下命令生成：
 
 ```cmd
-wqb sqlitesimu template-report <node_dir>\run_export.json --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
+wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-coverage <F_minimum_ready_coverage> --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
 ```
 
 Markdown 的前三段名称和列式格式固定为：
@@ -103,7 +103,7 @@ Markdown 的前三段名称和列式格式固定为：
 2. `template alphas checks statistics`：逐 template/check 的 `FAIL / PASS / PENDING / WARNING / ERROR` 计数、value describe 和 limit values。
 3. `template alphas best performance each metric`：逐 template 的 Sharpe/Fitness 代表，不跨 template 使用全局 fallback。
 
-代表选择必须使用有符号最大值，禁止用绝对值把最差负 Sharpe 或负 Fitness 当成最佳值。先从该 template 内没有 `FAIL/ERROR` 的 READY alpha 选择；若该 template 没有这种 alpha，才在该 template 内 fallback，并显式标为 `all_ready_fallback`。
+代表选择必须使用有符号最大值，禁止用绝对值把最差负 Sharpe 或负 Fitness 当成最佳值。先从该 template 内 simulation-resolved checks 已确定且无 blocker 的 READY alpha 选择；submission-only 的 `SELF_CORRELATION / DATA_DIVERSITY / PROD_CORRELATION / REGULAR_SUBMISSION` 为 `PENDING` 时记录为 deferred，不作为 K blocker。若该 template 没有通过基础 screen 的 alpha，才在该 template 内 fallback，并显式标为 `all_ready_fallback`；fallback 只能用于描述，不能进入 L。
 
 三段机器表之后，每个模板必须按以下格式给出描述，包含没有 READY 结果的模板：
 
@@ -115,7 +115,9 @@ N. [English Template Name] - 中文模板名
 改进方向: ...
 ```
 
-该固定报告只完成格式化和基础完整性筛查。K 仍必须结合 F 的 denominator/Wilson contract、错误分类和真实 IS-PnL cluster 生成最终 `analysis_eligibility.json`；固定报告本身不能授权 L 扩展。
+该固定报告只完成格式化和基础完整性筛查。K 仍必须结合 F 的 denominator/Wilson contract、错误分类和真实 IS-PnL cluster 生成最终 `analysis_eligibility.json`；固定报告本身不能授权候选进入 L。
+
+`CANCELLED` run 永远只能描述。若 `BLOCKED` 仅由少数 `SIMULATE_UNKNOWN` 导致，`template-report` 使用 F 在回测前冻结的 `minimum_ready_coverage` 判断 READY 子集能否分析。unknown experiment 必须独立隔离，永远不自动重跑、不选择、不提交。
 
 ## 禁止降级
 
@@ -123,5 +125,5 @@ N. [English Template Name] - 中文模板名
 - 不通过 alpha 创建时间推断 run 归属。
 - 不把没有结果的模板从报告中静默删除。
 - 不按单条最大 Sharpe 排模板，不用表达式外观代替实际 PnL correlation。
-- 不把 `CANCELLED`、`BLOCKED` 或含 `SIMULATE_UNKNOWN` 的 run 用于扩展选择。
+- 不从 `CANCELLED`、coverage 不足或完整性不明的 run 选择候选；部分 `BLOCKED` run 只有在 unknown 已隔离且 READY coverage 达到预注册门槛时才可分析 READY 子集。
 - 不在 K/L 修改 expression、manifest 或 J 的 SQLite。

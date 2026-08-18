@@ -33,7 +33,7 @@ class WorkflowLayoutTests(unittest.TestCase):
         self.assertFalse((ROOT / "workflow").exists())
 
         self.assertEqual(_node_letters(SIMU), list(string.ascii_uppercase[:13]))
-        self.assertEqual(_node_letters(BATCH), list(string.ascii_uppercase[:12]))
+        self.assertEqual(_node_letters(BATCH), list(string.ascii_uppercase[:13]))
 
         for workflow in (SIMU, BATCH):
             for node in (workflow / "nodes").iterdir():
@@ -51,8 +51,9 @@ class WorkflowLayoutTests(unittest.TestCase):
         self.assertIn("research_runs/\n  workflow_simu/", simu_graph)
         self.assertIn("research_runs/\n  workflow_batchsimu/", batch_graph)
         self.assertIn("A-M", simu_graph)
-        self.assertIn("A-L", batch_graph)
-        self.assertIn("alpha_submission_allowed = false", batch_graph)
+        self.assertIn("A-M", batch_graph)
+        self.assertIn("alpha_submission_allowed = true | false", batch_graph)
+        self.assertIn("M 提交与记录", batch_graph)
 
     def test_workflow_markdown_is_utf8_without_bom(self) -> None:
         for path in WORKFLOWS.rglob("*.md"):

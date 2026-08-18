@@ -15,6 +15,7 @@
 wqb user consultant-summary --output <node_dir>\consultant_summary.json
 wqb user pyramid-alphas --start-date <quarter_start> --end-date <quarter_end> --output <node_dir>\quarter_pyramid_alphas.json
 wqb user pyramid-multipliers --start-date <quarter_start> --end-date <quarter_end> --output <node_dir>\quarter_pyramid_multipliers.json
+wqb alpha list --date-submitted-after <campaign_started_at> --output <node_dir>\submission_activity.json
 wqb data categories --output <node_dir>\data_categories.json
 wqb sim options --output <node_dir>\simulation_options.json
 ```
@@ -24,6 +25,7 @@ wqb sim options --output <node_dir>\simulation_options.json
 - `target_context.json`：region、delay、category、tower 状态及选择依据。
 - `simulation_settings.json`：完整、可直接放入 manifest 的 settings。
 - `settings_identity.json`：canonical JSON 和 SHA-256 settings hash。
+- `submission_quota.json`：记录 campaign 开始后的平台确认提交基线、当日已提交数量、剩余额度、查询时间与来源；A 未授权提交时仍记录 `submission_allowed=false`。
 - `settings_rationale.md`
 - `commands.md`
 - `node_summary.md`
@@ -39,7 +41,7 @@ wqb sim options --output <node_dir>\simulation_options.json
 - 一个权威 run 只有一个 settings hash。
 - region 选择必须比较目标 tower、倍率或机会、数据覆盖与研究拥挤度，并在 `settings_rationale.md` 记录证据；不得仅沿用上一次 run。
 - region、delay、universe、instrumentType、language、decay、neutralization、truncation、pasteurization、unitHandling、nanHandling、visualization 和 testPeriod 必须显式记录。
-- 本节点不读取提交额度，也不授权提交 Alpha。
+- 本节点只读取并冻结提交额度，不扩大 A 的提交授权。额度为 0 不阻止 simulation，但 M 必须记录 no-op 或继续到后续平台提交日。
 - 若目标是比较 settings，必须把每个 settings cell 作为不同 run，而不是在一个 manifest 中混合。
 
 ## 成功条件
@@ -47,6 +49,7 @@ wqb sim options --output <node_dir>\simulation_options.json
 - settings 全部来自平台支持值，并与目标 tower 一致。
 - region 选择符合预注册目标；若选择降优先级 region，理由完整且在生成模板前固定。
 - 后续节点不再修改 settings；任何修改都使当前 run 作废并重新从 C 开始。
+- 提交额度快照可在 M 前重新读取以防过期，但原始 C 快照不得覆盖。
 
 ## 下一跳
 

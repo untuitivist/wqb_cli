@@ -36,6 +36,7 @@
 - `quality_density = quality_pass / READY`
 - `usable_density = quality_and_checks_pass / assigned`
 - 每个比例报告 numerator、denominator 和 Wilson interval。
+- `analysis_contract.json` 必须把 `minimum_ready_coverage` 预注册为 `[0, 1]` 内数值；J 终态后不得根据实际失败率调低。
 - auth、throttle、平台中断与 family 确定性错误分开报告。
 - IS-PnL 聚类的相关系数、最小重叠长度、缺失处理和 cluster threshold 必须预先写入 `analysis_contract.json`。
 

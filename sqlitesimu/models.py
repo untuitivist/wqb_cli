@@ -56,6 +56,9 @@ class RuntimePolicy:
     default_retry_seconds: float = 5.0
     idle_sleep_seconds: float = 1.0
     lease_seconds: float = 300.0
+    concurrent: bool = True
+    result_workers: int = 16
+    enrichment_workers: int = 4
 
 
 @dataclass(frozen=True)

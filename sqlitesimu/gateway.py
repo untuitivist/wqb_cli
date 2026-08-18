@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import threading
 from collections.abc import Callable
 from typing import Any, Protocol
 
@@ -52,6 +53,8 @@ class WqbApiGateway:
         self.reauth_attempts = reauth_attempts
         self.reauth_delay_seconds = reauth_delay_seconds
         self.sleeper = sleeper
+        self._reauth_lock = threading.Lock()
+        self._reauth_generation = 0
 
     def call(
         self,
@@ -62,6 +65,7 @@ class WqbApiGateway:
         params: dict[str, Any] | None = None,
         json_body: Any = None,
     ) -> dict[str, Any]:
+        observed_generation = self._reauth_generation
         result = self._call_once(
             method,
             path,
@@ -72,53 +76,80 @@ class WqbApiGateway:
         if not self._should_reauthenticate(path, result):
             return result
         trigger_status = _status_code(result)
-        attempts: list[dict[str, Any]] = []
-        for attempt in range(1, self.reauth_attempts + 1):
-            if self.reauth_delay_seconds:
-                self.sleeper(self.reauth_delay_seconds)
-            try:
-                authentication = self._reauthenticate()
-            except ApiTransportError as exc:
-                attempts.append(
-                    {
-                        "attempt": attempt,
-                        "ok": False,
-                        "error_type": type(exc).__name__,
-                        "detail": str(exc),
-                    }
+        with self._reauth_lock:
+            if self._reauth_generation != observed_generation:
+                result = self._call_once(
+                    method,
+                    path,
+                    path_vars=path_vars,
+                    params=params,
+                    json_body=json_body,
+                    auto_auth=False,
                 )
-                continue
-            authentication = {"attempt": attempt, **authentication}
-            attempts.append(authentication)
-            if not authentication["ok"]:
-                continue
-            result = self._call_once(
-                method,
-                path,
-                path_vars=path_vars,
-                params=params,
-                json_body=json_body,
-                auto_auth=False,
-            )
-            authentication["replay_status"] = _status_code(result)
-            if not self._should_reauthenticate(path, result):
-                result["reauthentication"] = {
-                    "layer": "sqlitesimu",
-                    "ok": True,
-                    "exhausted": False,
-                    "trigger_status": trigger_status,
-                    "attempts": attempts,
-                }
-                return result
-        result["ok"] = False
-        result["reauthentication"] = {
-            "layer": "sqlitesimu",
-            "ok": False,
-            "exhausted": True,
-            "trigger_status": trigger_status,
-            "attempts": attempts,
-        }
-        return result
+                if not self._should_reauthenticate(path, result):
+                    result["reauthentication"] = {
+                        "layer": "sqlitesimu",
+                        "ok": True,
+                        "exhausted": False,
+                        "shared": True,
+                        "generation": self._reauth_generation,
+                        "trigger_status": trigger_status,
+                        "attempts": [],
+                    }
+                    return result
+
+            attempts: list[dict[str, Any]] = []
+            for attempt in range(1, self.reauth_attempts + 1):
+                if self.reauth_delay_seconds:
+                    self.sleeper(self.reauth_delay_seconds)
+                try:
+                    authentication = self._reauthenticate()
+                except ApiTransportError as exc:
+                    attempts.append(
+                        {
+                            "attempt": attempt,
+                            "ok": False,
+                            "error_type": type(exc).__name__,
+                            "detail": str(exc),
+                        }
+                    )
+                    continue
+                authentication = {"attempt": attempt, **authentication}
+                attempts.append(authentication)
+                if not authentication["ok"]:
+                    continue
+                self._reauth_generation += 1
+                result = self._call_once(
+                    method,
+                    path,
+                    path_vars=path_vars,
+                    params=params,
+                    json_body=json_body,
+                    auto_auth=False,
+                )
+                authentication["replay_status"] = _status_code(result)
+                if not self._should_reauthenticate(path, result):
+                    result["reauthentication"] = {
+                        "layer": "sqlitesimu",
+                        "ok": True,
+                        "exhausted": False,
+                        "shared": False,
+                        "generation": self._reauth_generation,
+                        "trigger_status": trigger_status,
+                        "attempts": attempts,
+                    }
+                    return result
+            result["ok"] = False
+            result["reauthentication"] = {
+                "layer": "sqlitesimu",
+                "ok": False,
+                "exhausted": True,
+                "shared": False,
+                "generation": self._reauth_generation,
+                "trigger_status": trigger_status,
+                "attempts": attempts,
+            }
+            return result
 
     def _call_once(
         self,

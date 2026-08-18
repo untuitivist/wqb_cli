@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 import tempfile
+import threading
+import time
 import unittest
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -278,6 +281,8 @@ class ReauthGateway(WqbApiGateway):
         self.reauth_attempts = 5
         self.reauth_delay_seconds = 0
         self.sleeper = lambda _seconds: None
+        self._reauth_lock = threading.Lock()
+        self._reauth_generation = 0
 
     def _call_once(
         self,
@@ -306,6 +311,68 @@ class ReauthGateway(WqbApiGateway):
         }
 
 
+class ConcurrentReauthGateway(WqbApiGateway):
+    def __init__(self) -> None:
+        self.reauth_attempts = 5
+        self.reauth_delay_seconds = 0
+        self.sleeper = lambda _seconds: None
+        self._reauth_lock = threading.Lock()
+        self._reauth_generation = 0
+        self.initial_calls = threading.Barrier(2)
+        self.auth_calls = 0
+        self.auth_calls_lock = threading.Lock()
+
+    def _call_once(
+        self,
+        method: str,
+        path: str,
+        *,
+        path_vars: dict[str, str] | None,
+        params: dict[str, Any] | None,
+        json_body: Any,
+        auto_auth: bool = True,
+    ) -> dict[str, Any]:
+        if auto_auth:
+            self.initial_calls.wait(timeout=1.0)
+            return envelope(401)
+        return envelope(200, {"status": "PENDING"})
+
+    def _reauthenticate(self) -> dict[str, Any]:
+        with self.auth_calls_lock:
+            self.auth_calls += 1
+        time.sleep(0.02)
+        return {"ok": True, "reason": "authenticated", "status_code": 201}
+
+
+class ConcurrentPipelineGateway:
+    def __init__(self) -> None:
+        self.poll_started = threading.Event()
+        self.simulate_started = threading.Event()
+
+    def call(
+        self,
+        method: str,
+        path: str,
+        *,
+        path_vars: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any = None,
+    ) -> dict[str, Any]:
+        if method == "POST":
+            self.simulate_started.set()
+            if not self.poll_started.wait(timeout=1.0):
+                raise AssertionError("simulation sender did not overlap result polling")
+            return envelope(429, retry_after="60")
+        self.poll_started.set()
+        if not self.simulate_started.wait(timeout=1.0):
+            raise AssertionError("result polling did not overlap simulation sender")
+        return envelope(200, {"status": "PENDING"}, retry_after="60")
+
+
+def sequential_policy(**kwargs: Any) -> RuntimePolicy:
+    return RuntimePolicy(concurrent=False, **kwargs)
+
+
 class SqliteSimuTests(unittest.TestCase):
     def test_each_401_call_gets_reauthentication_and_replay(self) -> None:
         gateway = ReauthGateway(
@@ -323,6 +390,21 @@ class SqliteSimuTests(unittest.TestCase):
         self.assertEqual(first["response"]["status_code"], 200)
         self.assertEqual(second["response"]["status_code"], 200)
         self.assertEqual(gateway.auth_calls, 2)
+
+    def test_concurrent_sqlitesimu_calls_share_one_explicit_reauthentication(self) -> None:
+        gateway = ConcurrentReauthGateway()
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            results = list(
+                executor.map(
+                    lambda _: gateway.call("GET", "/simulations/{simulation_id}"),
+                    range(2),
+                )
+            )
+
+        self.assertEqual([result["response"]["status_code"] for result in results], [200, 200])
+        self.assertEqual(gateway.auth_calls, 1)
+        self.assertEqual(sum(bool(result["reauthentication"]["shared"]) for result in results), 1)
 
     def test_gateway_reauthenticates_on_all_wqb_session_statuses(self) -> None:
         for trigger in (204, 401, 429):
@@ -479,7 +561,7 @@ class SqliteSimuTests(unittest.TestCase):
             runtime = SqliteSimuRuntime(
                 store,
                 gateway,
-                policy=RuntimePolicy(default_retry_seconds=1.0, idle_sleep_seconds=1.0),
+                policy=sequential_policy(default_retry_seconds=1.0, idle_sleep_seconds=1.0),
                 clock=clock,
                 sleeper=clock.sleep,
             )
@@ -618,6 +700,134 @@ class SqliteSimuTests(unittest.TestCase):
             with store.connect() as conn:
                 batch_count = conn.execute("SELECT COUNT(*) FROM simulation_batches").fetchone()[0]
             self.assertEqual(batch_count, 1)
+
+    def test_concurrent_claims_are_unique_and_recovered_on_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    [
+                        {"expression": f"rank(close + {index})", "settings": SETTINGS}
+                        for index in range(8)
+                    ]
+                ),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.complete_parent(
+                batch.id,
+                alpha_id=None,
+                child_ids=[f"child-{index}" for index in range(8)],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE"}),
+                now=1001.0,
+            )
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                items = list(
+                    executor.map(
+                        lambda index: store.claim_child_item(
+                            enqueued.run_id,
+                            owner=f"result-{index}",
+                            now=1001.0,
+                        ),
+                        range(8),
+                    )
+                )
+
+            self.assertNotIn(None, items)
+            claimed_items = [item for item in items if item is not None]
+            self.assertEqual(
+                len({(item.batch_id, item.ordinal) for item in claimed_items}),
+                8,
+            )
+            for index, item in enumerate(claimed_items):
+                store.complete_child(
+                    item,
+                    alpha_id=f"alpha-{index}",
+                    response=envelope(200, {"status": "COMPLETE"}),
+                    now=1002.0,
+                )
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                experiments = list(
+                    executor.map(
+                        lambda index: store.claim_enrichment(
+                            enqueued.run_id,
+                            owner=f"enrichment-{index}",
+                            now=1002.0,
+                        ),
+                        range(8),
+                    )
+                )
+
+            self.assertNotIn(None, experiments)
+            claimed_experiments = [experiment for experiment in experiments if experiment is not None]
+            self.assertEqual(len({experiment.id for experiment in claimed_experiments}), 8)
+
+            store.recover_interrupted(enqueued.run_id, now=1003.0)
+            with store.connect() as conn:
+                remaining_claims = conn.execute(
+                    "SELECT COUNT(*) FROM enrichment_queue WHERE claim_owner IS NOT NULL"
+                ).fetchone()[0]
+            self.assertEqual(remaining_claims, 0)
+
+    def test_concurrent_runtime_overlaps_sender_and_result_polling(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    {
+                        "candidates": [
+                            {
+                                "expression": "rank(close)",
+                                "settings": SETTINGS,
+                                "priority": 10,
+                            },
+                            {
+                                "expression": "rank(volume)",
+                                "settings": {
+                                    **SETTINGS,
+                                    "region": "CHN",
+                                    "universe": "TOP2000U",
+                                },
+                            },
+                        ]
+                    }
+                ),
+                now=time.time(),
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=time.time())
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=time.time())
+            store.accept_simulation(
+                batch.id,
+                location="https://api.worldquantbrain.com/simulations/parent-due",
+                parent_simulation_id="parent-due",
+                response=envelope(201),
+                not_before=time.time(),
+                now=time.time(),
+            )
+            gateway = ConcurrentPipelineGateway()
+            runtime = SqliteSimuRuntime(
+                store,
+                gateway,
+                policy=RuntimePolicy(
+                    default_retry_seconds=0.05,
+                    idle_sleep_seconds=0.01,
+                    lease_seconds=2.0,
+                    result_workers=1,
+                    enrichment_workers=1,
+                ),
+            )
+
+            summary = runtime.run(enqueued.run_id, max_runtime_seconds=0.2)
+
+            self.assertTrue(summary["timed_out"])
+            self.assertTrue(gateway.poll_started.is_set())
+            self.assertTrue(gateway.simulate_started.is_set())
 
     def test_queue_rows_are_consumed_only_after_stage_results_are_persisted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -938,7 +1148,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(runtime_keys, {"simulation_request_not_before": "1010"})
             self.assertEqual(event["event_type"], "SIMULATE_RETRY")
             self.assertIn("SIMULATE_UNKNOWN", event["payload_json"])
-            self.assertEqual(schema_version, 3)
+            self.assertEqual(schema_version, 4)
 
     def test_run_lease_rejects_a_second_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -974,7 +1184,13 @@ class SqliteSimuTests(unittest.TestCase):
             store.mark_simulate_started(batch.id, now=1000.0)
             gateway = NoCallGateway()
             clock = FakeClock()
-            runtime = SqliteSimuRuntime(store, gateway, clock=clock, sleeper=clock.sleep)
+            runtime = SqliteSimuRuntime(
+                store,
+                gateway,
+                policy=sequential_policy(),
+                clock=clock,
+                sleeper=clock.sleep,
+            )
 
             summary = runtime.run(enqueued.run_id)
 
@@ -1030,7 +1246,7 @@ class SqliteSimuTests(unittest.TestCase):
             runtime = SqliteSimuRuntime(
                 store,
                 gateway,
-                policy=RuntimePolicy(
+                policy=sequential_policy(
                     max_attempts=1,
                     default_retry_seconds=1.0,
                     idle_sleep_seconds=1.0,
@@ -1063,7 +1279,7 @@ class SqliteSimuTests(unittest.TestCase):
                 runtime = SqliteSimuRuntime(
                     store,
                     gateway,
-                    policy=RuntimePolicy(
+                    policy=sequential_policy(
                         max_attempts=1,
                         default_retry_seconds=1.0,
                         idle_sleep_seconds=1.0,
@@ -1094,7 +1310,7 @@ class SqliteSimuTests(unittest.TestCase):
             runtime = SqliteSimuRuntime(
                 store,
                 gateway,
-                policy=RuntimePolicy(default_retry_seconds=1.0, idle_sleep_seconds=1.0),
+                policy=sequential_policy(default_retry_seconds=1.0, idle_sleep_seconds=1.0),
                 clock=clock,
                 sleeper=clock.sleep,
             )

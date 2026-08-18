@@ -20,7 +20,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS enrichment_queue (
     experiment_id TEXT PRIMARY KEY REFERENCES experiments(id) ON DELETE CASCADE,
     run_id TEXT NOT NULL REFERENCES runs(id),
     alpha_id TEXT NOT NULL,
-    enqueued_at REAL NOT NULL
+    enqueued_at REAL NOT NULL,
+    claim_owner TEXT
 );
 
 CREATE TABLE IF NOT EXISTS simulation_batches (
@@ -102,6 +103,7 @@ CREATE TABLE IF NOT EXISTS simulation_batches (
     last_status TEXT,
     last_response_json TEXT,
     last_error TEXT,
+    claim_owner TEXT,
     created_at REAL NOT NULL,
     updated_at REAL NOT NULL
 );
@@ -117,6 +119,7 @@ CREATE TABLE IF NOT EXISTS simulation_items (
     not_before REAL NOT NULL DEFAULT 0,
     last_response_json TEXT,
     last_error TEXT,
+    claim_owner TEXT,
     PRIMARY KEY(batch_id, ordinal)
 );
 
@@ -441,6 +444,22 @@ class SqliteStore:
                     conn.execute(
                         "DELETE FROM runtime_state WHERE key = 'simulation_submit_not_before'"
                     )
+            if current < 4:
+                _add_column_if_missing(conn, "simulation_batches", "claim_owner TEXT")
+                _add_column_if_missing(conn, "simulation_items", "claim_owner TEXT")
+                _add_column_if_missing(conn, "enrichment_queue", "claim_owner TEXT")
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_batches_claimable "
+                "ON simulation_batches(run_id, state, claim_owner, not_before, created_at)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_items_claimable "
+                "ON simulation_items(state, claim_owner, not_before, batch_id, ordinal)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_enrichment_claimable "
+                "ON enrichment_queue(run_id, claim_owner, enqueued_at, experiment_id)"
+            )
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def enqueue(self, manifest: SimulationManifest, *, now: float | None = None) -> EnqueueResult:
@@ -601,6 +620,21 @@ class SqliteStore:
 
     def recover_interrupted(self, run_id: str, *, now: float) -> None:
         with self.connect() as conn:
+            conn.execute(
+                "UPDATE simulation_batches SET claim_owner = NULL WHERE run_id = ?",
+                (run_id,),
+            )
+            conn.execute(
+                """
+                UPDATE simulation_items SET claim_owner = NULL
+                WHERE batch_id IN (SELECT id FROM simulation_batches WHERE run_id = ?)
+                """,
+                (run_id,),
+            )
+            conn.execute(
+                "UPDATE enrichment_queue SET claim_owner = NULL WHERE run_id = ?",
+                (run_id,),
+            )
             ambiguous = conn.execute(
                 """
                 SELECT id FROM simulation_batches
@@ -971,7 +1005,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = ?, last_error = ?, last_response_json = ?, updated_at = ?
+                SET state = ?, last_error = ?, last_response_json = ?,
+                    claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
                 (batch_state, error, _json(response) if response else None, now, batch_id),
@@ -981,7 +1016,11 @@ class SqliteStore:
                 (state, error, now, batch_id),
             )
             conn.execute(
-                "UPDATE simulation_items SET state = ?, last_error = ? WHERE batch_id = ?",
+                """
+                UPDATE simulation_items
+                SET state = ?, last_error = ?, claim_owner = NULL
+                WHERE batch_id = ?
+                """,
                 (state, error, batch_id),
             )
             if state == "PERMANENT_FAILURE":
@@ -1020,13 +1059,18 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = 'RETRIED', last_error = ?, last_response_json = ?, updated_at = ?
+                SET state = 'RETRIED', last_error = ?, last_response_json = ?,
+                    claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
                 (error, _json(response), now, batch_id),
             )
             conn.execute(
-                "UPDATE simulation_items SET state = 'RETRIED', last_error = ? WHERE batch_id = ?",
+                """
+                UPDATE simulation_items
+                SET state = 'RETRIED', last_error = ?, claim_owner = NULL
+                WHERE batch_id = ?
+                """,
                 (error, batch_id),
             )
             conn.execute(
@@ -1053,12 +1097,39 @@ class SqliteStore:
             row = conn.execute(
                 """
                 SELECT * FROM simulation_batches
-                WHERE run_id = ? AND state = 'POLLING' AND not_before <= ?
+                WHERE run_id = ? AND state = 'POLLING'
+                  AND claim_owner IS NULL AND not_before <= ?
                 ORDER BY not_before, created_at
                 LIMIT 1
                 """,
                 (run_id, now),
             ).fetchone()
+        return _batch_from_row(row) if row else None
+
+    def claim_poll_batch(
+        self,
+        run_id: str,
+        *,
+        owner: str,
+        now: float,
+    ) -> BatchRecord | None:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """
+                SELECT * FROM simulation_batches
+                WHERE run_id = ? AND state = 'POLLING'
+                  AND claim_owner IS NULL AND not_before <= ?
+                ORDER BY not_before, created_at
+                LIMIT 1
+                """,
+                (run_id, now),
+            ).fetchone()
+            if row is not None:
+                conn.execute(
+                    "UPDATE simulation_batches SET claim_owner = ? WHERE id = ?",
+                    (owner, row["id"]),
+                )
         return _batch_from_row(row) if row else None
 
     def defer_parent_poll(
@@ -1076,7 +1147,7 @@ class SqliteStore:
                 """
                 UPDATE simulation_batches
                 SET not_before = ?, last_status = ?, last_response_json = ?,
-                    poll_attempts = poll_attempts + ?, updated_at = ?
+                    poll_attempts = poll_attempts + ?, claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
                 (not_before, status, _json(response), 1 if increment_attempt else 0, now, batch_id),
@@ -1108,7 +1179,8 @@ class SqliteStore:
                     conn.execute(
                         """
                         UPDATE simulation_items
-                        SET state = 'POLLING', child_simulation_id = ?, not_before = ?, last_response_json = ?
+                        SET state = 'POLLING', child_simulation_id = ?, not_before = ?,
+                            last_response_json = ?, claim_owner = NULL
                         WHERE batch_id = ? AND ordinal = ?
                         """,
                         (child_id, now, _json(response), batch_id, item["ordinal"]),
@@ -1152,7 +1224,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = ?, last_status = ?, last_response_json = ?, updated_at = ?
+                SET state = ?, last_status = ?, last_response_json = ?,
+                    claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
                 (batch_state, parent_status, _json(response), now, batch_id),
@@ -1175,12 +1248,44 @@ class SqliteStore:
                 FROM simulation_items i
                 JOIN simulation_batches b ON b.id = i.batch_id
                 WHERE b.run_id = ? AND b.state = 'CHILD_POLLING'
-                  AND i.state = 'POLLING' AND i.not_before <= ?
+                  AND i.state = 'POLLING' AND i.claim_owner IS NULL AND i.not_before <= ?
                 ORDER BY i.not_before, b.created_at, i.ordinal
                 LIMIT 1
                 """,
                 (run_id, now),
             ).fetchone()
+        return _item_from_row(row) if row else None
+
+    def claim_child_item(
+        self,
+        run_id: str,
+        *,
+        owner: str,
+        now: float,
+    ) -> BatchItemRecord | None:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """
+                SELECT i.*
+                FROM simulation_items i
+                JOIN simulation_batches b ON b.id = i.batch_id
+                WHERE b.run_id = ? AND b.state = 'CHILD_POLLING'
+                  AND i.state = 'POLLING' AND i.claim_owner IS NULL
+                  AND i.not_before <= ?
+                ORDER BY i.not_before, b.created_at, i.ordinal
+                LIMIT 1
+                """,
+                (run_id, now),
+            ).fetchone()
+            if row is not None:
+                conn.execute(
+                    """
+                    UPDATE simulation_items SET claim_owner = ?
+                    WHERE batch_id = ? AND ordinal = ?
+                    """,
+                    (owner, row["batch_id"], row["ordinal"]),
+                )
         return _item_from_row(row) if row else None
 
     def defer_child_poll(
@@ -1195,7 +1300,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET not_before = ?, attempts = attempts + ?, last_response_json = ?
+                SET not_before = ?, attempts = attempts + ?, last_response_json = ?,
+                    claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
                 (
@@ -1222,7 +1328,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET state = 'SIM_DONE', alpha_id = ?, last_response_json = ?
+                SET state = 'SIM_DONE', alpha_id = ?, last_response_json = ?,
+                    claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
                 (alpha_id, _json(response), item.batch_id, item.ordinal),
@@ -1268,7 +1375,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET state = 'PERMANENT_FAILURE', last_error = ?, last_response_json = ?
+                SET state = 'PERMANENT_FAILURE', last_error = ?, last_response_json = ?,
+                    claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
                 (error, _json(response) if response else None, item.batch_id, item.ordinal),
@@ -1312,7 +1420,8 @@ class SqliteStore:
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET state = 'RETRIED', last_error = ?, last_response_json = ?
+                SET state = 'RETRIED', last_error = ?, last_response_json = ?,
+                    claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
                 (error, _json(response), item.batch_id, item.ordinal),
@@ -1346,13 +1455,42 @@ class SqliteStore:
                 FROM enrichment_queue q
                 JOIN experiments e ON e.id = q.experiment_id
                 WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
-                  AND e.not_before <= ?
+                  AND q.claim_owner IS NULL AND e.not_before <= ?
                 ORDER BY CASE e.state WHEN 'ENRICH_PNL' THEN 0 ELSE 1 END,
                          e.updated_at, e.id
                 LIMIT 1
                 """,
                 (run_id, now),
             ).fetchone()
+        return _experiment_from_row(row) if row else None
+
+    def claim_enrichment(
+        self,
+        run_id: str,
+        *,
+        owner: str,
+        now: float,
+    ) -> ExperimentRecord | None:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                """
+                SELECT e.*
+                FROM enrichment_queue q
+                JOIN experiments e ON e.id = q.experiment_id
+                WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
+                  AND q.claim_owner IS NULL AND e.not_before <= ?
+                ORDER BY CASE e.state WHEN 'ENRICH_PNL' THEN 0 ELSE 1 END,
+                         e.updated_at, e.id
+                LIMIT 1
+                """,
+                (run_id, now),
+            ).fetchone()
+            if row is not None:
+                conn.execute(
+                    "UPDATE enrichment_queue SET claim_owner = ? WHERE experiment_id = ?",
+                    (owner, row["id"]),
+                )
         return _experiment_from_row(row) if row else None
 
     def save_alpha_detail(
@@ -1423,6 +1561,10 @@ class SqliteStore:
                 WHERE id = ?
                 """,
                 (now, now, experiment.id),
+            )
+            conn.execute(
+                "UPDATE enrichment_queue SET claim_owner = NULL WHERE experiment_id = ?",
+                (experiment.id,),
             )
             self._event(
                 conn,
@@ -1504,6 +1646,11 @@ class SqliteStore:
             if terminal:
                 conn.execute(
                     "DELETE FROM enrichment_queue WHERE experiment_id = ?",
+                    (experiment.id,),
+                )
+            else:
+                conn.execute(
+                    "UPDATE enrichment_queue SET claim_owner = NULL WHERE experiment_id = ?",
                     (experiment.id,),
                 )
 
@@ -1815,6 +1962,17 @@ class SqliteStore:
 
 def candidate_fingerprint(payload: dict[str, Any]) -> str:
     return hashlib.sha256(_json(payload).encode("utf-8")).hexdigest()
+
+
+def _add_column_if_missing(
+    conn: sqlite3.Connection,
+    table: str,
+    definition: str,
+) -> None:
+    column = definition.split(None, 1)[0]
+    columns = {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table})")}
+    if column not in columns:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
 
 
 def scheduling_profile(payload: dict[str, Any]) -> tuple[str, int]:

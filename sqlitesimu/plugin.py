@@ -222,6 +222,18 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--retry-seconds", type=float, default=5.0)
     parser.add_argument("--idle-sleep-seconds", type=float, default=1.0)
     parser.add_argument(
+        "--result-workers",
+        type=int,
+        default=16,
+        help="Concurrent parent/child polling workers; not a simulation slot limit",
+    )
+    parser.add_argument(
+        "--enrichment-workers",
+        type=int,
+        default=4,
+        help="Concurrent Alpha detail/PnL workers",
+    )
+    parser.add_argument(
         "--max-runtime-seconds",
         type=float,
         help="Return with state RUNNING after this many seconds; default waits for a terminal state",
@@ -236,10 +248,14 @@ def _run(
 ) -> dict[str, Any]:
     if args.max_runtime_seconds is not None and args.max_runtime_seconds <= 0:
         raise ValueError("max-runtime-seconds must be positive")
+    if args.result_workers < 1 or args.enrichment_workers < 1:
+        raise ValueError("result-workers and enrichment-workers must be at least 1")
     policy = RuntimePolicy(
         max_attempts=args.max_attempts,
         default_retry_seconds=args.retry_seconds,
         idle_sleep_seconds=args.idle_sleep_seconds,
+        result_workers=args.result_workers,
+        enrichment_workers=args.enrichment_workers,
     )
     runtime = SqliteSimuRuntime(store, WqbApiGateway(context), policy=policy)
     return runtime.run(run_id, max_runtime_seconds=args.max_runtime_seconds)

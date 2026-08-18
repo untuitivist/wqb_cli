@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import math
+import queue
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -41,6 +43,10 @@ class SqliteSimuRuntime:
             raise ValueError("retry and idle sleep durations must be positive")
         if self.policy.lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
+        if self.policy.result_workers < 1:
+            raise ValueError("result_workers must be at least 1")
+        if self.policy.enrichment_workers < 1:
+            raise ValueError("enrichment_workers must be at least 1")
 
     def run(
         self,
@@ -55,12 +61,96 @@ class SqliteSimuRuntime:
             now=started,
             lease_seconds=self.policy.lease_seconds,
         )
-        refresh_at = started + self.policy.lease_seconds / 3
         try:
             self.store.mark_run_running(run_id, now=started)
             self.store.recover_interrupted(run_id, now=started)
+            if self.policy.concurrent:
+                return self._run_concurrent(
+                    run_id,
+                    started=started,
+                    max_runtime_seconds=max_runtime_seconds,
+                )
+            return self._run_sequential(
+                run_id,
+                started=started,
+                max_runtime_seconds=max_runtime_seconds,
+            )
+        finally:
+            self.store.release_run_lease(run_id, owner=self.worker_id)
+
+    def _run_sequential(
+        self,
+        run_id: str,
+        *,
+        started: float,
+        max_runtime_seconds: float | None,
+    ) -> dict[str, Any]:
+        refresh_at = started + self.policy.lease_seconds / 3
+        while True:
+            now = self.clock()
+            if now >= refresh_at:
+                self.store.renew_run_lease(
+                    run_id,
+                    owner=self.worker_id,
+                    now=now,
+                    lease_seconds=self.policy.lease_seconds,
+                )
+                refresh_at = now + self.policy.lease_seconds / 3
+            summary = self.store.refresh_run_state(run_id, now=now)
+            if summary["state"] in RUN_TERMINAL_STATES:
+                return summary
+            if max_runtime_seconds is not None and now - started >= max_runtime_seconds:
+                return {**summary, "timed_out": True}
+            if self._step(run_id, now=now):
+                continue
+            self.sleeper(self._idle_delay(run_id, now=now))
+
+    def _run_concurrent(
+        self,
+        run_id: str,
+        *,
+        started: float,
+        max_runtime_seconds: float | None,
+    ) -> dict[str, Any]:
+        stop = threading.Event()
+        errors: queue.Queue[BaseException] = queue.Queue()
+        threads: list[threading.Thread] = []
+
+        def start_worker(name: str, target: Callable[[], None]) -> None:
+            def guarded() -> None:
+                try:
+                    target()
+                except BaseException as exc:
+                    errors.put(exc)
+                    stop.set()
+
+            thread = threading.Thread(target=guarded, name=name, daemon=True)
+            thread.start()
+            threads.append(thread)
+
+        refresh_at = started + self.policy.lease_seconds / 3
+        timed_out = False
+        worker_error: BaseException | None = None
+        try:
+            start_worker(
+                "sqlitesimu-sender",
+                lambda: self._simulation_lane(run_id, stop),
+            )
+            for index in range(self.policy.result_workers):
+                start_worker(
+                    f"sqlitesimu-result-{index + 1}",
+                    lambda index=index: self._result_lane(run_id, stop, index=index),
+                )
+            for index in range(self.policy.enrichment_workers):
+                start_worker(
+                    f"sqlitesimu-enrichment-{index + 1}",
+                    lambda index=index: self._enrichment_lane(run_id, stop, index=index),
+                )
 
             while True:
+                if not errors.empty():
+                    worker_error = errors.get_nowait()
+                    break
                 now = self.clock()
                 if now >= refresh_at:
                     self.store.renew_run_lease(
@@ -72,14 +162,78 @@ class SqliteSimuRuntime:
                     refresh_at = now + self.policy.lease_seconds / 3
                 summary = self.store.refresh_run_state(run_id, now=now)
                 if summary["state"] in RUN_TERMINAL_STATES:
-                    return summary
+                    break
                 if max_runtime_seconds is not None and now - started >= max_runtime_seconds:
-                    return {**summary, "timed_out": True}
-                if self._step(run_id, now=now):
-                    continue
-                self.sleeper(self._idle_delay(run_id, now=now))
+                    timed_out = True
+                    break
+                stop.wait(self.policy.idle_sleep_seconds)
         finally:
-            self.store.release_run_lease(run_id, owner=self.worker_id)
+            stop.set()
+            for thread in threads:
+                thread.join()
+
+        if worker_error is None and not errors.empty():
+            worker_error = errors.get_nowait()
+        if worker_error is not None:
+            raise RuntimeError("sqlitesimu concurrent worker failed") from worker_error
+        summary = self.store.refresh_run_state(run_id, now=self.clock())
+        return {**summary, **({"timed_out": True} if timed_out else {})}
+
+    def _simulation_lane(self, run_id: str, stop: threading.Event) -> None:
+        while not stop.is_set():
+            if self._step_simulation(run_id, now=self.clock()):
+                continue
+            stop.wait(self.policy.idle_sleep_seconds)
+
+    def _result_lane(
+        self,
+        run_id: str,
+        stop: threading.Event,
+        *,
+        index: int,
+    ) -> None:
+        owner = f"{self.worker_id}:result:{index + 1}"
+        prefer_parent = index % 2 == 0
+        while not stop.is_set():
+            now = self.clock()
+            batch = None
+            item = None
+            if prefer_parent:
+                batch = self.store.claim_poll_batch(run_id, owner=owner, now=now)
+                if batch is None:
+                    item = self.store.claim_child_item(run_id, owner=owner, now=now)
+            else:
+                item = self.store.claim_child_item(run_id, owner=owner, now=now)
+                if item is None:
+                    batch = self.store.claim_poll_batch(run_id, owner=owner, now=now)
+            if batch is not None:
+                self._poll_parent(batch, now=now)
+                prefer_parent = False
+                continue
+            if item is not None:
+                self._poll_child(item, now=now)
+                prefer_parent = True
+                continue
+            stop.wait(self.policy.idle_sleep_seconds)
+
+    def _enrichment_lane(
+        self,
+        run_id: str,
+        stop: threading.Event,
+        *,
+        index: int,
+    ) -> None:
+        owner = f"{self.worker_id}:enrichment:{index + 1}"
+        while not stop.is_set():
+            experiment = self.store.claim_enrichment(
+                run_id,
+                owner=owner,
+                now=self.clock(),
+            )
+            if experiment is not None:
+                self._enrich(experiment, now=self.clock())
+                continue
+            stop.wait(self.policy.idle_sleep_seconds)
 
     def _step(self, run_id: str, *, now: float) -> bool:
         # The legacy sender and result collector ran independently. Rotate durable

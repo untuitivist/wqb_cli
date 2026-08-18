@@ -96,6 +96,31 @@ class NoCallGateway:
         raise AssertionError("ambiguous submissions must never be posted again automatically")
 
 
+class PendingParentGateway:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    def call(
+        self,
+        method: str,
+        path: str,
+        *,
+        path_vars: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        json_body: Any = None,
+    ) -> dict[str, Any]:
+        self.calls.append(
+            {
+                "method": method,
+                "path": path,
+                "path_vars": path_vars,
+                "params": params,
+                "json_body": json_body,
+            }
+        )
+        return envelope(200, {"status": "PENDING"}, retry_after="5")
+
+
 class ThrottledGateway(SuccessfulGateway):
     def __init__(self) -> None:
         super().__init__()
@@ -531,6 +556,46 @@ class SqliteSimuTests(unittest.TestCase):
                     "SELECT COUNT(*) FROM simulation_batches WHERE state = 'POLLING'"
                 ).fetchone()[0]
             self.assertEqual(active, 9)
+
+    def test_due_result_polling_precedes_new_batch_submission(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            manifest = parse_manifest(
+                {
+                    "candidates": [
+                        {
+                            "expression": "rank(close)",
+                            "settings": SETTINGS,
+                            "priority": 10,
+                        },
+                        {
+                            "expression": "rank(volume)",
+                            "settings": {**SETTINGS, "region": "CHN", "universe": "TOP2000U"},
+                        },
+                    ]
+                }
+            )
+            enqueued = store.enqueue(manifest, now=1000.0)
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_submit_started(batch.id, now=1000.0)
+            store.accept_submission(
+                batch.id,
+                location="https://api.worldquantbrain.com/simulations/parent-due",
+                parent_simulation_id="parent-due",
+                response=envelope(201),
+                not_before=1000.0,
+                now=1000.0,
+            )
+            gateway = PendingParentGateway()
+            runtime = SqliteSimuRuntime(store, gateway, clock=FakeClock())
+
+            self.assertTrue(runtime._step(enqueued.run_id, now=1001.0))
+
+            self.assertEqual(gateway.calls[0]["method"], "GET")
+            with store.connect() as conn:
+                batch_count = conn.execute("SELECT COUNT(*) FROM simulation_batches").fetchone()[0]
+            self.assertEqual(batch_count, 1)
 
     def test_queue_rows_are_consumed_only_after_stage_results_are_persisted(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

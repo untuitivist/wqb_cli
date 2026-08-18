@@ -76,14 +76,6 @@ class SqliteSimuRuntime:
             self.store.release_run_lease(run_id, owner=self.worker_id)
 
     def _step(self, run_id: str, *, now: float) -> bool:
-        batch = self.store.next_submit_batch(run_id, now=now)
-        if batch:
-            self._submit(batch, now=now)
-            return True
-
-        if self.store.create_next_batch(run_id, now=now):
-            return True
-
         batch = self.store.next_poll_batch(run_id, now=now)
         if batch:
             self._poll_parent(batch, now=now)
@@ -97,6 +89,14 @@ class SqliteSimuRuntime:
         experiment = self.store.next_enrichment(run_id, now=now)
         if experiment:
             self._enrich(experiment, now=now)
+            return True
+
+        batch = self.store.next_submit_batch(run_id, now=now)
+        if batch:
+            self._submit(batch, now=now)
+            return True
+
+        if self.store.create_next_batch(run_id, now=now):
             return True
         return False
 

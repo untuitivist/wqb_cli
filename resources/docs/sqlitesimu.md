@@ -123,6 +123,7 @@ QUEUED -> BATCHED -> SUBMITTING -> POLLING
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
 - 到期的父任务、child 和 enrichment 轮询优先于继续建批/提交，避免大批 manifest 让结果消费饥饿；未到 `not_before` 的任务不会阻塞新提交。
+- enrichment 内部优先完成已经保存 detail 的 `ENRICH_PNL`，使每个 alpha 尽快闭环为 `READY` 并删除待办，而不是先积压整批 detail。
 - 旧脚本识别的资源不足、执行异常、运行过久错误会重新排队。
 - PnL 使用 record 第 2 列，先 forward-fill，再 diff；首项保存为 `nan`。
 - alpha 详情扁平化为旧 24 字段，并从 `MATCHES_PYRAMID` 和 `DATA_USAGE:SINGLE_DATA_SET` 生成 pyramids。

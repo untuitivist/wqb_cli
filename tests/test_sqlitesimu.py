@@ -482,6 +482,18 @@ class SqliteSimuTests(unittest.TestCase):
             post = next(call for call in gateway.calls if call["method"] == "POST")
             self.assertIsInstance(post["json_body"], list)
             self.assertEqual(len(post["json_body"]), 2)
+            enrichment_paths = [
+                call["path"] for call in gateway.calls if call["path"].startswith("/alphas/")
+            ]
+            self.assertEqual(
+                enrichment_paths,
+                [
+                    "/alphas/{alpha_id}",
+                    "/alphas/{alpha_id}/recordsets/pnl",
+                    "/alphas/{alpha_id}",
+                    "/alphas/{alpha_id}/recordsets/pnl",
+                ],
+            )
             normalized = store.analysis_results(enqueued.run_id)
             experiments = store.experiment_results(enqueued.run_id)
             legacy = store.compatibility_results(enqueued.run_id)

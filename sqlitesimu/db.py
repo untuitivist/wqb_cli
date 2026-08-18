@@ -1116,7 +1116,8 @@ class SqliteStore:
                 JOIN experiments e ON e.id = q.experiment_id
                 WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
                   AND e.not_before <= ?
-                ORDER BY e.updated_at, e.id
+                ORDER BY CASE e.state WHEN 'ENRICH_PNL' THEN 0 ELSE 1 END,
+                         e.updated_at, e.id
                 LIMIT 1
                 """,
                 (run_id, now),

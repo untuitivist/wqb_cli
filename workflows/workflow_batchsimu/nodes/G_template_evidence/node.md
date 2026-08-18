@@ -2,7 +2,7 @@
 
 ## 目标
 
-围绕 F 的实验设计和 E 的有效字段，建立模板群方法、字段机制、operator 语义和失效风险的可追溯证据包。G 只形成设计约束，不生成 expression。
+围绕 F 的实验设计和 E 的有效字段，分别建立模板群方法、模板格式、字段机制、operator 语义和失效风险的可追溯证据包。G 只形成证据与约束，不生成 expression。
 
 ## 输入
 
@@ -40,6 +40,8 @@ wqb search template --output <node_dir>\platform_template_search.json
 - family 产量必须可计算，候选必须以完整 simulation identity 去重。
 - factor density 是经验性筛选指标，不是结论；表达式结构也不能证明 PnL 低相关。
 - 逐层追加 operator 并按同一批结果继续拟合存在过拟合风险，本流程不采用无上限 LEGO 式自适应堆叠。
+- 模板格式证据与模板有效性证据分开：格式被社区或旧 notebook 使用，不代表该模板机制有效。
+- 每条引用必须落到 `claim_id`；H 的每个结构、字段角色和 operator 选择必须引用 claim，而不能只引用整篇帖子。
 
 ## 输出
 
@@ -49,6 +51,8 @@ wqb search template --output <node_dir>\platform_template_search.json
 - `platform_field_lessons.md`
 - `mechanism_research_lessons.md`
 - `family_design_constraints.json`
+- `template_format_evidence.md`：只记录人读模板、placeholder、变量和结果报告格式证据。
+- `claim_ledger.json`：claim、source、原文位置、support/oppose/uncertain、适用范围和失效边界。
 - `unsupported_patterns.json`
 - `query_log.md`
 - `commands.md`
@@ -56,7 +60,7 @@ wqb search template --output <node_dir>\platform_template_search.json
 
 ## 成功条件
 
-- 模板方法与字段机制证据分开记录，无法取得正文的摘要只标为 clue。
+- 模板方法、模板格式与字段机制证据分开记录，无法取得正文的摘要只标为 clue。
 - 支持、反对和不确定证据都保留。
 - H 可以据此定义 family，但 G 不包含可回测 expression 列表。
 

@@ -286,7 +286,7 @@ For REGULAR FASTEXPR multi-simulation, the shared settings requirement is limite
 
 ### Durable SQLite Batch Simulations
 
-To let a workflow generate candidates while the CLI independently submits, polls, retries, and persists results:
+To let a workflow generate candidates while the CLI independently runs simulations, polls, retries, and persists results:
 
 ```powershell
 wqb sqlitesimu run candidates.json --output run-result.json

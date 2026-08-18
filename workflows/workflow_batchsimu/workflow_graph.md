@@ -1,8 +1,10 @@
 # WQB Research Workflow: BatchSimu
 
-本流程用于模板群的分层筛选与扩展。A-I 由 agent 构建一次性、可复现的候选 manifest；J 将 manifest 入库并启动 `wqb sqlitesimu` worker；worker 运行期间 agent 不参与逐条提交、轮询、重试或结果修补；只有 run 到达终态后才能进入 K/L。
+本流程用于模板群的分层筛选与扩展。A-I 由 agent 构建一次性、可复现的候选 manifest；J 将 manifest 入库并启动 `wqb sqlitesimu` worker；worker 运行期间 agent 不参与逐条发起回测、轮询、重试或结果修补；只有 run 到达终态后才能进入 K/L。
 
 本目录自包含 A-L 的全部输入输出契约。节点不得读取其他研究流程的节点目录，也不存在跨流程跳转或 handoff。
+
+模板源码、candidate lineage 和结果报告统一遵循本目录的 `template_contract.md`；节点文档若与该契约冲突，以该契约为准并停止执行，禁止临时兼容。
 
 ## 运行目录
 
@@ -58,15 +60,17 @@ flowchart TD
 ## 阶段闸门
 
 1. A-F 未完成时，G 不得定义模板族。
-2. G/H 未提供证据、字段角色和对称性规则时，I 不得生成 expression。
-3. I 的机器校验未通过时，J 不得 enqueue。
+2. G/H 未提供证据、字段角色、placeholder contract、版本/epoch 和对称性规则时，I 不得生成 expression。
+3. I 的 `template-validate` 未通过，或 lineage/hash/去重索引不一致时，J 不得 enqueue。
 4. J 启动 worker 后只写交接信息；不得按单条结果自适应修改 manifest。
 5. run 非终态时，K 不得计算密度、质量排名或相关性聚类。
-6. K 未完成 execution、quality、IS-PnL 三层分析时，L 不得扩展。
+6. K 未生成固定三段报告并完成 execution、quality、IS-PnL 三层分析时，L 不得扩展。
+7. `CANCELLED`、`BLOCKED` 或含 `SIMULATE_UNKNOWN` 的 run 只能进入描述性 K 和 `STOP`，不得扩展。
 
 ## 模板群硬规则
 
 - 模板群是带 lineage 的参数化 expression family，不是固定表达式列表。
+- H 的参数化模板与 I 的已实例化 expression 是两个 artifact；I 不得丢失模板 header、version、epoch 或字段角色。
 - 初筛采用各族等额、固定 seed、无放回抽样；候选总数由族数与有效族内样本数决定，不预设必须为 5000。
 - 社区中 `30` 个族各抽约 `80` 条、再集中扩展少数高密度族，是实验设计参考，不是无需论证的常量。
 - family 必须包含数据清理或 reduction、一个有经济含义的核心比较关系，以及有证据时才加入的约束性细节；只换 `rank/scale/zscore` 外层包装不构成新 family。
@@ -79,9 +83,9 @@ flowchart TD
 
 ## Worker 与终态
 
-run 终态为 `COMPLETED`、`COMPLETED_WITH_ERRORS`、`BLOCKED` 或 `CANCELLED`。experiment 终态为 `READY`、`PERMANENT_FAILURE`、`SUBMIT_UNKNOWN` 或 `CANCELLED`。
+run 终态为 `COMPLETED`、`COMPLETED_WITH_ERRORS`、`BLOCKED` 或 `CANCELLED`。experiment 终态为 `READY`、`PERMANENT_FAILURE`、`SIMULATE_UNKNOWN` 或 `CANCELLED`。
 
-`BLOCKED` 和 `SUBMIT_UNKNOWN` 虽是终态，但不自动具备统计资格。K 必须先判断 denominator 是否完整、POST 不确定性是否污染结果，再决定只能停止、重跑，还是可以作受限分析。
+`BLOCKED`、`CANCELLED` 和 `SIMULATE_UNKNOWN` 虽可进入 K，但只具备描述性统计资格。K 必须保留所有 assigned candidate 的 denominator，L 对这些 run 只能 `STOP`。
 
 worker 运行时禁止持续打印日志。监控只读取 `wqb sqlitesimu status` 的紧凑计数；只有 worker 异常退出时才读取末尾少量错误摘要。
 

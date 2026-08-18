@@ -91,23 +91,23 @@ class SqliteSimuRuntime:
             self._enrich(experiment, now=now)
             return True
 
-        batch = self.store.next_submit_batch(run_id, now=now)
+        batch = self.store.next_simulate_batch(run_id, now=now)
         if batch:
-            self._submit(batch, now=now)
+            self._simulate(batch, now=now)
             return True
 
         if self.store.create_next_batch(run_id, now=now):
             return True
         return False
 
-    def _submit(self, batch: BatchRecord, *, now: float) -> None:
-        self.store.mark_submit_started(batch.id, now=now)
+    def _simulate(self, batch: BatchRecord, *, now: float) -> None:
+        self.store.mark_simulate_started(batch.id, now=now)
         try:
             result = self.gateway.call("POST", "/simulations", json_body=batch.payload)
         except ApiTransportError as exc:
             self.store.fail_batch(
                 batch.id,
-                state="SUBMIT_UNKNOWN",
+                state="SIMULATE_UNKNOWN",
                 error=str(exc),
                 response=None,
                 now=self.clock(),
@@ -120,7 +120,7 @@ class SqliteSimuRuntime:
             location = _response(result).get("location")
             parent_id = _simulation_id(location)
             if isinstance(location, str) and parent_id:
-                self.store.accept_submission(
+                self.store.accept_simulation(
                     batch.id,
                     location=location,
                     parent_simulation_id=parent_id,
@@ -131,8 +131,8 @@ class SqliteSimuRuntime:
                 return
             self.store.fail_batch(
                 batch.id,
-                state="SUBMIT_UNKNOWN",
-                error="submission_accepted_without_location",
+                state="SIMULATE_UNKNOWN",
+                error="simulation_accepted_without_location",
                 response=result,
                 now=observed_at,
             )
@@ -142,11 +142,11 @@ class SqliteSimuRuntime:
             retry_at = observed_at + _retry_seconds(result, self.policy.default_retry_seconds)
             if status_code == 429:
                 self.store.set_runtime_float(
-                    "simulation_submit_not_before",
+                    "simulation_request_not_before",
                     retry_at,
                     now=observed_at,
                 )
-            self.store.retry_submission(
+            self.store.retry_simulate(
                 batch.id,
                 response=result,
                 not_before=retry_at,
@@ -161,11 +161,11 @@ class SqliteSimuRuntime:
         if status_code in {400, 403, 404, 409, 422}:
             failure_state = "PERMANENT_FAILURE"
         else:
-            failure_state = "SUBMIT_UNKNOWN"
+            failure_state = "SIMULATE_UNKNOWN"
         self.store.fail_batch(
             batch.id,
             state=failure_state,
-            error=_error_detail(result, f"unexpected_submit_status_{status_code}"),
+            error=_error_detail(result, f"unexpected_simulate_status_{status_code}"),
             response=result,
             now=observed_at,
         )

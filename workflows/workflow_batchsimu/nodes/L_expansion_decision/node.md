@@ -15,6 +15,7 @@
 只有同时满足以下条件才能 `EXPAND`：
 
 - `analysis_eligibility = true`
+- source run 必须是 `COMPLETED` 或 `COMPLETED_WITH_ERRORS`，且没有 `SIMULATE_UNKNOWN/CANCELLED`
 - family READY coverage 达到 F 的最小样本要求
 - usable density 与置信区间优于预注册基线，而非仅有单条极值
 - 错误率未显示结构、unit 或 operator 契约失效
@@ -29,6 +30,8 @@
 - 社区案例中每个领先 family 约扩到 1600 条是参考量级，不是固定配额。
 - 实际配额由未采样 population、置信区间宽度、cluster diversity 和剩余预算推导。
 - 不重新抽取首轮已测试 identity，不增加 sign twin 或 wrapper-only 变体。
+- 同一结构扩展保留 `template_version`、递增 `template_epoch`，只抽取未出现过的 `calculation_hash + settings_hash`。
+- 改变 AST skeleton、字段角色、operator contract 或参数 domain 时递增 `template_version`，作为新版本重新走 A-L，禁止与旧版本合并 denominator。
 - 扩展必须创建新的独立 batch run，并从该流程的 A 节点开始；当前 J 数据库保持只读历史记录。
 
 ## 输出
@@ -48,6 +51,7 @@
 - 不把不同 PnL cluster 中的代表线性混成一个 expression。
 - 不直接 patch、tag 或 submit 任一 alpha。
 - 不产生指向其他研究流程的 handoff。
+- 不从 `CANCELLED`、`BLOCKED`、含 `SIMULATE_UNKNOWN` 或固定报告不完整的 run 扩展。
 
 ## 成功条件
 

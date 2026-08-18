@@ -93,7 +93,7 @@ class NoCallGateway:
 
     def call(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
         self.calls += 1
-        raise AssertionError("ambiguous submissions must never be posted again automatically")
+        raise AssertionError("ambiguous simulations must never be posted again automatically")
 
 
 class PendingParentGateway:
@@ -159,7 +159,7 @@ class ThrottledGateway(SuccessfulGateway):
 class RetryableSimulationGateway(SuccessfulGateway):
     def __init__(self) -> None:
         super().__init__()
-        self.submissions = 0
+        self.simulate_calls = 0
 
     def call(
         self,
@@ -171,8 +171,8 @@ class RetryableSimulationGateway(SuccessfulGateway):
         json_body: Any = None,
     ) -> dict[str, Any]:
         if method == "POST":
-            self.submissions += 1
-            if self.submissions == 1:
+            self.simulate_calls += 1
+            if self.simulate_calls == 1:
                 self.calls.append(
                     {
                         "method": method,
@@ -553,8 +553,8 @@ class SqliteSimuTests(unittest.TestCase):
                 batch = store.create_next_batch(enqueued.run_id, now=1000.0 + index)
                 self.assertIsNotNone(batch)
                 assert batch is not None
-                store.mark_submit_started(batch.id, now=1000.0 + index)
-                store.accept_submission(
+                store.mark_simulate_started(batch.id, now=1000.0 + index)
+                store.accept_simulation(
                     batch.id,
                     location=f"https://api.worldquantbrain.com/simulations/parent-{index}",
                     parent_simulation_id=f"parent-{index}",
@@ -569,7 +569,7 @@ class SqliteSimuTests(unittest.TestCase):
                 ).fetchone()[0]
             self.assertEqual(active, 9)
 
-    def test_due_result_polling_precedes_new_batch_submission(self) -> None:
+    def test_due_result_polling_precedes_new_batch_simulation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             manifest = parse_manifest(
@@ -590,8 +590,8 @@ class SqliteSimuTests(unittest.TestCase):
             enqueued = store.enqueue(manifest, now=1000.0)
             batch = store.create_next_batch(enqueued.run_id, now=1000.0)
             assert batch is not None
-            store.mark_submit_started(batch.id, now=1000.0)
-            store.accept_submission(
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.accept_simulation(
                 batch.id,
                 location="https://api.worldquantbrain.com/simulations/parent-due",
                 parent_simulation_id="parent-due",
@@ -623,8 +623,8 @@ class SqliteSimuTests(unittest.TestCase):
 
             batch = store.create_next_batch(enqueued.run_id, now=1000.0)
             assert batch is not None
-            store.mark_submit_started(batch.id, now=1000.0)
-            store.accept_submission(
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.accept_simulation(
                 batch.id,
                 location="https://api.worldquantbrain.com/simulations/parent-1",
                 parent_simulation_id="parent-1",
@@ -669,8 +669,132 @@ class SqliteSimuTests(unittest.TestCase):
             summary = store.refresh_run_state(enqueued.run_id, now=1003.0)
             self.assertEqual(summary["queues"], {"simulation": 0, "enrichment": 0})
             self.assertEqual(len(store.experiment_results(enqueued.run_id)), 1)
+            checks = store.check_results(enqueued.run_id)
+            self.assertEqual(len(checks), 1)
+            self.assertEqual(checks[0]["name"], "MATCHES_PYRAMID")
+            self.assertEqual(checks[0]["result"], "WARNING")
+            self.assertEqual(checks[0]["raw"]["pyramids"], [{"name": "USA/D1"}])
 
-    def test_permanent_failure_consumes_simulation_queue_but_unknown_submit_does_not(self) -> None:
+    def test_cancel_preserves_simulate_ambiguity_and_consumes_other_queues(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    {
+                        "candidates": [
+                            {"expression": "rank(close)", "settings": SETTINGS},
+                            {
+                                "expression": "rank(volume)",
+                                "settings": {
+                                    **SETTINGS,
+                                    "region": "CHN",
+                                    "universe": "TOP2000U",
+                                },
+                            },
+                        ]
+                    }
+                ),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+
+            summary = store.cancel_run(
+                enqueued.run_id,
+                reason="obsolete_template_set",
+                now=1001.0,
+            )
+
+            self.assertEqual(summary["state"], "CANCELLED")
+            self.assertEqual(summary["counts"], {"CANCELLED": 1, "SIMULATE_UNKNOWN": 1})
+            self.assertEqual(summary["queues"], {"simulation": 1, "enrichment": 0})
+            self.assertEqual(
+                store.refresh_run_state(enqueued.run_id, now=1002.0)["state"],
+                "CANCELLED",
+            )
+            with store.connect() as conn:
+                batch_state = conn.execute(
+                    "SELECT state FROM simulation_batches WHERE id = ?", (batch.id,)
+                ).fetchone()[0]
+                event_count = conn.execute(
+                    "SELECT COUNT(*) FROM api_events WHERE run_id = ? AND event_type = 'RUN_CANCELLED'",
+                    (enqueued.run_id,),
+                ).fetchone()[0]
+            self.assertEqual(batch_state, "SIMULATE_UNKNOWN")
+            self.assertEqual(event_count, 1)
+
+    def test_cancel_rejects_active_lease_unless_worker_death_was_verified(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            store.acquire_run_lease(
+                enqueued.run_id,
+                owner="worker-1",
+                now=1000.0,
+                lease_seconds=300.0,
+            )
+
+            with self.assertRaisesRegex(RuntimeError, "active worker lease"):
+                store.cancel_run(enqueued.run_id, reason="stop", now=1001.0)
+
+            summary = store.cancel_run(
+                enqueued.run_id,
+                reason="verified_worker_dead",
+                allow_active_lease=True,
+                now=1001.0,
+            )
+            self.assertEqual(summary["state"], "CANCELLED")
+
+    def test_cancel_consumes_enrichment_queue_and_preserves_alpha_history(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.accept_simulation(
+                batch.id,
+                location="https://api.worldquantbrain.com/simulations/parent-1",
+                parent_simulation_id="parent-1",
+                response=envelope(201),
+                not_before=1001.0,
+                now=1000.0,
+            )
+            store.complete_parent(
+                batch.id,
+                alpha_id="alpha-1",
+                child_ids=[],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE", "alpha": "alpha-1"}),
+                now=1001.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1001.0)
+            assert experiment is not None
+            store.save_alpha_detail(
+                experiment,
+                alpha_detail("alpha-1"),
+                response=envelope(200),
+                now=1001.5,
+            )
+
+            summary = store.cancel_run(enqueued.run_id, reason="stop", now=1002.0)
+
+            self.assertEqual(summary["counts"], {"CANCELLED": 1})
+            self.assertEqual(summary["queues"], {"simulation": 0, "enrichment": 0})
+            with store.connect() as conn:
+                alpha_count = conn.execute(
+                    "SELECT COUNT(*) FROM alphas WHERE alpha_id = 'alpha-1'"
+                ).fetchone()[0]
+            self.assertEqual(alpha_count, 1)
+
+    def test_permanent_failure_consumes_simulation_queue_but_unknown_simulate_does_not(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             failed = store.enqueue(
@@ -699,7 +823,7 @@ class SqliteSimuTests(unittest.TestCase):
             assert unknown_batch is not None
             store.fail_batch(
                 unknown_batch.id,
-                state="SUBMIT_UNKNOWN",
+                state="SIMULATE_UNKNOWN",
                 error="connection_lost_after_post",
                 response=None,
                 now=1003.0,
@@ -728,6 +852,84 @@ class SqliteSimuTests(unittest.TestCase):
                 {"simulation": 1, "enrichment": 0},
             )
 
+    def test_schema_v3_migrates_legacy_simulation_request_terms(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            with store.connect() as conn:
+                conn.execute(
+                    "UPDATE simulation_batches SET state = 'SUBMITTING' WHERE id = ?",
+                    (batch.id,),
+                )
+                conn.execute(
+                    "UPDATE experiments SET state = 'SUBMITTING', last_error = "
+                    "'worker_interrupted_during_submit' WHERE run_id = ?",
+                    (enqueued.run_id,),
+                )
+                conn.execute(
+                    "UPDATE simulation_items SET state = 'SUBMIT_UNKNOWN' WHERE batch_id = ?",
+                    (batch.id,),
+                )
+                conn.execute(
+                    """
+                    INSERT INTO runtime_state(key, value, updated_at)
+                    VALUES ('simulation_submit_not_before', '1010', 1000)
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO api_events(run_id, batch_id, event_type, payload_json, created_at)
+                    VALUES (?, ?, 'SIMULATION_SUBMIT_RETRY',
+                            '{"state":"SUBMIT_UNKNOWN"}', 1000)
+                    """,
+                    (enqueued.run_id, batch.id),
+                )
+                conn.execute("PRAGMA user_version = 2")
+
+            store.initialize()
+
+            with store.connect() as conn:
+                experiment = conn.execute(
+                    "SELECT state, last_error FROM experiments WHERE run_id = ?",
+                    (enqueued.run_id,),
+                ).fetchone()
+                migrated_batch = conn.execute(
+                    "SELECT state FROM simulation_batches WHERE id = ?",
+                    (batch.id,),
+                ).fetchone()
+                item = conn.execute(
+                    "SELECT state FROM simulation_items WHERE batch_id = ?",
+                    (batch.id,),
+                ).fetchone()
+                runtime_keys = {
+                    str(row["key"]): str(row["value"])
+                    for row in conn.execute("SELECT key, value FROM runtime_state")
+                }
+                event = conn.execute(
+                    """
+                    SELECT event_type, payload_json FROM api_events
+                    WHERE batch_id = ? AND event_type = 'SIMULATE_RETRY'
+                    """,
+                    (batch.id,),
+                ).fetchone()
+                schema_version = conn.execute("PRAGMA user_version").fetchone()[0]
+            self.assertEqual(experiment["state"], "SIMULATING")
+            self.assertEqual(
+                experiment["last_error"],
+                "worker_interrupted_during_simulate",
+            )
+            self.assertEqual(migrated_batch["state"], "SIMULATING")
+            self.assertEqual(item["state"], "SIMULATE_UNKNOWN")
+            self.assertEqual(runtime_keys, {"simulation_request_not_before": "1010"})
+            self.assertEqual(event["event_type"], "SIMULATE_RETRY")
+            self.assertIn("SIMULATE_UNKNOWN", event["payload_json"])
+            self.assertEqual(schema_version, 3)
+
     def test_run_lease_rejects_a_second_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
@@ -752,14 +954,14 @@ class SqliteSimuTests(unittest.TestCase):
 
             store.release_run_lease(enqueued.run_id, owner="worker-1")
 
-    def test_interrupted_submission_blocks_without_reposting(self) -> None:
+    def test_interrupted_simulate_blocks_without_reposting(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             manifest = parse_manifest([{"expression": "close", "settings": SETTINGS}])
             enqueued = store.enqueue(manifest, now=1000.0)
             batch = store.create_next_batch(enqueued.run_id, now=1000.0)
             assert batch is not None
-            store.mark_submit_started(batch.id, now=1000.0)
+            store.mark_simulate_started(batch.id, now=1000.0)
             gateway = NoCallGateway()
             clock = FakeClock()
             runtime = SqliteSimuRuntime(store, gateway, clock=clock, sleeper=clock.sleep)
@@ -767,10 +969,10 @@ class SqliteSimuTests(unittest.TestCase):
             summary = runtime.run(enqueued.run_id)
 
             self.assertEqual(summary["state"], "BLOCKED")
-            self.assertEqual(summary["counts"], {"SUBMIT_UNKNOWN": 1})
+            self.assertEqual(summary["counts"], {"SIMULATE_UNKNOWN": 1})
             self.assertEqual(gateway.calls, 0)
 
-    def test_submit_unknown_waits_for_other_experiments_before_blocking_run(self) -> None:
+    def test_simulate_unknown_waits_for_other_experiments_before_blocking_run(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             manifest = parse_manifest(
@@ -787,10 +989,10 @@ class SqliteSimuTests(unittest.TestCase):
             enqueued = store.enqueue(manifest, now=1000.0)
             batch = store.create_next_batch(enqueued.run_id, now=1000.0)
             assert batch is not None
-            store.mark_submit_started(batch.id, now=1000.0)
+            store.mark_simulate_started(batch.id, now=1000.0)
             store.fail_batch(
                 batch.id,
-                state="SUBMIT_UNKNOWN",
+                state="SIMULATE_UNKNOWN",
                 error="connection_lost",
                 response=None,
                 now=1001.0,
@@ -799,7 +1001,7 @@ class SqliteSimuTests(unittest.TestCase):
             summary = store.refresh_run_state(enqueued.run_id, now=1001.0)
 
             self.assertEqual(summary["state"], "RUNNING")
-            self.assertEqual(summary["counts"], {"QUEUED": 1, "SUBMIT_UNKNOWN": 1})
+            self.assertEqual(summary["counts"], {"QUEUED": 1, "SIMULATE_UNKNOWN": 1})
 
     def test_throttling_does_not_consume_the_failure_budget(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -890,7 +1092,7 @@ class SqliteSimuTests(unittest.TestCase):
             summary = runtime.run(enqueued.run_id)
 
             self.assertEqual(summary["state"], "COMPLETED")
-            self.assertEqual(gateway.submissions, 2)
+            self.assertEqual(gateway.simulate_calls, 2)
             with store.connect() as conn:
                 retried = conn.execute(
                     "SELECT COUNT(*) FROM simulation_batches WHERE state = 'RETRIED'"

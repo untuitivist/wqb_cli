@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,11 @@ from .gateway import WqbApiGateway
 from .manifest import load_manifest
 from .models import RuntimePolicy
 from .runtime import SqliteSimuRuntime
+from .template_report import (
+    build_template_report,
+    render_template_report_markdown,
+    validate_template_manifest,
+)
 
 
 DEFAULT_DATABASE_PATH = LOCAL_ROOT / "sqlitesimu" / "simulations.sqlite3"
@@ -53,16 +59,59 @@ class SqliteSimuPlugin:
         _add_database_argument(status)
         status.add_argument("--output", help="Write the JSON result to a file")
 
+        cancel = commands.add_parser("cancel", help="Stop a durable run without deleting history")
+        cancel.add_argument("run_id")
+        cancel.add_argument("--reason", default="user_requested")
+        cancel.add_argument(
+            "--force-active-lease",
+            action="store_true",
+            help="Cancel despite an unexpired lease after independently verifying the worker is dead",
+        )
+        _add_database_argument(cancel)
+        cancel.add_argument("--output", help="Write the JSON result to a file")
+
         export = commands.add_parser("export", help="Export normalized and legacy-ready results")
         export.add_argument("run_id")
         _add_database_argument(export)
         export.add_argument("--output", help="Write the JSON result to a file")
+
+        validate = commands.add_parser(
+            "template-validate",
+            help="Validate the strict BatchSimu template and lineage format",
+        )
+        validate.add_argument("input", help="Simulation manifest JSON path")
+        validate.add_argument("--output", help="Write the JSON result to a file")
+
+        report = commands.add_parser(
+            "template-report",
+            help="Render the fixed template analysis format from a terminal run export",
+        )
+        report.add_argument("input", help="JSON path produced by sqlitesimu export")
+        report.add_argument("--output", help="Write the normalized JSON report to a file")
+        report.add_argument("--markdown-output", help="Write the three-section report to Markdown")
         return parser
 
     def handle(self, args: argparse.Namespace, context: PluginContext) -> int:
+        command = args.sqlitesimu_command
+        if command == "template-validate":
+            payload = validate_template_manifest(load_manifest(args.input))
+            context.write_json(payload, args.output)
+            return 0 if payload["ok"] else 1
+        if command == "template-report":
+            export_payload = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
+            payload = build_template_report(export_payload)
+            if args.markdown_output:
+                markdown_path = Path(args.markdown_output)
+                markdown_path.parent.mkdir(parents=True, exist_ok=True)
+                markdown_path.write_text(
+                    render_template_report_markdown(payload),
+                    encoding="utf-8",
+                )
+            context.write_json(payload, args.output)
+            return 0
+
         store = SqliteStore(args.db)
         store.initialize()
-        command = args.sqlitesimu_command
         if command == "init":
             context.write_json(
                 {
@@ -117,6 +166,21 @@ class SqliteSimuPlugin:
                 }
             context.write_json(payload, args.output)
             return 0
+        if command == "cancel":
+            summary = store.cancel_run(
+                args.run_id,
+                reason=args.reason,
+                allow_active_lease=args.force_active_lease,
+            )
+            context.write_json(
+                {
+                    "ok": True,
+                    "database": _database_name(store),
+                    "run": summary,
+                },
+                args.output,
+            )
+            return 0
         if command == "export":
             payload = {
                 "ok": True,
@@ -125,6 +189,7 @@ class SqliteSimuPlugin:
                 "run": store.run_summary(args.run_id),
                 "experiments": store.experiment_results(args.run_id),
                 "results": store.analysis_results(args.run_id),
+                "checks": store.check_results(args.run_id),
                 "simued_alpha_is_pnl": store.compatibility_results(args.run_id),
             }
             context.write_json(payload, args.output)

@@ -30,6 +30,29 @@ class PluginTests(unittest.TestCase):
 
         self.assertEqual(args._wqb_plugin.name, "sqlitesimu")
 
+    def test_sqlitesimu_exposes_template_workflow_commands(self) -> None:
+        parser = build_parser()
+
+        cancel = parser.parse_args(
+            ["sqlitesimu", "cancel", "run-1", "--force-active-lease"]
+        )
+        validate = parser.parse_args(["sqlitesimu", "template-validate", "manifest.json"])
+        report = parser.parse_args(
+            [
+                "sqlitesimu",
+                "template-report",
+                "export.json",
+                "--markdown-output",
+                "report.md",
+            ]
+        )
+
+        self.assertEqual(cancel.sqlitesimu_command, "cancel")
+        self.assertTrue(cancel.force_active_lease)
+        self.assertEqual(validate.sqlitesimu_command, "template-validate")
+        self.assertEqual(report.sqlitesimu_command, "template-report")
+        self.assertEqual(report.markdown_output, "report.md")
+
     def test_parser_binds_plugin_instance(self) -> None:
         plugin = DemoPlugin()
         parser = build_parser(plugins=[plugin])

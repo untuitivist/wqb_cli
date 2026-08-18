@@ -20,7 +20,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -338,7 +338,7 @@ class SqliteStore:
                     SELECT id, run_id, created_at
                     FROM experiments
                     WHERE state IN (
-                        'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SUBMITTING',
+                        'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SUBMITTING', 'SIMULATING',
                         'POLLING', 'CHILD_POLLING'
                     )
                     """
@@ -353,6 +353,94 @@ class SqliteStore:
                     WHERE state IN ('SIM_DONE', 'ENRICH_PNL') AND alpha_id IS NOT NULL
                     """
                 )
+            if current < 3:
+                # v3 reserves "submit" for Alpha submission; these literals only migrate v2 data.
+                for table in ("experiments", "simulation_batches", "simulation_items"):
+                    conn.execute(
+                        f"""
+                        UPDATE {table}
+                        SET state = CASE state
+                            WHEN 'SUBMITTING' THEN 'SIMULATING'
+                            WHEN 'SUBMIT_UNKNOWN' THEN 'SIMULATE_UNKNOWN'
+                            ELSE state
+                        END
+                        WHERE state IN ('SUBMITTING', 'SUBMIT_UNKNOWN')
+                        """
+                    )
+                for table in ("experiments", "simulation_batches", "simulation_items"):
+                    conn.execute(
+                        f"""
+                        UPDATE {table}
+                        SET last_error = REPLACE(
+                            REPLACE(
+                                REPLACE(last_error,
+                                    'worker_interrupted_during_submit',
+                                    'worker_interrupted_during_simulate'
+                                ),
+                                'cancelled_during_submit',
+                                'cancelled_during_simulate'
+                            ),
+                            'unexpected_submit_status_',
+                            'unexpected_simulate_status_'
+                        )
+                        WHERE last_error IS NOT NULL
+                        """
+                    )
+                conn.execute(
+                    """
+                    UPDATE api_events
+                    SET event_type = CASE event_type
+                        WHEN 'SUBMIT_BECAME_AMBIGUOUS' THEN 'SIMULATE_BECAME_AMBIGUOUS'
+                        WHEN 'SIMULATION_SUBMITTED' THEN 'SIMULATION_ACCEPTED'
+                        WHEN 'SIMULATION_SUBMIT_RETRY' THEN 'SIMULATE_RETRY'
+                        ELSE event_type
+                    END,
+                    payload_json = REPLACE(
+                        REPLACE(payload_json, 'SUBMIT_UNKNOWN', 'SIMULATE_UNKNOWN'),
+                        'SUBMITTING', 'SIMULATING'
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    UPDATE outbox_events
+                    SET payload_json = REPLACE(
+                        REPLACE(payload_json, 'SUBMIT_UNKNOWN', 'SIMULATE_UNKNOWN'),
+                        'SUBMITTING', 'SIMULATING'
+                    )
+                    """
+                )
+                old_backpressure = conn.execute(
+                    """
+                    SELECT value, updated_at FROM runtime_state
+                    WHERE key = 'simulation_submit_not_before'
+                    """
+                ).fetchone()
+                if old_backpressure:
+                    current_backpressure = conn.execute(
+                        """
+                        SELECT updated_at FROM runtime_state
+                        WHERE key = 'simulation_request_not_before'
+                        """
+                    ).fetchone()
+                    if (
+                        current_backpressure is None
+                        or float(old_backpressure["updated_at"])
+                        >= float(current_backpressure["updated_at"])
+                    ):
+                        conn.execute(
+                            """
+                            INSERT INTO runtime_state(key, value, updated_at)
+                            VALUES ('simulation_request_not_before', ?, ?)
+                            ON CONFLICT(key) DO UPDATE SET
+                                value = excluded.value,
+                                updated_at = excluded.updated_at
+                            """,
+                            (old_backpressure["value"], old_backpressure["updated_at"]),
+                        )
+                    conn.execute(
+                        "DELETE FROM runtime_state WHERE key = 'simulation_submit_not_before'"
+                    )
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def enqueue(self, manifest: SimulationManifest, *, now: float | None = None) -> EnqueueResult:
@@ -516,31 +604,174 @@ class SqliteStore:
             ambiguous = conn.execute(
                 """
                 SELECT id FROM simulation_batches
-                WHERE run_id = ? AND state = 'SUBMITTING'
+                WHERE run_id = ? AND state = 'SIMULATING'
                 """,
                 (run_id,),
             ).fetchall()
             for row in ambiguous:
                 batch_id = str(row["id"])
                 conn.execute(
-                    "UPDATE simulation_batches SET state = 'SUBMIT_UNKNOWN', updated_at = ? WHERE id = ?",
+                    "UPDATE simulation_batches SET state = 'SIMULATE_UNKNOWN', updated_at = ? WHERE id = ?",
                     (now, batch_id),
                 )
                 conn.execute(
-                    "UPDATE experiments SET state = 'SUBMIT_UNKNOWN', last_error = ?, updated_at = ? WHERE batch_id = ?",
-                    ("worker_interrupted_during_submit", now, batch_id),
+                    "UPDATE experiments SET state = 'SIMULATE_UNKNOWN', last_error = ?, updated_at = ? WHERE batch_id = ?",
+                    ("worker_interrupted_during_simulate", now, batch_id),
                 )
                 self._event(
                     conn,
                     run_id,
-                    "SUBMIT_BECAME_AMBIGUOUS",
+                    "SIMULATE_BECAME_AMBIGUOUS",
                     batch_id=batch_id,
-                    payload={"reason": "worker_interrupted_during_submit"},
+                    payload={"reason": "worker_interrupted_during_simulate"},
                     now=now,
                 )
 
-    def next_submit_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
-        global_not_before = self.runtime_float("simulation_submit_not_before")
+    def cancel_run(
+        self,
+        run_id: str,
+        *,
+        reason: str,
+        allow_active_lease: bool = False,
+        now: float | None = None,
+    ) -> dict[str, Any]:
+        timestamp = time.time() if now is None else now
+        detail = reason.strip()
+        if not detail:
+            raise ValueError("Cancellation reason must not be empty")
+        with self.connect() as conn:
+            run = conn.execute("SELECT state FROM runs WHERE id = ?", (run_id,)).fetchone()
+            if not run:
+                raise KeyError(f"Unknown run id: {run_id}")
+            if str(run["state"]) in {"COMPLETED", "COMPLETED_WITH_ERRORS", "BLOCKED", "CANCELLED"}:
+                return self.run_summary(run_id)
+            lease = conn.execute(
+                "SELECT owner, lease_until FROM run_leases WHERE run_id = ?",
+                (run_id,),
+            ).fetchone()
+            if lease and float(lease["lease_until"]) > timestamp and not allow_active_lease:
+                raise RuntimeError(
+                    "Run has an active worker lease; stop and verify the worker first, "
+                    "then retry with allow_active_lease"
+                )
+
+            conn.execute(
+                """
+                UPDATE simulation_items
+                SET state = 'SIMULATE_UNKNOWN', last_error = ?
+                WHERE batch_id IN (
+                    SELECT id FROM simulation_batches
+                    WHERE run_id = ? AND state = 'SIMULATING'
+                )
+                """,
+                (f"cancelled_during_simulate: {detail}", run_id),
+            )
+            conn.execute(
+                """
+                UPDATE simulation_items
+                SET state = 'CANCELLED', last_error = ?
+                WHERE batch_id IN (
+                    SELECT id FROM simulation_batches
+                    WHERE run_id = ? AND state IN (
+                        'CREATED', 'RETRY_WAIT', 'POLLING', 'CHILD_POLLING'
+                    )
+                ) AND state IN ('BATCHED', 'POLLING')
+                """,
+                (f"cancelled: {detail}", run_id),
+            )
+            conn.execute(
+                """
+                UPDATE simulation_batches
+                SET state = CASE
+                        WHEN state = 'SIMULATING' THEN 'SIMULATE_UNKNOWN'
+                        ELSE 'CANCELLED'
+                    END,
+                    last_error = ?, updated_at = ?
+                WHERE run_id = ? AND state IN (
+                    'CREATED', 'RETRY_WAIT', 'SIMULATING', 'POLLING', 'CHILD_POLLING'
+                )
+                """,
+                (f"cancelled: {detail}", timestamp, run_id),
+            )
+            conn.execute(
+                """
+                UPDATE experiments
+                SET state = 'SIMULATE_UNKNOWN', last_error = ?, updated_at = ?
+                WHERE run_id = ? AND state = 'SIMULATING'
+                """,
+                (f"cancelled_during_simulate: {detail}", timestamp, run_id),
+            )
+            conn.execute(
+                """
+                UPDATE experiments
+                SET state = 'CANCELLED', last_error = ?, updated_at = ?
+                WHERE run_id = ? AND state NOT IN (
+                    'READY', 'PERMANENT_FAILURE', 'SIMULATE_UNKNOWN', 'CANCELLED'
+                )
+                """,
+                (f"cancelled: {detail}", timestamp, run_id),
+            )
+            conn.execute(
+                """
+                DELETE FROM simulation_queue
+                WHERE run_id = ? AND experiment_id IN (
+                    SELECT id FROM experiments WHERE run_id = ? AND state = 'CANCELLED'
+                )
+                """,
+                (run_id, run_id),
+            )
+            conn.execute(
+                """
+                DELETE FROM enrichment_queue
+                WHERE run_id = ? AND experiment_id IN (
+                    SELECT id FROM experiments WHERE run_id = ? AND state = 'CANCELLED'
+                )
+                """,
+                (run_id, run_id),
+            )
+            conn.execute(
+                """
+                UPDATE runs
+                SET state = 'CANCELLED', updated_at = ?, finished_at = ?
+                WHERE id = ?
+                """,
+                (timestamp, timestamp, run_id),
+            )
+            conn.execute("DELETE FROM run_leases WHERE run_id = ?", (run_id,))
+            counts = {
+                str(row["state"]): int(row["count"])
+                for row in conn.execute(
+                    "SELECT state, COUNT(*) AS count FROM experiments WHERE run_id = ? GROUP BY state",
+                    (run_id,),
+                )
+            }
+            queues = self._queue_counts(conn, run_id)
+            payload = {
+                "run_id": run_id,
+                "state": "CANCELLED",
+                "reason": detail,
+                "counts": counts,
+                "queues": queues,
+                "total": sum(counts.values()),
+            }
+            self._event(
+                conn,
+                run_id,
+                "RUN_CANCELLED",
+                payload=payload,
+                now=timestamp,
+            )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO outbox_events(run_id, event_type, payload_json, created_at)
+                VALUES (?, 'RUN_TERMINAL', ?, ?)
+                """,
+                (run_id, _json(payload), timestamp),
+            )
+        return self.run_summary(run_id)
+
+    def next_simulate_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
+        global_not_before = self.runtime_float("simulation_request_not_before")
         if global_not_before is not None and now < global_not_before:
             return None
         with self.connect() as conn:
@@ -638,24 +869,24 @@ class SqliteStore:
             row = conn.execute("SELECT * FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()
         return _batch_from_row(row)
 
-    def mark_submit_started(self, batch_id: str, *, now: float) -> None:
+    def mark_simulate_started(self, batch_id: str, *, now: float) -> None:
         with self.connect() as conn:
             cursor = conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = 'SUBMITTING', attempts = attempts + 1, updated_at = ?
+                SET state = 'SIMULATING', attempts = attempts + 1, updated_at = ?
                 WHERE id = ? AND state IN ('CREATED', 'RETRY_WAIT')
                 """,
                 (now, batch_id),
             )
             if cursor.rowcount != 1:
-                raise RuntimeError(f"Batch {batch_id} is no longer ready for submission")
+                raise RuntimeError(f"Batch {batch_id} is no longer ready to simulate")
             conn.execute(
-                "UPDATE experiments SET state = 'SUBMITTING', attempts = attempts + 1, updated_at = ? WHERE batch_id = ?",
+                "UPDATE experiments SET state = 'SIMULATING', attempts = attempts + 1, updated_at = ? WHERE batch_id = ?",
                 (now, batch_id),
             )
 
-    def accept_submission(
+    def accept_simulation(
         self,
         batch_id: str,
         *,
@@ -683,14 +914,14 @@ class SqliteStore:
             self._event(
                 conn,
                 str(row["run_id"]),
-                "SIMULATION_SUBMITTED",
+                "SIMULATION_ACCEPTED",
                 batch_id=batch_id,
                 status_code=_status_code(response),
                 payload=response,
                 now=now,
             )
 
-    def retry_submission(
+    def retry_simulate(
         self,
         batch_id: str,
         *,
@@ -716,7 +947,7 @@ class SqliteStore:
             self._event(
                 conn,
                 str(row["run_id"]),
-                "SIMULATION_SUBMIT_RETRY",
+                "SIMULATE_RETRY",
                 batch_id=batch_id,
                 status_code=_status_code(response),
                 payload=response,
@@ -732,9 +963,9 @@ class SqliteStore:
         response: dict[str, Any] | None,
         now: float,
     ) -> None:
-        if state not in {"PERMANENT_FAILURE", "SUBMIT_UNKNOWN"}:
+        if state not in {"PERMANENT_FAILURE", "SIMULATE_UNKNOWN"}:
             raise ValueError(f"Unsupported batch failure state: {state}")
-        batch_state = "FAILED" if state == "PERMANENT_FAILURE" else "SUBMIT_UNKNOWN"
+        batch_state = "FAILED" if state == "PERMANENT_FAILURE" else "SIMULATE_UNKNOWN"
         with self.connect() as conn:
             row = conn.execute("SELECT run_id FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()
             conn.execute(
@@ -1293,7 +1524,8 @@ class SqliteStore:
 
     def refresh_run_state(self, run_id: str, *, now: float) -> dict[str, Any]:
         with self.connect() as conn:
-            if not self._run_exists(conn, run_id):
+            run = conn.execute("SELECT state FROM runs WHERE id = ?", (run_id,)).fetchone()
+            if not run:
                 raise KeyError(f"Unknown run id: {run_id}")
             counts = {
                 str(row["state"]): int(row["count"])
@@ -1305,8 +1537,10 @@ class SqliteStore:
             queues = self._queue_counts(conn, run_id)
             total = sum(counts.values())
             terminal_count = sum(counts.get(state, 0) for state in EXPERIMENT_TERMINAL_STATES)
-            if total == terminal_count:
-                if counts.get("SUBMIT_UNKNOWN", 0):
+            if str(run["state"]) == "CANCELLED":
+                state = "CANCELLED"
+            elif total == terminal_count:
+                if counts.get("SIMULATE_UNKNOWN", 0):
                     state = "BLOCKED"
                 elif counts.get("PERMANENT_FAILURE", 0):
                     state = "COMPLETED_WITH_ERRORS"
@@ -1387,6 +1621,38 @@ class SqliteStore:
         results = [dict(row) for row in rows]
         for result in results:
             result["metadata"] = json.loads(result.pop("metadata_json"))
+        return results
+
+    def check_results(self, run_id: str) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                """
+                SELECT
+                    e.id AS experiment_id,
+                    e.metadata_json,
+                    a.alpha_id,
+                    checks.name,
+                    checks.result,
+                    checks.value_json,
+                    checks.raw_json
+                FROM alpha_checks checks
+                JOIN alphas a ON a.alpha_id = checks.alpha_id
+                JOIN experiments e ON e.id = a.experiment_id
+                WHERE e.run_id = ? AND e.state = 'READY'
+                ORDER BY e.id, checks.name
+                """,
+                (run_id,),
+            ).fetchall()
+        results = []
+        for row in rows:
+            result = dict(row)
+            result["metadata"] = json.loads(result.pop("metadata_json"))
+            result["value"] = json.loads(result.pop("value_json"))
+            result["raw"] = json.loads(result.pop("raw_json"))
+            result["limit"] = (
+                result["raw"].get("limit") if isinstance(result["raw"], dict) else None
+            )
+            results.append(result)
         return results
 
     def experiment_results(self, run_id: str) -> list[dict[str, Any]]:

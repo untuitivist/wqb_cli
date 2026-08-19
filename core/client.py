@@ -20,8 +20,10 @@ MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
 WQB_SESSION_REAUTH_STATUSES = frozenset({204, 401, 429})
 WQB_BACKPRESSURE_MARKERS = frozenset(
     {
+        "cancel_limit_exceeded",
         "concurrent_simulation_limit_exceeded",
         "api rate limit exceeded",
+        "rate_limit_exceeded",
     }
 )
 

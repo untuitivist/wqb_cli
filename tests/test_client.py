@@ -263,8 +263,10 @@ class ClientPrepareTests(unittest.TestCase):
 
     def test_backpressure_429_does_not_trigger_global_reauthentication(self) -> None:
         bodies = (
+            {"detail": "CANCEL_LIMIT_EXCEEDED"},
             {"detail": "CONCURRENT_SIMULATION_LIMIT_EXCEEDED"},
             {"message": "API rate limit exceeded"},
+            {"error": "RATE_LIMIT_EXCEEDED"},
         )
         for body in bodies:
             with self.subTest(body=body):

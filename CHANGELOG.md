@@ -7,6 +7,7 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 ### Changed
 
 - Distinguished simulation-capacity and API-rate-limit `429` responses from authentication failures. CoreClient and `sqlitesimu` now preserve server backpressure without clearing cookies or replaying simulation requests, while `204`, `401`, and authentication-like `429` responses retain the existing aggressive reauthentication behavior.
+- Made parent-simulation requeue restore missing durable simulation-queue entries atomically, including operational recovery after a remotely deleted parent was first observed as `404`.
 
 ## 0.4.0 - 2026-08-18
 

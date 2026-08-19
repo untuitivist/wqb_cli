@@ -1082,6 +1082,16 @@ class SqliteStore:
                 """,
                 (not_before, error, now, batch_id),
             )
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at)
+                SELECT i.experiment_id, b.run_id, ?
+                FROM simulation_items i
+                JOIN simulation_batches b ON b.id = i.batch_id
+                WHERE i.batch_id = ?
+                """,
+                (now, batch_id),
+            )
             self._event(
                 conn,
                 str(batch["run_id"]),

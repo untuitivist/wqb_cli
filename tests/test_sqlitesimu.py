@@ -1390,6 +1390,36 @@ class SqliteSimuTests(unittest.TestCase):
                 ).fetchone()[0]
             self.assertEqual(state, "RETRIED")
 
+    def test_parent_requeue_restores_a_previously_removed_simulation_queue_row(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "close", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.fail_batch(
+                batch.id,
+                state="PERMANENT_FAILURE",
+                error="remote_parent_not_found",
+                response=envelope(404, {"detail": "Not found."}),
+                now=1001.0,
+            )
+
+            store.retry_completed_batch(
+                batch.id,
+                error="remote_parent_delete_verified",
+                response=envelope(404, {"detail": "Not found."}),
+                not_before=1003.0,
+                now=1002.0,
+            )
+
+            summary = store.run_summary(enqueued.run_id)
+            self.assertEqual(summary["counts"], {"RETRY_WAIT": 1})
+            self.assertEqual(summary["queues"], {"simulation": 1, "enrichment": 0})
+
     def test_cancelled_child_is_requeued_instead_of_polled_forever(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)

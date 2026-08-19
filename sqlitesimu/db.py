@@ -20,7 +20,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -77,7 +77,9 @@ CREATE TABLE IF NOT EXISTS experiments (
 CREATE TABLE IF NOT EXISTS simulation_queue (
     experiment_id TEXT PRIMARY KEY REFERENCES experiments(id) ON DELETE CASCADE,
     run_id TEXT NOT NULL REFERENCES runs(id),
-    enqueued_at REAL NOT NULL
+    enqueued_at REAL NOT NULL,
+    last_attempt_at REAL NOT NULL DEFAULT 0,
+    attempt_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS enrichment_queue (
@@ -448,6 +450,17 @@ class SqliteStore:
                 _add_column_if_missing(conn, "simulation_batches", "claim_owner TEXT")
                 _add_column_if_missing(conn, "simulation_items", "claim_owner TEXT")
                 _add_column_if_missing(conn, "enrichment_queue", "claim_owner TEXT")
+            if current < 5:
+                _add_column_if_missing(
+                    conn,
+                    "simulation_queue",
+                    "last_attempt_at REAL NOT NULL DEFAULT 0",
+                )
+                _add_column_if_missing(
+                    conn,
+                    "simulation_queue",
+                    "attempt_count INTEGER NOT NULL DEFAULT 0",
+                )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_batches_claimable "
                 "ON simulation_batches(run_id, state, claim_owner, not_before, created_at)"
@@ -459,6 +472,10 @@ class SqliteStore:
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_enrichment_claimable "
                 "ON enrichment_queue(run_id, claim_owner, enqueued_at, experiment_id)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_simulation_queue_attempt "
+                "ON simulation_queue(run_id, last_attempt_at, enqueued_at, experiment_id)"
             )
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
@@ -644,20 +661,66 @@ class SqliteStore:
             ).fetchall()
             for row in ambiguous:
                 batch_id = str(row["id"])
+                items = conn.execute(
+                    "SELECT experiment_id, ordinal FROM simulation_items WHERE batch_id = ?",
+                    (batch_id,),
+                ).fetchall()
+                claimed = 0
+                for item in items:
+                    owner = conn.execute(
+                        """
+                        UPDATE experiments
+                        SET state = 'SIMULATE_UNKNOWN', last_error = ?, updated_at = ?
+                        WHERE id = ? AND batch_id = ? AND state = 'SIMULATING'
+                          AND EXISTS (
+                              SELECT 1 FROM simulation_queue q
+                              WHERE q.experiment_id = experiments.id
+                          )
+                        """,
+                        (
+                            "worker_interrupted_during_simulate",
+                            now,
+                            item["experiment_id"],
+                            batch_id,
+                        ),
+                    )
+                    item_state = "SIMULATE_UNKNOWN" if owner.rowcount else "SUPERSEDED"
+                    claimed += int(bool(owner.rowcount))
+                    conn.execute(
+                        """
+                        UPDATE simulation_items
+                        SET state = ?, last_error = ?, claim_owner = NULL
+                        WHERE batch_id = ? AND ordinal = ?
+                        """,
+                        (
+                            item_state,
+                            "worker_interrupted_during_simulate",
+                            batch_id,
+                            item["ordinal"],
+                        ),
+                    )
                 conn.execute(
-                    "UPDATE simulation_batches SET state = 'SIMULATE_UNKNOWN', updated_at = ? WHERE id = ?",
-                    (now, batch_id),
-                )
-                conn.execute(
-                    "UPDATE experiments SET state = 'SIMULATE_UNKNOWN', last_error = ?, updated_at = ? WHERE batch_id = ?",
-                    ("worker_interrupted_during_simulate", now, batch_id),
+                    """
+                    UPDATE simulation_batches
+                    SET state = ?, last_error = ?, claim_owner = NULL, updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        "SIMULATE_UNKNOWN" if claimed else "SUPERSEDED",
+                        "worker_interrupted_during_simulate",
+                        now,
+                        batch_id,
+                    ),
                 )
                 self._event(
                     conn,
                     run_id,
                     "SIMULATE_BECAME_AMBIGUOUS",
                     batch_id=batch_id,
-                    payload={"reason": "worker_interrupted_during_simulate"},
+                    payload={
+                        "reason": "worker_interrupted_during_simulate",
+                        "claimed_experiments": claimed,
+                    },
                     now=now,
                 )
 
@@ -820,7 +883,17 @@ class SqliteStore:
             ).fetchone()
         return _batch_from_row(row) if row else None
 
-    def create_next_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
+    def create_next_batch(
+        self,
+        run_id: str,
+        *,
+        now: float,
+        resend_interval_seconds: float = 0.0,
+    ) -> BatchRecord | None:
+        global_not_before = self.runtime_float("simulation_request_not_before")
+        if global_not_before is not None and now < global_not_before:
+            return None
+        resend_cutoff = now - max(0.0, resend_interval_seconds)
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             selected_head = conn.execute(
@@ -830,11 +903,12 @@ class SqliteStore:
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
-                  AND e.state IN ('QUEUED', 'RETRY_WAIT') AND e.not_before <= ?
-                ORDER BY e.priority DESC, e.created_at, e.id
+                  AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
+                  AND e.not_before <= ? AND q.last_attempt_at <= ?
+                ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT 1
                 """,
-                (run_id, now),
+                (run_id, now, resend_cutoff),
             ).fetchone()
             if selected_head is None:
                 return None
@@ -844,14 +918,17 @@ class SqliteStore:
                 FROM simulation_queue q
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
-                WHERE q.run_id = ? AND e.state IN ('QUEUED', 'RETRY_WAIT')
-                  AND e.not_before <= ? AND c.compatibility_key = ?
-                ORDER BY e.priority DESC, e.created_at, e.id
+                WHERE q.run_id = ?
+                  AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
+                  AND e.not_before <= ? AND q.last_attempt_at <= ?
+                  AND c.compatibility_key = ?
+                ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT ?
                 """,
                 (
                     run_id,
                     now,
+                    resend_cutoff,
                     selected_head["compatibility_key"],
                     int(selected_head["batch_limit"]),
                 ),
@@ -891,6 +968,14 @@ class SqliteStore:
                     WHERE id = ?
                     """,
                     (batch_id, now, experiment_id),
+                )
+                conn.execute(
+                    """
+                    UPDATE simulation_queue
+                    SET last_attempt_at = ?, attempt_count = attempt_count + 1
+                    WHERE experiment_id = ?
+                    """,
+                    (now, experiment_id),
                 )
             self._event(
                 conn,
@@ -1002,6 +1087,49 @@ class SqliteStore:
         batch_state = "FAILED" if state == "PERMANENT_FAILURE" else "SIMULATE_UNKNOWN"
         with self.connect() as conn:
             row = conn.execute("SELECT run_id FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()
+            items = conn.execute(
+                "SELECT experiment_id, ordinal FROM simulation_items WHERE batch_id = ?",
+                (batch_id,),
+            ).fetchall()
+            claimed = 0
+            for item in items:
+                owner = conn.execute(
+                    """
+                    UPDATE experiments
+                    SET state = ?, last_error = ?, updated_at = ?
+                    WHERE id = ? AND batch_id = ?
+                      AND state IN (
+                          'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
+                          'POLLING', 'SIMULATE_UNKNOWN'
+                      )
+                      AND EXISTS (
+                          SELECT 1 FROM simulation_queue q
+                          WHERE q.experiment_id = experiments.id
+                      )
+                    """,
+                    (state, error, now, item["experiment_id"], batch_id),
+                )
+                item_state = state if owner.rowcount else "SUPERSEDED"
+                claimed += int(bool(owner.rowcount))
+                conn.execute(
+                    """
+                    UPDATE simulation_items
+                    SET state = ?, last_error = ?, last_response_json = ?, claim_owner = NULL
+                    WHERE batch_id = ? AND ordinal = ?
+                    """,
+                    (
+                        item_state,
+                        error,
+                        _json(response) if response else None,
+                        batch_id,
+                        item["ordinal"],
+                    ),
+                )
+                if owner.rowcount and state == "PERMANENT_FAILURE":
+                    conn.execute(
+                        "DELETE FROM simulation_queue WHERE experiment_id = ?",
+                        (item["experiment_id"],),
+                    )
             conn.execute(
                 """
                 UPDATE simulation_batches
@@ -1009,37 +1137,26 @@ class SqliteStore:
                     claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (batch_state, error, _json(response) if response else None, now, batch_id),
+                (
+                    batch_state if claimed else "SUPERSEDED",
+                    error,
+                    _json(response) if response else None,
+                    now,
+                    batch_id,
+                ),
             )
-            conn.execute(
-                "UPDATE experiments SET state = ?, last_error = ?, updated_at = ? WHERE batch_id = ?",
-                (state, error, now, batch_id),
-            )
-            conn.execute(
-                """
-                UPDATE simulation_items
-                SET state = ?, last_error = ?, claim_owner = NULL
-                WHERE batch_id = ?
-                """,
-                (state, error, batch_id),
-            )
-            if state == "PERMANENT_FAILURE":
-                conn.execute(
-                    """
-                    DELETE FROM simulation_queue
-                    WHERE experiment_id IN (
-                        SELECT experiment_id FROM simulation_items WHERE batch_id = ?
-                    )
-                    """,
-                    (batch_id,),
-                )
             self._event(
                 conn,
                 str(row["run_id"]),
                 "SIMULATION_BATCH_FAILED",
                 batch_id=batch_id,
                 status_code=_status_code(response),
-                payload={"state": state, "error": error, "response": response},
+                payload={
+                    "state": state,
+                    "error": error,
+                    "response": response,
+                    "claimed_experiments": claimed,
+                },
                 now=now,
             )
 
@@ -1056,41 +1173,70 @@ class SqliteStore:
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (batch_id,)
             ).fetchone()
+            items = conn.execute(
+                "SELECT experiment_id, ordinal FROM simulation_items WHERE batch_id = ?",
+                (batch_id,),
+            ).fetchall()
+            claimed = 0
+            for item in items:
+                owner = conn.execute(
+                    """
+                    UPDATE experiments
+                    SET state = 'RETRY_WAIT', batch_id = NULL, child_simulation_id = NULL,
+                        alpha_id = NULL, not_before = ?, last_error = ?, updated_at = ?
+                    WHERE id = ? AND batch_id = ?
+                      AND state IN (
+                          'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
+                          'POLLING', 'SIMULATE_UNKNOWN', 'PERMANENT_FAILURE'
+                      )
+                      AND (
+                          state = 'PERMANENT_FAILURE'
+                          OR EXISTS (
+                              SELECT 1 FROM simulation_queue q
+                              WHERE q.experiment_id = experiments.id
+                          )
+                      )
+                    """,
+                    (not_before, error, now, item["experiment_id"], batch_id),
+                )
+                item_state = "RETRIED" if owner.rowcount else "SUPERSEDED"
+                claimed += int(bool(owner.rowcount))
+                conn.execute(
+                    """
+                    UPDATE simulation_items
+                    SET state = ?, last_error = ?, last_response_json = ?, claim_owner = NULL
+                    WHERE batch_id = ? AND ordinal = ?
+                    """,
+                    (
+                        item_state,
+                        error,
+                        _json(response),
+                        batch_id,
+                        item["ordinal"],
+                    ),
+                )
+                if owner.rowcount:
+                    conn.execute(
+                        """
+                        INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at)
+                        VALUES (?, ?, ?)
+                        """,
+                        (item["experiment_id"], batch["run_id"], now),
+                    )
             conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = 'RETRIED', last_error = ?, last_response_json = ?,
+                SET state = ?, last_error = ?, last_response_json = ?,
                     claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (error, _json(response), now, batch_id),
-            )
-            conn.execute(
-                """
-                UPDATE simulation_items
-                SET state = 'RETRIED', last_error = ?, claim_owner = NULL
-                WHERE batch_id = ?
-                """,
-                (error, batch_id),
-            )
-            conn.execute(
-                """
-                UPDATE experiments
-                SET state = 'RETRY_WAIT', batch_id = NULL, child_simulation_id = NULL,
-                    alpha_id = NULL, not_before = ?, last_error = ?, updated_at = ?
-                WHERE batch_id = ?
-                """,
-                (not_before, error, now, batch_id),
-            )
-            conn.execute(
-                """
-                INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at)
-                SELECT i.experiment_id, b.run_id, ?
-                FROM simulation_items i
-                JOIN simulation_batches b ON b.id = i.batch_id
-                WHERE i.batch_id = ?
-                """,
-                (now, batch_id),
+                (
+                    "RETRIED" if claimed else "SUPERSEDED",
+                    error,
+                    _json(response),
+                    now,
+                    batch_id,
+                ),
             )
             self._event(
                 conn,
@@ -1098,7 +1244,11 @@ class SqliteStore:
                 "SIMULATION_BATCH_REQUEUED",
                 batch_id=batch_id,
                 status_code=_status_code(response),
-                payload={"error": error, "response": response},
+                payload={
+                    "error": error,
+                    "response": response,
+                    "claimed_experiments": claimed,
+                },
                 now=now,
             )
 
@@ -1185,52 +1335,88 @@ class SqliteStore:
                     raise ValueError(
                         f"Parent returned {len(child_ids)} children for {len(items)} batch items"
                     )
+                claimed = 0
                 for item, child_id in zip(items, child_ids):
+                    owner = conn.execute(
+                        """
+                        UPDATE experiments
+                        SET state = 'CHILD_POLLING', batch_id = ?, child_simulation_id = ?,
+                            last_error = NULL, updated_at = ?
+                        WHERE id = ?
+                          AND state IN (
+                              'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
+                              'POLLING', 'SIMULATE_UNKNOWN'
+                          )
+                          AND EXISTS (
+                              SELECT 1 FROM simulation_queue q
+                              WHERE q.experiment_id = experiments.id
+                          )
+                        """,
+                        (batch_id, child_id, now, item["experiment_id"]),
+                    )
+                    if owner.rowcount:
+                        claimed += 1
+                        item_state = "POLLING"
+                    else:
+                        item_state = "SUPERSEDED"
                     conn.execute(
                         """
                         UPDATE simulation_items
-                        SET state = 'POLLING', child_simulation_id = ?, not_before = ?,
+                        SET state = ?, child_simulation_id = ?, not_before = ?,
                             last_response_json = ?, claim_owner = NULL
                         WHERE batch_id = ? AND ordinal = ?
                         """,
-                        (child_id, now, _json(response), batch_id, item["ordinal"]),
+                        (
+                            item_state,
+                            child_id,
+                            now,
+                            _json(response),
+                            batch_id,
+                            item["ordinal"],
+                        ),
                     )
-                    conn.execute(
-                        """
-                        UPDATE experiments
-                        SET state = 'CHILD_POLLING', child_simulation_id = ?, updated_at = ?
-                        WHERE id = ?
-                        """,
-                        (child_id, now, item["experiment_id"]),
-                    )
-                batch_state = "CHILD_POLLING"
+                batch_state = "CHILD_POLLING" if claimed else "SUPERSEDED"
             else:
                 if len(items) != 1 or not alpha_id:
                     raise ValueError("Single simulation completed without an alpha id")
                 item = items[0]
+                owner = conn.execute(
+                    """
+                    UPDATE experiments
+                    SET state = 'SIM_DONE', batch_id = ?, alpha_id = ?,
+                        last_error = NULL, updated_at = ?
+                    WHERE id = ?
+                      AND state IN (
+                          'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
+                          'POLLING', 'SIMULATE_UNKNOWN'
+                      )
+                      AND EXISTS (
+                          SELECT 1 FROM simulation_queue q
+                          WHERE q.experiment_id = experiments.id
+                      )
+                    """,
+                    (batch_id, alpha_id, now, item["experiment_id"]),
+                )
+                item_state = "SIM_DONE" if owner.rowcount else "SUPERSEDED"
                 conn.execute(
                     """
                     UPDATE simulation_items
-                    SET state = 'SIM_DONE', alpha_id = ?, last_response_json = ?
+                    SET state = ?, alpha_id = ?, last_response_json = ?, claim_owner = NULL
                     WHERE batch_id = ? AND ordinal = 0
                     """,
-                    (alpha_id, _json(response), batch_id),
+                    (item_state, alpha_id, _json(response), batch_id),
                 )
-                conn.execute(
-                    """
-                    UPDATE experiments SET state = 'SIM_DONE', alpha_id = ?, updated_at = ?
-                    WHERE id = ?
-                    """,
-                    (alpha_id, now, item["experiment_id"]),
-                )
-                self._advance_to_enrichment(
-                    conn,
-                    experiment_id=str(item["experiment_id"]),
-                    run_id=str(batch["run_id"]),
-                    alpha_id=alpha_id,
-                    now=now,
-                )
-                batch_state = "COMPLETE"
+                if owner.rowcount:
+                    self._advance_to_enrichment(
+                        conn,
+                        experiment_id=str(item["experiment_id"]),
+                        run_id=str(batch["run_id"]),
+                        alpha_id=alpha_id,
+                        now=now,
+                    )
+                    batch_state = "COMPLETE"
+                else:
+                    batch_state = "SUPERSEDED"
             conn.execute(
                 """
                 UPDATE simulation_batches
@@ -1335,33 +1521,47 @@ class SqliteStore:
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (item.batch_id,)
             ).fetchone()
+            owner = conn.execute(
+                """
+                UPDATE experiments
+                SET state = 'SIM_DONE', alpha_id = ?, last_error = NULL, updated_at = ?
+                WHERE id = ? AND state = 'CHILD_POLLING' AND batch_id = ?
+                  AND child_simulation_id = ?
+                  AND EXISTS (
+                      SELECT 1 FROM simulation_queue q
+                      WHERE q.experiment_id = experiments.id
+                  )
+                """,
+                (
+                    alpha_id,
+                    now,
+                    item.experiment_id,
+                    item.batch_id,
+                    item.child_simulation_id,
+                ),
+            )
+            item_state = "SIM_DONE" if owner.rowcount else "SUPERSEDED"
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET state = 'SIM_DONE', alpha_id = ?, last_response_json = ?,
+                SET state = ?, alpha_id = ?, last_response_json = ?,
                     claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
-                (alpha_id, _json(response), item.batch_id, item.ordinal),
+                (item_state, alpha_id, _json(response), item.batch_id, item.ordinal),
             )
-            conn.execute(
-                """
-                UPDATE experiments SET state = 'SIM_DONE', alpha_id = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (alpha_id, now, item.experiment_id),
-            )
-            self._advance_to_enrichment(
-                conn,
-                experiment_id=item.experiment_id,
-                run_id=str(batch["run_id"]),
-                alpha_id=alpha_id,
-                now=now,
-            )
+            if owner.rowcount:
+                self._advance_to_enrichment(
+                    conn,
+                    experiment_id=item.experiment_id,
+                    run_id=str(batch["run_id"]),
+                    alpha_id=alpha_id,
+                    now=now,
+                )
             self._event(
                 conn,
                 str(batch["run_id"]),
-                "SIMULATION_CHILD_COMPLETE",
+                "SIMULATION_CHILD_COMPLETE" if owner.rowcount else "SIMULATION_CHILD_SUPERSEDED",
                 experiment_id=item.experiment_id,
                 batch_id=item.batch_id,
                 status_code=_status_code(response),
@@ -1382,30 +1582,50 @@ class SqliteStore:
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (item.batch_id,)
             ).fetchone()
+            owner = conn.execute(
+                """
+                UPDATE experiments
+                SET state = 'PERMANENT_FAILURE', last_error = ?, updated_at = ?
+                WHERE id = ? AND state = 'CHILD_POLLING' AND batch_id = ?
+                  AND child_simulation_id = ?
+                  AND EXISTS (
+                      SELECT 1 FROM simulation_queue q
+                      WHERE q.experiment_id = experiments.id
+                  )
+                """,
+                (
+                    error,
+                    now,
+                    item.experiment_id,
+                    item.batch_id,
+                    item.child_simulation_id,
+                ),
+            )
+            item_state = "PERMANENT_FAILURE" if owner.rowcount else "SUPERSEDED"
             conn.execute(
                 """
                 UPDATE simulation_items
-                SET state = 'PERMANENT_FAILURE', last_error = ?, last_response_json = ?,
+                SET state = ?, last_error = ?, last_response_json = ?,
                     claim_owner = NULL
                 WHERE batch_id = ? AND ordinal = ?
                 """,
-                (error, _json(response) if response else None, item.batch_id, item.ordinal),
+                (
+                    item_state,
+                    error,
+                    _json(response) if response else None,
+                    item.batch_id,
+                    item.ordinal,
+                ),
             )
-            conn.execute(
-                """
-                UPDATE experiments SET state = 'PERMANENT_FAILURE', last_error = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (error, now, item.experiment_id),
-            )
-            conn.execute(
-                "DELETE FROM simulation_queue WHERE experiment_id = ?",
-                (item.experiment_id,),
-            )
+            if owner.rowcount:
+                conn.execute(
+                    "DELETE FROM simulation_queue WHERE experiment_id = ?",
+                    (item.experiment_id,),
+                )
             self._event(
                 conn,
                 str(batch["run_id"]),
-                "SIMULATION_CHILD_FAILED",
+                "SIMULATION_CHILD_FAILED" if owner.rowcount else "SIMULATION_CHILD_SUPERSEDED",
                 experiment_id=item.experiment_id,
                 batch_id=item.batch_id,
                 status_code=_status_code(response),
@@ -1427,28 +1647,41 @@ class SqliteStore:
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (item.batch_id,)
             ).fetchone()
-            conn.execute(
-                """
-                UPDATE simulation_items
-                SET state = 'RETRIED', last_error = ?, last_response_json = ?,
-                    claim_owner = NULL
-                WHERE batch_id = ? AND ordinal = ?
-                """,
-                (error, _json(response), item.batch_id, item.ordinal),
-            )
-            conn.execute(
+            owner = conn.execute(
                 """
                 UPDATE experiments
                 SET state = 'RETRY_WAIT', batch_id = NULL, child_simulation_id = NULL,
                     alpha_id = NULL, not_before = ?, last_error = ?, updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND state = 'CHILD_POLLING' AND batch_id = ?
+                  AND child_simulation_id = ?
+                  AND EXISTS (
+                      SELECT 1 FROM simulation_queue q
+                      WHERE q.experiment_id = experiments.id
+                  )
                 """,
-                (not_before, error, now, item.experiment_id),
+                (
+                    not_before,
+                    error,
+                    now,
+                    item.experiment_id,
+                    item.batch_id,
+                    item.child_simulation_id,
+                ),
+            )
+            item_state = "RETRIED" if owner.rowcount else "SUPERSEDED"
+            conn.execute(
+                """
+                UPDATE simulation_items
+                SET state = ?, last_error = ?, last_response_json = ?,
+                    claim_owner = NULL
+                WHERE batch_id = ? AND ordinal = ?
+                """,
+                (item_state, error, _json(response), item.batch_id, item.ordinal),
             )
             self._event(
                 conn,
                 str(batch["run_id"]),
-                "SIMULATION_CHILD_REQUEUED",
+                "SIMULATION_CHILD_REQUEUED" if owner.rowcount else "SIMULATION_CHILD_SUPERSEDED",
                 experiment_id=item.experiment_id,
                 batch_id=item.batch_id,
                 status_code=_status_code(response),
@@ -1692,11 +1925,22 @@ class SqliteStore:
                 )
             }
             queues = self._queue_counts(conn, run_id)
+            active_attempts = int(
+                conn.execute(
+                    """
+                    SELECT COUNT(*) FROM simulation_batches
+                    WHERE run_id = ? AND state IN (
+                        'CREATED', 'RETRY_WAIT', 'SIMULATING', 'POLLING', 'CHILD_POLLING'
+                    )
+                    """,
+                    (run_id,),
+                ).fetchone()[0]
+            )
             total = sum(counts.values())
             terminal_count = sum(counts.get(state, 0) for state in EXPERIMENT_TERMINAL_STATES)
             if str(run["state"]) == "CANCELLED":
                 state = "CANCELLED"
-            elif total == terminal_count:
+            elif total == terminal_count and active_attempts == 0:
                 if counts.get("SIMULATE_UNKNOWN", 0):
                     state = "BLOCKED"
                 elif counts.get("PERMANENT_FAILURE", 0):
@@ -1707,7 +1951,12 @@ class SqliteStore:
                 state = "RUNNING"
             terminal = state in {"COMPLETED", "COMPLETED_WITH_ERRORS", "BLOCKED", "CANCELLED"}
             conn.execute(
-                "UPDATE runs SET state = ?, updated_at = ?, finished_at = CASE WHEN ? THEN ? ELSE finished_at END WHERE id = ?",
+                """
+                UPDATE runs
+                SET state = ?, updated_at = ?,
+                    finished_at = CASE WHEN ? THEN COALESCE(finished_at, ?) ELSE NULL END
+                WHERE id = ?
+                """,
                 (state, now, 1 if terminal else 0, now, run_id),
             )
             if terminal:
@@ -1716,6 +1965,7 @@ class SqliteStore:
                     "state": state,
                     "counts": counts,
                     "queues": queues,
+                    "active_attempts": active_attempts,
                     "total": total,
                 }
                 conn.execute(
@@ -1992,14 +2242,21 @@ class SqliteStore:
         pending = counts.get("POLLING", 0) + counts.get("BATCHED", 0)
         if pending:
             return
-        if counts.get("PERMANENT_FAILURE", 0):
+        resolved = sum(counts.values()) - counts.get("SUPERSEDED", 0)
+        if resolved == 0:
+            state = "SUPERSEDED"
+        elif counts.get("PERMANENT_FAILURE", 0):
             state = "PARTIAL_FAILURE"
         elif counts.get("RETRIED", 0):
             state = "RETRIED"
         else:
             state = "COMPLETE"
         conn.execute(
-            "UPDATE simulation_batches SET state = ?, updated_at = ? WHERE id = ?",
+            """
+            UPDATE simulation_batches
+            SET state = ?, claim_owner = NULL, updated_at = ?
+            WHERE id = ?
+            """,
             (state, now, batch_id),
         )
 

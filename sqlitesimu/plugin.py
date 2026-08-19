@@ -223,6 +223,15 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--retry-seconds", type=float, default=5.0)
     parser.add_argument("--idle-sleep-seconds", type=float, default=1.0)
     parser.add_argument(
+        "--resend-seconds",
+        type=float,
+        default=10.0,
+        help=(
+            "Minimum delay before an unresolved expression can be sent again; "
+            "the sender remains active until a terminal result consumes it"
+        ),
+    )
+    parser.add_argument(
         "--result-workers",
         type=int,
         default=16,
@@ -249,12 +258,15 @@ def _run(
 ) -> dict[str, Any]:
     if args.max_runtime_seconds is not None and args.max_runtime_seconds <= 0:
         raise ValueError("max-runtime-seconds must be positive")
+    if args.resend_seconds < 0:
+        raise ValueError("resend-seconds must not be negative")
     if args.result_workers < 1 or args.enrichment_workers < 1:
         raise ValueError("result-workers and enrichment-workers must be at least 1")
     policy = RuntimePolicy(
         max_attempts=args.max_attempts,
         default_retry_seconds=args.retry_seconds,
         idle_sleep_seconds=args.idle_sleep_seconds,
+        resend_interval_seconds=args.resend_seconds,
         result_workers=args.result_workers,
         enrichment_workers=args.enrichment_workers,
     )

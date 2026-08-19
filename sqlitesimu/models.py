@@ -55,6 +55,7 @@ class RuntimePolicy:
     max_attempts: int = 5
     default_retry_seconds: float = 5.0
     idle_sleep_seconds: float = 1.0
+    resend_interval_seconds: float = 10.0
     lease_seconds: float = 300.0
     concurrent: bool = True
     result_workers: int = 16

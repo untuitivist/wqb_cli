@@ -693,6 +693,250 @@ class SqliteSimuTests(unittest.TestCase):
                 ).fetchone()[0]
             self.assertEqual(active, 9)
 
+    def test_accepted_expression_remains_sendable_until_a_terminal_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            first = store.create_next_batch(
+                enqueued.run_id,
+                now=1000.0,
+                resend_interval_seconds=10.0,
+            )
+            assert first is not None
+            store.mark_simulate_started(first.id, now=1000.0)
+            store.accept_simulation(
+                first.id,
+                location="https://api.worldquantbrain.com/simulations/parent-first",
+                parent_simulation_id="parent-first",
+                response=envelope(201),
+                not_before=2000.0,
+                now=1000.0,
+            )
+
+            self.assertIsNone(
+                store.create_next_batch(
+                    enqueued.run_id,
+                    now=1009.0,
+                    resend_interval_seconds=10.0,
+                )
+            )
+            second = store.create_next_batch(
+                enqueued.run_id,
+                now=1010.0,
+                resend_interval_seconds=10.0,
+            )
+
+            self.assertIsNotNone(second)
+            assert second is not None
+            self.assertNotEqual(first.id, second.id)
+            with store.connect() as conn:
+                queue_row = conn.execute(
+                    "SELECT attempt_count, last_attempt_at FROM simulation_queue"
+                ).fetchone()
+            self.assertEqual(queue_row["attempt_count"], 2)
+            self.assertEqual(queue_row["last_attempt_at"], 1010.0)
+
+    def test_resend_rotation_serves_unattempted_candidates_before_repeating_priority(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    [
+                        {
+                            "expression": "rank(close)",
+                            "settings": SETTINGS,
+                            "priority": 100,
+                        },
+                        {
+                            "expression": "rank(volume)",
+                            "settings": {**SETTINGS, "region": "EUR"},
+                            "priority": 10,
+                        },
+                        {
+                            "expression": "rank(returns)",
+                            "settings": {**SETTINGS, "region": "ASI"},
+                            "priority": 1,
+                        },
+                    ]
+                ),
+                now=1000.0,
+            )
+            expressions: list[str] = []
+            for index in range(3):
+                batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+                assert batch is not None
+                expressions.append(str(batch.payload["regular"]))
+                store.mark_simulate_started(batch.id, now=1000.0)
+                store.accept_simulation(
+                    batch.id,
+                    location=f"https://api.worldquantbrain.com/simulations/parent-{index}",
+                    parent_simulation_id=f"parent-{index}",
+                    response=envelope(201),
+                    not_before=2000.0,
+                    now=1000.0,
+                )
+
+            self.assertEqual(
+                expressions,
+                ["rank(close)", "rank(volume)", "rank(returns)"],
+            )
+
+    def test_first_terminal_result_wins_and_run_waits_for_late_progress_attempts(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            first = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert first is not None
+            store.mark_simulate_started(first.id, now=1000.0)
+            store.accept_simulation(
+                first.id,
+                location="https://api.worldquantbrain.com/simulations/parent-winner",
+                parent_simulation_id="parent-winner",
+                response=envelope(201),
+                not_before=2000.0,
+                now=1000.0,
+            )
+            second = store.create_next_batch(
+                enqueued.run_id,
+                now=1010.0,
+                resend_interval_seconds=10.0,
+            )
+            assert second is not None
+            store.mark_simulate_started(second.id, now=1010.0)
+            store.accept_simulation(
+                second.id,
+                location="https://api.worldquantbrain.com/simulations/parent-late",
+                parent_simulation_id="parent-late",
+                response=envelope(201),
+                not_before=2000.0,
+                now=1010.0,
+            )
+
+            store.complete_parent(
+                first.id,
+                alpha_id="alpha-winner",
+                child_ids=[],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE", "alpha": "alpha-winner"}),
+                now=1011.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1011.0)
+            assert experiment is not None
+            store.save_alpha_detail(
+                experiment,
+                alpha_detail("alpha-winner"),
+                response=envelope(200),
+                now=1012.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1012.0)
+            assert experiment is not None
+            store.save_pnl(
+                experiment,
+                [("2024-01-01", 1.0, None)],
+                response=envelope(200),
+                now=1013.0,
+            )
+
+            still_draining = store.refresh_run_state(enqueued.run_id, now=1013.0)
+            self.assertEqual(still_draining["state"], "RUNNING")
+            self.assertEqual(still_draining["counts"], {"READY": 1})
+            self.assertEqual(still_draining["queues"], {"simulation": 0, "enrichment": 0})
+
+            store.complete_parent(
+                second.id,
+                alpha_id="alpha-late",
+                child_ids=[],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE", "alpha": "alpha-late"}),
+                now=1014.0,
+            )
+            completed = store.refresh_run_state(enqueued.run_id, now=1014.0)
+
+            self.assertEqual(completed["state"], "COMPLETED")
+            with store.connect() as conn:
+                experiment_row = conn.execute(
+                    "SELECT alpha_id FROM experiments WHERE run_id = ?",
+                    (enqueued.run_id,),
+                ).fetchone()
+                late_state = conn.execute(
+                    "SELECT state FROM simulation_batches WHERE id = ?",
+                    (second.id,),
+                ).fetchone()[0]
+            self.assertEqual(experiment_row["alpha_id"], "alpha-winner")
+            self.assertEqual(late_state, "SUPERSEDED")
+
+    def test_parent_and_child_progress_gets_retry_without_a_failure_budget(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            parent_run = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            parent_batch = store.create_next_batch(parent_run.run_id, now=1000.0)
+            assert parent_batch is not None
+            store.mark_simulate_started(parent_batch.id, now=1000.0)
+            store.accept_simulation(
+                parent_batch.id,
+                location="https://api.worldquantbrain.com/simulations/parent-transient",
+                parent_simulation_id="parent-transient",
+                response=envelope(201),
+                not_before=1001.0,
+                now=1000.0,
+            )
+            parent = store.next_poll_batch(parent_run.run_id, now=1001.0)
+            assert parent is not None
+            runtime = SqliteSimuRuntime(
+                store,
+                FixedResponseGateway(envelope(500, {"detail": "temporary"})),
+                policy=sequential_policy(max_attempts=1),
+            )
+            runtime._poll_parent(parent, now=1001.0)
+
+            child_run = store.enqueue(
+                parse_manifest(
+                    [
+                        {"expression": "rank(volume)", "settings": SETTINGS},
+                        {"expression": "rank(returns)", "settings": SETTINGS},
+                    ]
+                ),
+                now=2000.0,
+            )
+            child_batch = store.create_next_batch(child_run.run_id, now=2000.0)
+            assert child_batch is not None
+            store.mark_simulate_started(child_batch.id, now=2000.0)
+            store.complete_parent(
+                child_batch.id,
+                alpha_id=None,
+                child_ids=["child-transient-1", "child-transient-2"],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE"}),
+                now=2001.0,
+            )
+            child = store.next_child_item(child_run.run_id, now=2001.0)
+            assert child is not None
+            runtime._poll_child(child, now=2001.0)
+
+            with store.connect() as conn:
+                parent_state = conn.execute(
+                    "SELECT state, poll_attempts FROM simulation_batches WHERE id = ?",
+                    (parent_batch.id,),
+                ).fetchone()
+                child_state = conn.execute(
+                    """
+                    SELECT state, attempts FROM simulation_items
+                    WHERE batch_id = ? AND ordinal = ?
+                    """,
+                    (child.batch_id, child.ordinal),
+                ).fetchone()
+            self.assertEqual(dict(parent_state), {"state": "POLLING", "poll_attempts": 1})
+            self.assertEqual(dict(child_state), {"state": "POLLING", "attempts": 1})
+
     def test_due_result_polling_precedes_new_batch_simulation(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
@@ -1104,6 +1348,51 @@ class SqliteSimuTests(unittest.TestCase):
                 {"simulation": 1, "enrichment": 0},
             )
 
+    def test_schema_v4_upgrade_preserves_queue_rows_and_adds_attempt_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            with store.connect() as conn:
+                conn.execute("DROP INDEX idx_simulation_queue_attempt")
+                conn.execute("ALTER TABLE simulation_queue RENAME TO simulation_queue_v5")
+                conn.execute(
+                    """
+                    CREATE TABLE simulation_queue (
+                        experiment_id TEXT PRIMARY KEY REFERENCES experiments(id) ON DELETE CASCADE,
+                        run_id TEXT NOT NULL REFERENCES runs(id),
+                        enqueued_at REAL NOT NULL
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO simulation_queue(experiment_id, run_id, enqueued_at)
+                    SELECT experiment_id, run_id, enqueued_at FROM simulation_queue_v5
+                    """
+                )
+                conn.execute("DROP TABLE simulation_queue_v5")
+                conn.execute("PRAGMA user_version = 4")
+
+            store.initialize()
+
+            with store.connect() as conn:
+                queue_row = conn.execute(
+                    """
+                    SELECT experiment_id, run_id, enqueued_at, last_attempt_at, attempt_count
+                    FROM simulation_queue
+                    """
+                ).fetchone()
+                schema_version = conn.execute("PRAGMA user_version").fetchone()[0]
+            self.assertIsNotNone(queue_row)
+            self.assertEqual(queue_row["run_id"], enqueued.run_id)
+            self.assertEqual(queue_row["enqueued_at"], 1000.0)
+            self.assertEqual(queue_row["last_attempt_at"], 0.0)
+            self.assertEqual(queue_row["attempt_count"], 0)
+            self.assertEqual(schema_version, 5)
+
     def test_schema_v3_migrates_legacy_simulation_request_terms(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
@@ -1180,7 +1469,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(runtime_keys, {"simulation_request_not_before": "1010"})
             self.assertEqual(event["event_type"], "SIMULATE_RETRY")
             self.assertIn("SIMULATE_UNKNOWN", event["payload_json"])
-            self.assertEqual(schema_version, 4)
+            self.assertEqual(schema_version, 5)
 
     def test_run_lease_rejects_a_second_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

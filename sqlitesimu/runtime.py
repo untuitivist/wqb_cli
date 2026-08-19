@@ -41,6 +41,8 @@ class SqliteSimuRuntime:
             raise ValueError("max_attempts must be at least 1")
         if self.policy.default_retry_seconds <= 0 or self.policy.idle_sleep_seconds <= 0:
             raise ValueError("retry and idle sleep durations must be positive")
+        if self.policy.resend_interval_seconds < 0:
+            raise ValueError("resend interval must not be negative")
         if self.policy.lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
         if self.policy.result_workers < 1:
@@ -277,7 +279,14 @@ class SqliteSimuRuntime:
         if batch:
             self._simulate(batch, now=now)
             return True
-        return self.store.create_next_batch(run_id, now=now) is not None
+        return (
+            self.store.create_next_batch(
+                run_id,
+                now=now,
+                resend_interval_seconds=self.policy.resend_interval_seconds,
+            )
+            is not None
+        )
 
     def _simulate(self, batch: BatchRecord, *, now: float) -> None:
         self.store.mark_simulate_started(batch.id, now=now)
@@ -472,15 +481,8 @@ class SqliteSimuRuntime:
         *,
         now: float,
     ) -> None:
-        if batch.poll_attempts + 1 >= self.policy.max_attempts:
-            self.store.fail_batch(
-                batch.id,
-                state="PERMANENT_FAILURE",
-                error=_error_detail(result, "parent_poll_retry_exhausted"),
-                response=result,
-                now=now,
-            )
-            return
+        # A progress URL is durable remote work. Transient GET failures must not
+        # discard it; only an explicit remote terminal status consumes the attempt.
         self.store.defer_parent_poll(
             batch.id,
             response=result,
@@ -591,14 +593,8 @@ class SqliteSimuRuntime:
         *,
         now: float,
     ) -> None:
-        if item.attempts + 1 >= self.policy.max_attempts:
-            self.store.fail_child(
-                item,
-                error=_error_detail(result, "child_poll_retry_exhausted"),
-                response=result,
-                now=now,
-            )
-            return
+        # Child simulation IDs follow the same durable polling contract as parent
+        # progress URLs. Keep retry counts for diagnostics, not as a loss budget.
         self.store.defer_child_poll(
             item,
             response=result,

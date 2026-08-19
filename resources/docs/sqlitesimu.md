@@ -103,18 +103,20 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 运行队列与历史账本分离：
 
-- `simulation_queue` 是表达式待回测队列。只有拿到 alpha id，或已确认该表达式永久失败后，才在同一事务中删除。
+- `simulation_queue` 是表达式待回测队列。`POST /simulations` 返回 `201` 只新增一个持久化 attempt，不消费源表达式；sender 按 `last_attempt_at` 公平轮转，默认 10 秒后允许未决表达式再次发送。
+- 同一表达式可能同时存在多个 progress attempt。第一个有效 COMPLETE/ERROR 终态原子认领 experiment；其他晚到 attempt 只把自身标为 `SUPERSEDED`，不能覆盖结果或重复进入 PnL。
+- 只有拿到 alpha id，或已确认该表达式永久失败后，才在同一事务中删除 `simulation_queue` 行。
 - 拿到 alpha id 时，同一事务会先删除 `simulation_queue` 行，再写入 `enrichment_queue`。
 - `enrichment_queue` 是 alpha 详情/PnL 待处理队列。只有详情和 PnL 都持久化、experiment 进入 `READY` 后才删除。
 - `SIMULATE_UNKNOWN` 可能已经在服务器创建 simulation，因此不自动删除其 `simulation_queue` 行，必须先人工核对。
 - queue 行会被真实 `DELETE`；`experiments`、batch、Location、API event 和结果表继续保留，因而删除待办不会破坏恢复、导出和审计。
 
-`status` 和最终 run JSON 的 `queues.simulation`、`queues.enrichment` 可直接检查两级待办数量。旧数据库首次打开时会自动升级为 schema v3：v1 数据回填未完成队列，v2 的 simulation request 状态和事件统一迁移到 `SIMULATING / SIMULATE_UNKNOWN` 术语。
+`status` 和最终 run JSON 的 `queues.simulation`、`queues.enrichment` 可直接检查两级待办数量。旧数据库首次打开时会自动升级为 schema v5：v1 数据回填未完成队列，v2 的 simulation request 状态和事件统一迁移到 `SIMULATING / SIMULATE_UNKNOWN` 术语，v4 queue 无损补齐 attempt 轮转字段。
 
 终止状态：
 
 - `READY`：详情和 PnL 都已保存。
-- `PERMANENT_FAILURE`：明确请求错误，或可重试读取错误超过预算。
+- `PERMANENT_FAILURE`：服务器明确返回的不可重试 simulation 错误，或 enrichment 读取错误超过预算。
 - `SIMULATE_UNKNOWN`：`POST /simulations` 时连接中断或返回无法确认，可能已经在服务器创建 simulation。
 - `CANCELLED`：用户显式终止的未完成 simulate 待办；历史仍可导出。
 
@@ -128,8 +130,11 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 - POST `/simulations` 成功必须是 `201`，并持久化 `Location`。
 - `429` 和服务器并发限制不会消耗失败预算，按 `Retry-After` 继续等待。
 - 客户端不设置 `8 / 4 / 3` 等并发槽位上限；持续发起 simulate 请求，由 BRAIN 的 `429` 和 `Retry-After` 提供背压。
+- `201` 只登记 Location；源表达式在首个有效终态前仍留在发送队列，按最久未发送顺序循环产生 attempt，以持续填充服务器可用并发。
 - `204 / 401 / 429` 都按 `wqb.WQBSession` 的异常会话状态处理；即使两层重登耗尽，也只延期当前工作，不会把 experiment 写成永久失败。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
+- 父 progress URL 和 child simulation ID 会一直按 `Retry-After` 检查；瞬时网络、认证和可重试 HTTP 错误只累计诊断次数，不会因本地次数预算而丢弃。
+- 父/child 的 COMPLETE、ERROR 或 CANCELLED 一旦处理，就退出活跃轮询集合；run 会等所有晚到重复 attempt 都退出后才进入终态。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
 - 到期的父任务、child 和 enrichment 轮询优先于继续建批和 simulate，避免大批 manifest 让结果消费饥饿；未到 `not_before` 的任务不会阻塞新的 simulate 请求。
 - enrichment 内部优先完成已经保存 detail 的 `ENRICH_PNL`，使每个 alpha 尽快闭环为 `READY` 并删除待办，而不是先积压整批 detail。
@@ -141,11 +146,12 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 | 位置 | 旧脚本 | sqlitesimu |
 | --- | --- | --- |
-| 源任务 | 结果落库后删除源表行，但完成前可能被再次随机抽中 | 两级 queue 真实消费删除；candidate/experiment 作为历史账本保留 |
+| 源任务 | 结果落库后删除源表行，完成前可能被再次随机抽中 | `201` 后继续按最久未发送顺序抽取；首个终态消费 queue，candidate/experiment 和 attempt 作为历史账本保留 |
 | 尾批 | 少于 2 条会跳过 | 单条也 simulate，避免永久滞留 |
 | 批次安全 | 只按 region、delay 分组，统一最多 10 条 | 额外隔离 instrument type、language；GLB 最多 5 条 |
 | 并发 | 槽位检查已注释，依赖服务端 429 | 不做客户端槽位计数，依赖服务端 429/Retry-After |
-| 重复 simulate | 异常后可能重新 POST | `POST /simulations` 结果不确定时阻塞，禁止盲目重跑 |
+| 重复 simulate | 未完成源行会被重复抽中 | 明确 `201` 的未决表达式会公平重发；`POST` 结果不确定时仍阻塞该表达式，等待其他已知 progress attempt 或人工核对 |
+| progress 读取 | 非 200 保留 URL，后续继续检查 | 父和 child 的瞬时读取错误同样无限延期；明确终态后退出活跃集合但保留历史账本 |
 | 多进程 | 多线程加 SQLite lock | run 租约阻止两个 worker 重复消费 |
 | 认证 | 脚本直接持有 EMAIL/PASSWORD | 使用 wqb-cli cookie/keyring/env；CoreClient 处理 `204 / 401 / 429`，耗尽后 sqlitesimu 再补 5 次重登 |
 | 术语 | simulation POST 也常写作 submit | simulation 一律使用 simulate；submit 仅表示 `wqb alpha submit` 入库提交 |

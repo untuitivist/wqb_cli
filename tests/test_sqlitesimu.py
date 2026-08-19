@@ -418,6 +418,23 @@ class SqliteSimuTests(unittest.TestCase):
                 self.assertFalse(result["reauthentication"]["exhausted"])
                 self.assertEqual(gateway.call_auto_auth, [True, False])
 
+    def test_gateway_treats_capacity_and_rate_429_as_backpressure(self) -> None:
+        bodies = (
+            {"detail": "CONCURRENT_SIMULATION_LIMIT_EXCEEDED"},
+            {"message": "API rate limit exceeded"},
+        )
+        for body in bodies:
+            with self.subTest(body=body):
+                gateway = ReauthGateway([envelope(429, body, retry_after="10")])
+
+                result = gateway.call("POST", "/simulations", json_body={"type": "REGULAR"})
+
+                self.assertEqual(result["response"]["status_code"], 429)
+                self.assertEqual(result["response"]["retry_after"], "10")
+                self.assertEqual(gateway.auth_calls, 0)
+                self.assertEqual(gateway.call_auto_auth, [True])
+                self.assertNotIn("reauthentication", result)
+
     def test_gateway_replays_mutating_204_like_wqb_session(self) -> None:
         gateway = ReauthGateway([envelope(204), envelope(201)])
 

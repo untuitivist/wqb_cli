@@ -261,6 +261,29 @@ class ClientPrepareTests(unittest.TestCase):
                 event = result["response"]["authentication"]["events"][0]
                 self.assertEqual(event["trigger_status"], trigger)
 
+    def test_backpressure_429_does_not_trigger_global_reauthentication(self) -> None:
+        bodies = (
+            {"detail": "CONCURRENT_SIMULATION_LIMIT_EXCEEDED"},
+            {"message": "API rate limit exceeded"},
+        )
+        for body in bodies:
+            with self.subTest(body=body):
+                session = SequenceSession([FakeResponse(429, body, retry_after="10")])
+                client = self.auto_auth_client(session)
+                prepared = client.prepare(
+                    client.registry.get("/simulations"),
+                    "POST",
+                    json_body={"type": "REGULAR"},
+                )
+
+                result = client.call_once(prepared)
+
+                self.assertFalse(result["ok"])
+                self.assertEqual(result["response"]["status_code"], 429)
+                self.assertEqual(result["response"]["retry_after"], "10")
+                self.assertNotIn("authentication", result["response"])
+                self.assertEqual(len(session.calls), 1)
+
     def test_authentication_retries_before_replaying_request(self) -> None:
         session = SequenceSession(
             [

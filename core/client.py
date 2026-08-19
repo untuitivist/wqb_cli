@@ -18,6 +18,25 @@ from .registry import Endpoint, EndpointRegistry
 
 MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
 WQB_SESSION_REAUTH_STATUSES = frozenset({204, 401, 429})
+WQB_BACKPRESSURE_MARKERS = frozenset(
+    {
+        "concurrent_simulation_limit_exceeded",
+        "api rate limit exceeded",
+    }
+)
+
+
+def is_wqb_backpressure(status_code: int | None, body: Any) -> bool:
+    """Distinguish capacity/rate backpressure from authentication-like 429s."""
+
+    if status_code != 429:
+        return False
+    if isinstance(body, dict):
+        values = [body.get(key) for key in ("detail", "message", "error")]
+    else:
+        values = [body]
+    normalized = " ".join(str(value).strip().casefold() for value in values if value)
+    return any(marker in normalized for marker in WQB_BACKPRESSURE_MARKERS)
 
 
 @dataclass(frozen=True)
@@ -319,7 +338,16 @@ class WqbClient:
     ) -> bool:
         if not enabled or prepared.endpoint == "/authentication":
             return False
-        return response.status_code in self.auto_auth_policy.statuses
+        if response.status_code not in self.auto_auth_policy.statuses:
+            return False
+        return not is_wqb_backpressure(response.status_code, self._response_body_value(response))
+
+    @staticmethod
+    def _response_body_value(response: requests.Response) -> Any:
+        try:
+            return response.json()
+        except ValueError:
+            return response.text
 
     @staticmethod
     def _response_succeeded(

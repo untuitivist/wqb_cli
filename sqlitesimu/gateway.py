@@ -8,6 +8,7 @@ from typing import Any, Protocol
 import requests
 
 from ..core.auth import resolve_login_payload, save_cookie_payload
+from ..core.client import is_wqb_backpressure
 from ..sdk import PluginContext
 
 
@@ -232,7 +233,12 @@ class WqbApiGateway:
     ) -> bool:
         if path == "/authentication":
             return False
-        return _status_code(result) in SQLITESIMU_REAUTH_STATUSES
+        status_code = _status_code(result)
+        if status_code not in SQLITESIMU_REAUTH_STATUSES:
+            return False
+        response = result.get("response")
+        body = response.get("body") if isinstance(response, dict) else None
+        return not is_wqb_backpressure(status_code, body)
 
 
 def _status_code(result: dict[str, Any]) -> int | None:

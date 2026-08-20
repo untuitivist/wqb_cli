@@ -90,10 +90,17 @@ class SqliteSimuPlugin:
         report.add_argument(
             "--minimum-ready-coverage",
             type=float,
-            default=1.0,
+            default=None,
             help=(
                 "Pre-registered READY/assigned threshold for partial-run analysis "
-                "(0..1; default: 1)"
+                "(0..1; defaults to the analysis contract, then 1)"
+            ),
+        )
+        report.add_argument(
+            "--analysis-contract",
+            help=(
+                "Pre-registered F analysis contract containing minimum_ready_coverage, "
+                "interval and an optional discovery_screen"
             ),
         )
         report.add_argument("--output", help="Write the normalized JSON report to a file")
@@ -108,9 +115,15 @@ class SqliteSimuPlugin:
             return 0 if payload["ok"] else 1
         if command == "template-report":
             export_payload = json.loads(Path(args.input).read_text(encoding="utf-8-sig"))
+            analysis_contract = None
+            if args.analysis_contract:
+                analysis_contract = json.loads(
+                    Path(args.analysis_contract).read_text(encoding="utf-8-sig")
+                )
             payload = build_template_report(
                 export_payload,
                 minimum_ready_coverage=args.minimum_ready_coverage,
+                analysis_contract=analysis_contract,
             )
             if args.markdown_output:
                 markdown_path = Path(args.markdown_output)

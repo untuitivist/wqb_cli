@@ -19,7 +19,7 @@ K 不生成 expression，不 enqueue，不恢复 worker，不执行慢速终检�
 ```cmd
 wqb sqlitesimu status <run_id> --db <j_node_dir>\simulations.sqlite3 --output <node_dir>\terminal_status.json
 wqb sqlitesimu export <run_id> --db <j_node_dir>\simulations.sqlite3 --output <node_dir>\run_export.json
-wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-coverage <F_minimum_ready_coverage> --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
+wqb sqlitesimu template-report <node_dir>\run_export.json --analysis-contract <f_node_dir>\analysis_contract.json --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
 ```
 
 后续统计只读 `run_export.json`。不得按 alpha 创建时间补结果，不得对 J 的执行数据库写 SQL，不得把其他 run 的 export 合并进 denominator。
@@ -33,19 +33,27 @@ wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-covera
 5. 每个 `SIMULATE_UNKNOWN` 单独写入隔离清单，永远不自动重跑、不进入 PnL clustering、不选择、不提交；它不能连带否决同 run 已满足 coverage 合同的 READY Alpha。
 6. 诊断、canary、retired run 和不同 settings 的结果一律排除。
 
-## 三层分析
+## 四层分析
 
 ### 1. Execution 与错误
 
 按 family 报告 `READY / PERMANENT_FAILURE / SIMULATE_UNKNOWN / CANCELLED`。错误至少分为 authentication/throttle、platform transient、syntax/operator、data/unit、resource/time、unknown。认证和平台错误不能归因于 family 经济机制。
 
-### 2. Density 与质量分布
+### 2. Discovery density
 
-严格使用 F 预注册口径计算 execution-ready rate、quality density 和 usable density，并报告 numerator、denominator、Wilson interval、Sharpe/fitness/turnover/margin 分位数和 checks 分布。不得只按 family 最大 Sharpe 排名。
+使用 F 预注册的 direction-invariant discovery screen 统计每族信号数、正向数、反向数、assigned denominator 和 Wilson interval。该层回答“模板是否产生值得验证的信号”，不回答 Alpha 是否可提交。
+
+- 负 Sharpe discovery 必须标记 `REVERSE_AND_RESIMULATE`，只能在新的独立 BatchSimu run 从 A 重新生成反向 expression。
+- 禁止直接对旧结果取反、推算反向 checks 或将旧 alpha id 送入 L。
+- exact-source 与 ported-source family 分层报告。ported winner 只能支持移植机制，不能声称验证了原始模板。
+
+### 3. Validation 与质量分布
+
+严格使用 F 预注册的正向 validation 口径计算 quality density 和 usable density，并报告 numerator、denominator、Wilson interval、Sharpe/fitness/turnover/margin 分位数和 checks 分布。不得只按 family 最大 Sharpe 排名，也不得把 discovery pass 当作 validation pass。
 
 在上述统计前，必须按 `template_contract.md` 生成固定的三段表和逐模板 `实验成果评估 / 关键发现 / 改进方向`。代表 alpha 使用有符号最大 Sharpe/Fitness；基础 simulation screen 与 submission-only deferred 状态按格式契约区分，fallback 只能描述。没有 READY 的模板也必须出现在报告中。
 
-### 3. IS-PnL 相关性
+### 4. IS-PnL 相关性
 
 - 从 `simued_alpha_is_pnl` 读取每条 READY alpha 的 PnL 差分序列；兼容视图首项 `nan` 是预期行为。
 - 按 F 预注册的缺失处理、最小重叠长度、correlation method 和 threshold 聚类。
@@ -73,6 +81,8 @@ wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-covera
 - `experiment_state_counts.json`
 - `error_taxonomy.json`
 - `family_density.json`
+- `discovery_candidates.json`
+- `direction_validation_plan.json`
 - `quality_distributions.json`
 - `pnl_correlation_clusters.json`
 - `family_shortlist.json`
@@ -89,6 +99,7 @@ wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-covera
 
 - 每个 assigned candidate 在 state、错误、family 和 denominator 中恰好出现一次。
 - 所有 family 比率都有原始计数和区间，不按小样本偶然值扩展。
+- 每个反向 discovery 都明确指向新 run 重测或拒绝原因，绝不复用原 alpha id 进入 L。
 - correlation cluster 可追溯到 alpha id、experiment id、family id 和 PnL source。
 - 明确给出 run 是否具备终检候选选择与新 batch 扩展资格。
 - 固定报告、预注册统计和最终 eligibility 分层保存，固定报告不能单独触发 L 或新 batch。

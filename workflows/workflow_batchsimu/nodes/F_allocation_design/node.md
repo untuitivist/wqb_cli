@@ -32,10 +32,13 @@
 
 ## 预注册统计口径
 
+- `discovery_density = direction_invariant_signal / assigned`
 - `execution_ready_rate = READY / assigned`
 - `quality_density = quality_pass / READY`
 - `usable_density = quality_and_checks_pass / assigned`
 - 每个比例报告 numerator、denominator 和 Wilson interval。
+- `analysis_contract.json` 必须分别定义 `discovery_screen` 和正向 `validation_screen`。discovery 用于评估模板是否产生可研究信号，可以按预注册规则使用 Sharpe、Fitness 和 PnL 的绝对值；validation/final eligibility 始终使用实际表达式方向和平台 checks。
+- `discovery_screen` 必须显式冻结 `metric_mode`、`comparison`、`denominator`、各指标门槛、持仓数量门槛及是否要求指标符号一致。负向 discovery 只能产生 `REVERSE_AND_RESIMULATE`，原 Alpha 不得进入 L。
 - `analysis_contract.json` 必须把 `minimum_ready_coverage` 预注册为 `[0, 1]` 内数值；J 终态后不得根据实际失败率调低。
 - auth、throttle、平台中断与 family 确定性错误分开报告。
 - IS-PnL 聚类的相关系数、最小重叠长度、缺失处理和 cluster threshold 必须预先写入 `analysis_contract.json`。
@@ -43,6 +46,7 @@
 ## 成功条件
 
 - 任一候选生成前，样本量、seed、分层、门槛和相关性算法都已冻结。
+- discovery、方向验证和最终提交资格是三个不同状态，不得用同一个布尔字段表达。
 - 总预算由计划推导，不以 5000 作为默认目标。
 - expansion budget 尚未分配给具体 family。
 

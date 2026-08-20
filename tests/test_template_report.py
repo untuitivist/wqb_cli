@@ -258,6 +258,75 @@ class TemplateReportTests(unittest.TestCase):
         self.assertEqual(best["deferred_submission_checks"], ["SELF_CORRELATION"])
         self.assertEqual(best["simulation_check_blockers"], [])
 
+    def test_report_separates_absolute_discovery_from_final_check_eligibility(self) -> None:
+        payload = terminal_export()
+        payload["results"][0]["pnl"] = -4_000_001
+        contract = {
+            "registration": "PREREGISTERED",
+            "minimum_ready_coverage": 1.0,
+            "interval": {"method": "Wilson score", "confidence": 0.95},
+            "discovery_screen": {
+                "metric_mode": "ABSOLUTE",
+                "comparison": "STRICT",
+                "denominator": "ASSIGNED",
+                "sharpe_min": 0.7,
+                "fitness_min": 0.7,
+                "pnl_min": 3_000_000,
+                "position_count_min": 100,
+                "require_sign_consistency": True,
+            },
+        }
+
+        report = build_template_report(payload, analysis_contract=contract)
+        density = report["sections"]["template_discovery_density"]
+        candidates = report["sections"]["template_discovery_candidates"]
+        family_a = next(row for row in density if row["template_name"] == "Family A")
+        markdown = render_template_report_markdown(report)
+
+        self.assertEqual(report["template_report_format_version"], 2)
+        self.assertEqual(family_a["signal_count"], 1)
+        self.assertEqual(family_a["forward_signal_count"], 0)
+        self.assertEqual(family_a["reverse_signal_count"], 1)
+        self.assertEqual(family_a["density"]["denominator"], 2)
+        self.assertEqual(candidates[0]["alpha_id"], "alpha-negative")
+        self.assertEqual(candidates[0]["next_action"], "REVERSE_AND_RESIMULATE")
+        self.assertFalse(candidates[0]["current_result_is_final_check_eligible"])
+        self.assertIn("```template discovery density", markdown)
+        self.assertIn("```template discovery candidates", markdown)
+
+    def test_report_rejects_conflicting_analysis_contract_coverage(self) -> None:
+        contract = {"minimum_ready_coverage": 0.95}
+
+        with self.assertRaisesRegex(ValueError, "conflicts with analysis_contract"):
+            build_template_report(
+                terminal_export(),
+                minimum_ready_coverage=1.0,
+                analysis_contract=contract,
+            )
+
+    def test_report_rejects_invalid_discovery_contract(self) -> None:
+        contract = {
+            "discovery_screen": {
+                "metric_mode": "ABSOLUTE",
+                "comparison": "STRICT",
+                "denominator": "ASSIGNED",
+            }
+        }
+
+        with self.assertRaisesRegex(ValueError, "at least one metric threshold"):
+            build_template_report(terminal_export(), analysis_contract=contract)
+
+    def test_report_rejects_fractional_discovery_position_count(self) -> None:
+        contract = {
+            "discovery_screen": {
+                "sharpe_min": 0.7,
+                "position_count_min": 1.5,
+            }
+        }
+
+        with self.assertRaisesRegex(ValueError, "position_count_min must be an integer"):
+            build_template_report(terminal_export(), analysis_contract=contract)
+
     def test_report_rejects_invalid_ready_coverage_contract(self) -> None:
         with self.assertRaisesRegex(ValueError, "between 0 and 1"):
             build_template_report(terminal_export(), minimum_ready_coverage=1.01)

@@ -308,8 +308,10 @@ wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 
 ```powershell
 wqb sqlitesimu template-validate template-manifest.json --output template-validation.json
-wqb sqlitesimu template-report run-export.json --minimum-ready-coverage 0.95 --output template-report.json --markdown-output template-report.md
+wqb sqlitesimu template-report run-export.json --analysis-contract analysis-contract.json --output template-report.json --markdown-output template-report.md
 ```
+
+分析契约可以把方向无关的 discovery screen 与正向 validation 分开预注册。负向 discovery 只会被标记为需要在新 run 中反向重新 simulate，不能通过变换历史指标直接成为终检候选。
 
 manifest、状态恢复、退出码以及相对旧三个脚本的行为变动见：
 

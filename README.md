@@ -308,8 +308,10 @@ Template-family manifests can be validated before enqueue and rendered into a fi
 
 ```powershell
 wqb sqlitesimu template-validate template-manifest.json --output template-validation.json
-wqb sqlitesimu template-report run-export.json --minimum-ready-coverage 0.95 --output template-report.json --markdown-output template-report.md
+wqb sqlitesimu template-report run-export.json --analysis-contract analysis-contract.json --output template-report.json --markdown-output template-report.md
 ```
+
+The analysis contract can pre-register a direction-invariant discovery screen separately from positive-direction validation. Reverse discoveries are reported as requiring a new simulation and never become final-check candidates from transformed historical metrics.
 
 See `resources/docs/sqlitesimu.md` for the manifest contract, recovery states, exit codes, and explicit differences from the three legacy workers.
 

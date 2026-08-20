@@ -104,7 +104,7 @@ K 只接受 `wqb sqlitesimu export` 生成的单个终态 run export。不得按
 固定报告由以下命令生成：
 
 ```cmd
-wqb sqlitesimu template-report <node_dir>\run_export.json --minimum-ready-coverage <F_minimum_ready_coverage> --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
+wqb sqlitesimu template-report <node_dir>\run_export.json --analysis-contract <f_node_dir>\analysis_contract.json --output <node_dir>\template_report.json --markdown-output <node_dir>\template_report.md
 ```
 
 Markdown 的前三段名称和列式格式固定为：
@@ -125,7 +125,11 @@ N. [English Template Name] - 中文模板名
 改进方向: ...
 ```
 
-该固定报告只完成格式化和基础完整性筛查。K 仍必须结合 F 的 denominator/Wilson contract、错误分类和真实 IS-PnL cluster 生成最终 `analysis_eligibility.json`；固定报告本身不能授权候选进入 L。
+F 定义 `discovery_screen` 时，固定三段之后必须额外输出 `template discovery density` 与 `template discovery candidates`。Discovery 可以按预注册规则使用指标绝对值发现方向未知的信号，但它不改变前三段的有符号代表规则，也不授权进入 L。负向候选必须记录 `REVERSE_AND_RESIMULATE`，在新的独立 BatchSimu run 中反向重测；禁止直接变换旧 Alpha 的指标或 checks。
+
+`FORUM_EXACT_NORMALIZED` 与 `FORUM_PORTED_FIXED` 必须在 discovery 表中保留 provenance。移植模板的结果不得表述为原式直接实证。
+
+该固定报告只完成格式化、discovery 和基础完整性筛查。K 仍必须结合 F 的 validation/denominator/Wilson contract、错误分类和真实 IS-PnL cluster 生成最终 `analysis_eligibility.json`；固定报告本身不能授权候选进入 L。
 
 `CANCELLED` run 永远只能描述。若 `BLOCKED` 仅由少数 `SIMULATE_UNKNOWN` 导致，`template-report` 使用 F 在回测前冻结的 `minimum_ready_coverage` 判断 READY 子集能否分析。unknown experiment 必须独立隔离，永远不自动重跑、不选择、不提交。
 

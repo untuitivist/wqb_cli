@@ -44,6 +44,8 @@ class PluginTests(unittest.TestCase):
                 "export.json",
                 "--minimum-ready-coverage",
                 "0.95",
+                "--analysis-contract",
+                "analysis_contract.json",
                 "--markdown-output",
                 "report.md",
             ]
@@ -54,6 +56,7 @@ class PluginTests(unittest.TestCase):
         self.assertEqual(validate.sqlitesimu_command, "template-validate")
         self.assertEqual(report.sqlitesimu_command, "template-report")
         self.assertEqual(report.minimum_ready_coverage, 0.95)
+        self.assertEqual(report.analysis_contract, "analysis_contract.json")
         self.assertEqual(report.markdown_output, "report.md")
 
     def test_parser_binds_plugin_instance(self) -> None:

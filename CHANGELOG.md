@@ -6,6 +6,7 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 ### Changed
 
+- Split BatchSimu template discovery density from positive-direction validation and final eligibility. `template-report` can now consume the pre-registered F analysis contract, report absolute-metric forward/reverse signals with Wilson intervals, and require a new simulation for every reverse-direction discovery.
 - Distinguished simulation-capacity, cancellation-limit, and API-rate-limit `429` responses from authentication failures. CoreClient and `sqlitesimu` now preserve server backpressure without clearing cookies or replaying mutating requests, while `204`, `401`, and authentication-like `429` responses retain the existing aggressive reauthentication behavior.
 - Made parent-simulation requeue restore missing durable simulation-queue entries atomically, including operational recovery after a remotely deleted parent was first observed as `404`.
 

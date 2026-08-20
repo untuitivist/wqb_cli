@@ -70,7 +70,7 @@ flowchart TD
 3. I 的 `template-validate` 未通过，或 lineage/hash/去重索引不一致时，J 不得 enqueue。
 4. J 启动 worker 后只写交接信息；不得按单条结果自适应修改 manifest。
 5. run 非终态时，K 不得计算密度、质量排名或相关性聚类。
-6. K 未生成固定三段报告并完成 execution、quality、IS-PnL 三层分析时，不得选择提交候选或制定下一批次。
+6. K 未生成固定报告并完成 execution、direction-invariant discovery、正向 validation、IS-PnL 四层分析时，不得选择提交候选或制定下一批次。
 7. L 必须对 K 选出的本 run 真实 `alpha_id` 完成全部慢速 check、年度稳定性、self/prod correlation 和 pool 价值检查；任一必需项失败或 inconclusive 时不得进入 M。
 8. M 只能处理 L 的 `submission_candidates.json`，且只在 run manifest 明确允许提交、额度可用时调用 `wqb alpha submit`。
 9. `CANCELLED` 只能进入描述性 K。`BLOCKED` 若仅由已隔离的 `SIMULATE_UNKNOWN` 引起，且 READY coverage 达到 F 的预注册门槛，可分析 READY 子集；unknown 本身永远不重跑、不选择、不提交。
@@ -85,6 +85,7 @@ flowchart TD
 - 模板群是带 lineage 的参数化 expression family，不是固定表达式列表。
 - H 的参数化模板与 I 的已实例化 expression 是两个 artifact；I 不得丢失模板 header、version、epoch 或字段角色。
 - 初筛采用各族等额、固定 seed、无放回抽样；候选总数由族数与有效族内样本数决定，不预设必须为 5000。
+- 初筛 discovery 允许按预注册的绝对值指标发现反向信号，但反向信号必须在新的独立 run 重新 simulate；旧 Alpha 和旧 checks 不能通过符号推算后进入 L。
 - 社区中 `30` 个族各抽约 `80` 条、再集中扩展少数高密度族，是实验设计参考，不是无需论证的常量。
 - family 必须包含数据清理或 reduction、一个有经济含义的核心比较关系，以及有证据时才加入的约束性细节；只换 `rank/scale/zscore` 外层包装不构成新 family。
 - unary/binary/ternary 按唯一字段数定义，不按 operator 嵌套层数定义；多字段只能服务同一个机制。

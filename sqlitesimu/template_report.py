@@ -15,7 +15,7 @@ from .models import RUN_TERMINAL_STATES, CandidateSpec, SimulationManifest
 
 
 TEMPLATE_FORMAT_VERSION = 1
-TEMPLATE_REPORT_FORMAT_VERSION = 1
+TEMPLATE_REPORT_FORMAT_VERSION = 2
 
 _NAME_PATTERN = re.compile(r"# \[([A-Za-z][A-Za-z0-9 .&+:/_-]*)\]")
 _VERSION_PATTERN = re.compile(
@@ -199,10 +199,16 @@ def validate_template_manifest(manifest: SimulationManifest) -> dict[str, Any]:
 def build_template_report(
     export_payload: dict[str, Any],
     *,
-    minimum_ready_coverage: float = 1.0,
+    minimum_ready_coverage: float | None = None,
+    analysis_contract: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    minimum_ready_coverage = _resolve_minimum_ready_coverage(
+        minimum_ready_coverage,
+        analysis_contract,
+    )
     if not 0.0 <= minimum_ready_coverage <= 1.0:
         raise ValueError("minimum_ready_coverage must be between 0 and 1")
+    discovery_screen = _normalize_discovery_screen(analysis_contract)
     run = export_payload.get("run")
     experiments = export_payload.get("experiments")
     results = export_payload.get("results")
@@ -262,6 +268,8 @@ def build_template_report(
     performance = []
     check_statistics = []
     representatives = []
+    discovery_statistics = []
+    discovery_candidates = []
     state_counts: Counter[str] = Counter()
     for key in family_keys:
         assigned = family_experiments.get(key, [])
@@ -290,6 +298,16 @@ def build_template_report(
         representatives.extend(
             _representatives(identity, ready, checks_by_alpha)
         )
+        if discovery_screen is not None:
+            family_discovery, family_candidates = _discovery_statistics(
+                identity,
+                ready,
+                checks_by_alpha,
+                assigned_count=len(assigned),
+                screen=discovery_screen,
+            )
+            discovery_statistics.append(family_discovery)
+            discovery_candidates.extend(family_candidates)
 
     assigned_count = len(experiments)
     ready_count = state_counts.get("READY", 0)
@@ -317,6 +335,13 @@ def build_template_report(
             "database": export_payload.get("database"),
             "schema_version": export_payload.get("schema_version"),
         },
+        "analysis_contract": {
+            "registration": (
+                str((analysis_contract or {}).get("registration") or "UNSPECIFIED")
+            ),
+            "minimum_ready_coverage": minimum_ready_coverage,
+            "discovery_screen": discovery_screen,
+        },
         "summary": {
             "assigned_count": assigned_count,
             "ready_count": len(results),
@@ -337,6 +362,8 @@ def build_template_report(
             "template_alphas_performance_each_template": performance,
             "template_alphas_checks_statistics": check_statistics,
             "template_alphas_best_performance_each_metric": representatives,
+            "template_discovery_density": discovery_statistics,
+            "template_discovery_candidates": discovery_candidates,
         },
         "template_assessments": assessments,
     }
@@ -361,9 +388,28 @@ def render_template_report_markdown(report: dict[str, Any]) -> str:
         ).rstrip(),
         "```",
         "",
-        "## Template Assessments",
-        "",
     ]
+    discovery_density = sections.get("template_discovery_density") or []
+    discovery_candidates = sections.get("template_discovery_candidates") or []
+    if discovery_density:
+        lines.extend(
+            [
+                "## Discovery Density",
+                "",
+                "Discovery is direction-invariant family screening only. Reverse-direction "
+                "signals require a new simulation and cannot enter final checks directly.",
+                "",
+                "```template discovery density",
+                _discovery_density_csv(discovery_density).rstrip(),
+                "```",
+                "",
+                "```template discovery candidates",
+                _discovery_candidates_csv(discovery_candidates).rstrip(),
+                "```",
+                "",
+            ]
+        )
+    lines.extend(["## Template Assessments", ""])
     for index, assessment in enumerate(report.get("template_assessments", []), start=1):
         lines.extend(
             [
@@ -549,6 +595,7 @@ def _template_identity(row: dict[str, Any]) -> dict[str, Any]:
     logic_zh = str(metadata.get("template_logic_zh") or "未记录")
     version = metadata.get("template_version")
     epoch = metadata.get("template_epoch") or (header.epoch if header else None)
+    parameters = metadata.get("parameters") if isinstance(metadata.get("parameters"), dict) else {}
     key = family_id or name
     if version not in {None, ""}:
         key = f"{key}@v{version}"
@@ -563,6 +610,11 @@ def _template_identity(row: dict[str, Any]) -> dict[str, Any]:
         "template_family_id": family_id or None,
         "template_version": version,
         "template_epoch": epoch,
+        "implementation_provenance": (
+            metadata.get("implementation_provenance")
+            or parameters.get("implementation_provenance")
+        ),
+        "design_mode": metadata.get("design_mode"),
     }
 
 
@@ -761,6 +813,232 @@ def _representative_check_blockers(checks: list[dict[str, Any]]) -> list[str]:
     return sorted(set(blockers))
 
 
+def _resolve_minimum_ready_coverage(
+    explicit: float | None,
+    analysis_contract: dict[str, Any] | None,
+) -> float:
+    if analysis_contract is not None and not isinstance(analysis_contract, dict):
+        raise ValueError("analysis_contract must be an object")
+    contract_value = (analysis_contract or {}).get("minimum_ready_coverage")
+    if contract_value is not None:
+        contract_number = _required_finite_float(
+            contract_value,
+            "analysis_contract.minimum_ready_coverage",
+        )
+        if explicit is not None and not math.isclose(explicit, contract_number):
+            raise ValueError("minimum_ready_coverage conflicts with analysis_contract")
+        return contract_number
+    return 1.0 if explicit is None else explicit
+
+
+def _normalize_discovery_screen(
+    analysis_contract: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    raw = (analysis_contract or {}).get("discovery_screen")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        raise ValueError("analysis_contract.discovery_screen must be an object")
+    metric_mode = str(raw.get("metric_mode") or "ABSOLUTE").upper()
+    comparison = str(raw.get("comparison") or "STRICT").upper()
+    denominator = str(raw.get("denominator") or "ASSIGNED").upper()
+    if metric_mode not in {"ABSOLUTE", "SIGNED"}:
+        raise ValueError("discovery_screen.metric_mode must be ABSOLUTE or SIGNED")
+    if comparison not in {"STRICT", "INCLUSIVE"}:
+        raise ValueError("discovery_screen.comparison must be STRICT or INCLUSIVE")
+    if denominator not in {"ASSIGNED", "READY"}:
+        raise ValueError("discovery_screen.denominator must be ASSIGNED or READY")
+    thresholds = {
+        name: _optional_nonnegative_float(raw.get(name), f"discovery_screen.{name}")
+        for name in ("sharpe_min", "fitness_min", "pnl_min")
+    }
+    if not any(value is not None for value in thresholds.values()):
+        raise ValueError("discovery_screen must define at least one metric threshold")
+    position_count_min = raw.get("position_count_min")
+    if position_count_min is not None:
+        if isinstance(position_count_min, bool):
+            raise ValueError("discovery_screen.position_count_min must be an integer")
+        position_count_number = _required_finite_float(
+            position_count_min,
+            "discovery_screen.position_count_min",
+        )
+        if not position_count_number.is_integer():
+            raise ValueError("discovery_screen.position_count_min must be an integer")
+        position_count_min = int(position_count_number)
+        if position_count_min < 0:
+            raise ValueError("discovery_screen.position_count_min must be nonnegative")
+    require_sign_consistency = raw.get("require_sign_consistency", False)
+    if not isinstance(require_sign_consistency, bool):
+        raise ValueError("discovery_screen.require_sign_consistency must be boolean")
+    interval = (analysis_contract or {}).get("interval") or {}
+    if not isinstance(interval, dict):
+        raise ValueError("analysis_contract.interval must be an object")
+    method = str(interval.get("method") or "Wilson score")
+    if method.casefold() != "wilson score":
+        raise ValueError("analysis_contract.interval.method must be Wilson score")
+    confidence = _required_finite_float(
+        interval.get("confidence", 0.95),
+        "analysis_contract.interval.confidence",
+    )
+    if not 0.0 < confidence < 1.0:
+        raise ValueError("analysis_contract.interval.confidence must be between 0 and 1")
+    return {
+        "metric_mode": metric_mode,
+        "comparison": comparison,
+        "denominator": denominator,
+        **thresholds,
+        "position_count_min": position_count_min,
+        "require_sign_consistency": require_sign_consistency,
+        "interval": {"method": "Wilson score", "confidence": confidence},
+    }
+
+
+def _discovery_statistics(
+    identity: dict[str, Any],
+    rows: list[dict[str, Any]],
+    checks_by_alpha: dict[str, list[dict[str, Any]]],
+    *,
+    assigned_count: int,
+    screen: dict[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    selected = [row for row in rows if _passes_discovery_screen(row, screen)]
+    selected.sort(
+        key=lambda row: (
+            -abs(_finite_float(row.get("sharpe")) or 0.0),
+            -abs(_finite_float(row.get("fitness")) or 0.0),
+            str(row.get("alpha_id") or ""),
+        )
+    )
+    candidates = []
+    for row in selected:
+        sharpe = _finite_float(row.get("sharpe")) or 0.0
+        alpha_id = str(row.get("alpha_id") or "")
+        reverse = sharpe < 0
+        candidates.append(
+            {
+                **identity,
+                "alpha_id": alpha_id or None,
+                "experiment_id": row.get("experiment_id"),
+                "observed_direction": "REVERSE" if reverse else "FORWARD",
+                "next_action": (
+                    "REVERSE_AND_RESIMULATE" if reverse else "VALIDATE_CURRENT_DIRECTION"
+                ),
+                "current_result_is_final_check_eligible": False,
+                "sharpe": row.get("sharpe"),
+                "fitness": row.get("fitness"),
+                "pnl": row.get("pnl"),
+                "long_count": row.get("long_count"),
+                "short_count": row.get("short_count"),
+                "regular_code": row.get("regular_code"),
+                "metadata": row.get("metadata") or {},
+                "current_expression_checks": checks_by_alpha.get(alpha_id, []),
+            }
+        )
+    denominator = assigned_count if screen["denominator"] == "ASSIGNED" else len(rows)
+    reverse_count = sum(row["observed_direction"] == "REVERSE" for row in candidates)
+    return (
+        {
+            **identity,
+            "assigned_count": assigned_count,
+            "ready_count": len(rows),
+            "signal_count": len(candidates),
+            "forward_signal_count": len(candidates) - reverse_count,
+            "reverse_signal_count": reverse_count,
+            "density": _wilson_ratio(
+                len(candidates),
+                denominator,
+                confidence=screen["interval"]["confidence"],
+            ),
+        },
+        candidates,
+    )
+
+
+def _passes_discovery_screen(row: dict[str, Any], screen: dict[str, Any]) -> bool:
+    values = {
+        "sharpe_min": _finite_float(row.get("sharpe")),
+        "fitness_min": _finite_float(row.get("fitness")),
+        "pnl_min": _finite_float(row.get("pnl")),
+    }
+    observed = []
+    for name, value in values.items():
+        threshold = screen[name]
+        if threshold is None:
+            continue
+        if value is None:
+            return False
+        comparable = abs(value) if screen["metric_mode"] == "ABSOLUTE" else value
+        if not _threshold_passes(comparable, threshold, screen["comparison"]):
+            return False
+        observed.append(value)
+    position_count_min = screen["position_count_min"]
+    if position_count_min is not None:
+        long_count = _finite_float(row.get("long_count"))
+        short_count = _finite_float(row.get("short_count"))
+        if long_count is None or short_count is None:
+            return False
+        if not _threshold_passes(
+            long_count + short_count,
+            position_count_min,
+            screen["comparison"],
+        ):
+            return False
+    if screen["require_sign_consistency"]:
+        signs = {math.copysign(1.0, value) for value in observed if value != 0}
+        if len(signs) > 1:
+            return False
+    return True
+
+
+def _threshold_passes(value: float, threshold: float, comparison: str) -> bool:
+    return value > threshold if comparison == "STRICT" else value >= threshold
+
+
+def _wilson_ratio(numerator: int, denominator: int, *, confidence: float) -> dict[str, Any]:
+    if denominator <= 0:
+        return {
+            "numerator": numerator,
+            "denominator": denominator,
+            "rate": None,
+            "lower": None,
+            "upper": None,
+            "confidence": confidence,
+            "method": "Wilson score",
+        }
+    rate = numerator / denominator
+    z = statistics.NormalDist().inv_cdf(0.5 + confidence / 2)
+    scale = 1 + z * z / denominator
+    center = (rate + z * z / (2 * denominator)) / scale
+    spread = z * math.sqrt(
+        rate * (1 - rate) / denominator + z * z / (4 * denominator * denominator)
+    ) / scale
+    return {
+        "numerator": numerator,
+        "denominator": denominator,
+        "rate": rate,
+        "lower": max(0.0, center - spread),
+        "upper": min(1.0, center + spread),
+        "confidence": confidence,
+        "method": "Wilson score",
+    }
+
+
+def _required_finite_float(value: Any, name: str) -> float:
+    number = _finite_float(value)
+    if number is None:
+        raise ValueError(f"{name} must be a finite number")
+    return number
+
+
+def _optional_nonnegative_float(value: Any, name: str) -> float | None:
+    if value is None:
+        return None
+    number = _required_finite_float(value, name)
+    if number < 0:
+        raise ValueError(f"{name} must be nonnegative")
+    return number
+
+
 def _ineligibility_reasons(
     run: dict[str, Any],
     state_counts: Counter[str],
@@ -936,6 +1214,70 @@ def _representatives_csv(rows: list[dict[str, Any]]) -> str:
             row.get("drawdown"),
             row.get("pnl"),
             json.dumps(row.get("checks") or [], ensure_ascii=False, separators=(",", ":")),
+        ]
+        for row in rows
+    ]
+    return _csv(header, data)
+
+
+def _discovery_density_csv(rows: list[dict[str, Any]]) -> str:
+    header = [
+        "template",
+        "provenance",
+        "assigned",
+        "ready",
+        "signals",
+        "forward",
+        "reverse",
+        "density",
+        "wilsonLower",
+        "wilsonUpper",
+    ]
+    data = []
+    for row in rows:
+        density = row["density"]
+        data.append(
+            [
+                row.get("template"),
+                row.get("implementation_provenance"),
+                row.get("assigned_count"),
+                row.get("ready_count"),
+                row.get("signal_count"),
+                row.get("forward_signal_count"),
+                row.get("reverse_signal_count"),
+                density.get("rate"),
+                density.get("lower"),
+                density.get("upper"),
+            ]
+        )
+    return _csv(header, data)
+
+
+def _discovery_candidates_csv(rows: list[dict[str, Any]]) -> str:
+    header = [
+        "template",
+        "provenance",
+        "alpha_id",
+        "direction",
+        "next_action",
+        "sharpe",
+        "fitness",
+        "pnl",
+        "long_count",
+        "short_count",
+    ]
+    data = [
+        [
+            row.get("template"),
+            row.get("implementation_provenance"),
+            row.get("alpha_id"),
+            row.get("observed_direction"),
+            row.get("next_action"),
+            row.get("sharpe"),
+            row.get("fitness"),
+            row.get("pnl"),
+            row.get("long_count"),
+            row.get("short_count"),
         ]
         for row in rows
     ]

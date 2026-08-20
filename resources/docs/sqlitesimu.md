@@ -210,10 +210,10 @@ wqb sqlitesimu template-validate simulation_manifest.json --output template_vali
 权威 run 到达终态并 export 后，可生成 notebook 兼容的固定三段统计和逐模板评估：
 
 ```cmd
-wqb sqlitesimu template-report run_export.json --output template_report.json --markdown-output template_report.md
+wqb sqlitesimu template-report run_export.json --analysis-contract analysis_contract.json --output template_report.json --markdown-output template_report.md
 ```
 
-三段分别是 `template alphas performance each template`、`template alphas checks statistics` 和 `template alphas best performance each metric`。代表选择使用有符号最大 Sharpe/Fitness，并限制在各 template 内；报告不会把 `CANCELLED/BLOCKED/SIMULATE_UNKNOWN` run 判作可扩展。
+前三段分别是 `template alphas performance each template`、`template alphas checks statistics` 和 `template alphas best performance each metric`。代表选择使用有符号最大 Sharpe/Fitness，并限制在各 template 内。F 契约含 `discovery_screen` 时，报告另行输出方向无关的模板信号密度及待验证候选；负向信号只会标记为需要反向重新 simulate，不会直接成为终检候选。报告不会把 `CANCELLED/BLOCKED/SIMULATE_UNKNOWN` run 判作可扩展。
 
 ## 退出码
 

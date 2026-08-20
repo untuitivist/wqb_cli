@@ -20,7 +20,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -162,11 +162,12 @@ CREATE TABLE IF NOT EXISTS alpha_metrics (
 
 CREATE TABLE IF NOT EXISTS alpha_checks (
     alpha_id TEXT NOT NULL REFERENCES alphas(alpha_id),
+    ordinal INTEGER NOT NULL,
     name TEXT NOT NULL,
     result TEXT,
     value_json TEXT,
     raw_json TEXT NOT NULL,
-    PRIMARY KEY(alpha_id, name)
+    PRIMARY KEY(alpha_id, ordinal)
 );
 
 CREATE TABLE IF NOT EXISTS alpha_pnl (
@@ -461,6 +462,8 @@ class SqliteStore:
                     "simulation_queue",
                     "attempt_count INTEGER NOT NULL DEFAULT 0",
                 )
+            if current < 6:
+                _migrate_alpha_checks_v6(conn)
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_batches_claimable "
                 "ON simulation_batches(run_id, state, claim_owner, not_before, created_at)"
@@ -1781,16 +1784,18 @@ class SqliteStore:
                 {"alpha_id": alpha_id, **metrics},
             )
             conn.execute("DELETE FROM alpha_checks WHERE alpha_id = ?", (alpha_id,))
-            for check in checks if isinstance(checks, list) else []:
+            for ordinal, check in enumerate(checks if isinstance(checks, list) else []):
                 if not isinstance(check, dict) or not check.get("name"):
                     continue
                 conn.execute(
                     """
-                    INSERT INTO alpha_checks(alpha_id, name, result, value_json, raw_json)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO alpha_checks(
+                        alpha_id, ordinal, name, result, value_json, raw_json
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     (
                         alpha_id,
+                        ordinal,
                         str(check["name"]),
                         check.get("result"),
                         _json(check.get("value")),
@@ -2039,6 +2044,7 @@ class SqliteStore:
                     e.id AS experiment_id,
                     e.metadata_json,
                     a.alpha_id,
+                    checks.ordinal,
                     checks.name,
                     checks.result,
                     checks.value_json,
@@ -2047,7 +2053,7 @@ class SqliteStore:
                 JOIN alphas a ON a.alpha_id = checks.alpha_id
                 JOIN experiments e ON e.id = a.experiment_id
                 WHERE e.run_id = ? AND e.state = 'READY'
-                ORDER BY e.id, checks.name
+                ORDER BY e.id, checks.ordinal
                 """,
                 (run_id,),
             ).fetchall()
@@ -2390,6 +2396,45 @@ def _add_column_if_missing(
     columns = {str(row["name"]) for row in conn.execute(f"PRAGMA table_info({table})")}
     if column not in columns:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {definition}")
+
+
+def _migrate_alpha_checks_v6(conn: sqlite3.Connection) -> None:
+    columns = {
+        str(row["name"])
+        for row in conn.execute("PRAGMA table_info(alpha_checks)")
+    }
+    if "ordinal" in columns:
+        return
+    conn.execute("ALTER TABLE alpha_checks RENAME TO alpha_checks_v5")
+    conn.execute(
+        """
+        CREATE TABLE alpha_checks (
+            alpha_id TEXT NOT NULL REFERENCES alphas(alpha_id),
+            ordinal INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            result TEXT,
+            value_json TEXT,
+            raw_json TEXT NOT NULL,
+            PRIMARY KEY(alpha_id, ordinal)
+        )
+        """
+    )
+    conn.execute(
+        """
+        INSERT INTO alpha_checks(
+            alpha_id, ordinal, name, result, value_json, raw_json
+        )
+        SELECT
+            alpha_id,
+            ROW_NUMBER() OVER (PARTITION BY alpha_id ORDER BY name) - 1,
+            name,
+            result,
+            value_json,
+            raw_json
+        FROM alpha_checks_v5
+        """
+    )
+    conn.execute("DROP TABLE alpha_checks_v5")
 
 
 def scheduling_profile(payload: dict[str, Any]) -> tuple[str, int]:

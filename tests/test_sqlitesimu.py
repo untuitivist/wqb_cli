@@ -1199,6 +1199,66 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(checks[0]["result"], "WARNING")
             self.assertEqual(checks[0]["raw"]["pyramids"], [{"name": "USA/D1"}])
 
+    def test_duplicate_named_checks_are_preserved_in_server_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.complete_parent(
+                batch.id,
+                alpha_id="alpha-duplicate-checks",
+                child_ids=[],
+                parent_status="COMPLETE",
+                response=envelope(
+                    200,
+                    {"status": "COMPLETE", "alpha": "alpha-duplicate-checks"},
+                ),
+                now=1001.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1001.0)
+            assert experiment is not None
+            detail = alpha_detail("alpha-duplicate-checks")
+            detail["is"]["checks"] = [
+                {
+                    "name": "UNITS",
+                    "result": "WARNING",
+                    "message": "first unit warning",
+                },
+                {
+                    "name": "UNITS",
+                    "result": "WARNING",
+                    "message": "second unit warning",
+                },
+            ]
+            store.save_alpha_detail(
+                experiment,
+                detail,
+                response=envelope(200),
+                now=1002.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1002.0)
+            assert experiment is not None
+            store.save_pnl(
+                experiment,
+                [("2024-01-01", 1.0, None)],
+                response=envelope(200),
+                now=1003.0,
+            )
+
+            checks = store.check_results(enqueued.run_id)
+
+            self.assertEqual([check["ordinal"] for check in checks], [0, 1])
+            self.assertEqual([check["name"] for check in checks], ["UNITS", "UNITS"])
+            self.assertEqual(
+                [check["raw"]["message"] for check in checks],
+                ["first unit warning", "second unit warning"],
+            )
+
     def test_cancel_preserves_simulate_ambiguity_and_consumes_other_queues(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
@@ -1419,7 +1479,75 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(queue_row["enqueued_at"], 1000.0)
             self.assertEqual(queue_row["last_attempt_at"], 0.0)
             self.assertEqual(queue_row["attempt_count"], 0)
-            self.assertEqual(schema_version, 5)
+            self.assertEqual(schema_version, 6)
+
+    def test_schema_v5_upgrade_preserves_checks_and_adds_ordinal(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest([{"expression": "rank(close)", "settings": SETTINGS}]),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.complete_parent(
+                batch.id,
+                alpha_id="alpha-v5",
+                child_ids=[],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE", "alpha": "alpha-v5"}),
+                now=1001.0,
+            )
+            experiment = store.next_enrichment(enqueued.run_id, now=1001.0)
+            assert experiment is not None
+            store.save_alpha_detail(
+                experiment,
+                alpha_detail("alpha-v5"),
+                response=envelope(200),
+                now=1002.0,
+            )
+            with store.connect() as conn:
+                conn.execute("ALTER TABLE alpha_checks RENAME TO alpha_checks_v6")
+                conn.execute(
+                    """
+                    CREATE TABLE alpha_checks (
+                        alpha_id TEXT NOT NULL REFERENCES alphas(alpha_id),
+                        name TEXT NOT NULL,
+                        result TEXT,
+                        value_json TEXT,
+                        raw_json TEXT NOT NULL,
+                        PRIMARY KEY(alpha_id, name)
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO alpha_checks(alpha_id, name, result, value_json, raw_json)
+                    SELECT alpha_id, name, result, value_json, raw_json
+                    FROM alpha_checks_v6
+                    """
+                )
+                conn.execute("DROP TABLE alpha_checks_v6")
+                conn.execute("PRAGMA user_version = 5")
+
+            store.initialize()
+
+            with store.connect() as conn:
+                columns = {
+                    str(row["name"])
+                    for row in conn.execute("PRAGMA table_info(alpha_checks)")
+                }
+                check = conn.execute(
+                    """
+                    SELECT ordinal, name, result FROM alpha_checks
+                    WHERE alpha_id = 'alpha-v5'
+                    """
+                ).fetchone()
+                schema_version = conn.execute("PRAGMA user_version").fetchone()[0]
+            self.assertIn("ordinal", columns)
+            self.assertEqual(dict(check), {"ordinal": 0, "name": "MATCHES_PYRAMID", "result": "WARNING"})
+            self.assertEqual(schema_version, 6)
 
     def test_schema_v3_migrates_legacy_simulation_request_terms(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1497,7 +1625,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(runtime_keys, {"simulation_request_not_before": "1010"})
             self.assertEqual(event["event_type"], "SIMULATE_RETRY")
             self.assertIn("SIMULATE_UNKNOWN", event["payload_json"])
-            self.assertEqual(schema_version, 5)
+            self.assertEqual(schema_version, 6)
 
     def test_run_lease_rejects_a_second_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

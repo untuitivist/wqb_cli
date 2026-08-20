@@ -177,7 +177,10 @@ class SqliteSimuRuntime:
         if worker_error is None and not errors.empty():
             worker_error = errors.get_nowait()
         if worker_error is not None:
-            raise RuntimeError("sqlitesimu concurrent worker failed") from worker_error
+            raise RuntimeError(
+                "sqlitesimu concurrent worker failed: "
+                f"{type(worker_error).__name__}: {worker_error}"
+            ) from worker_error
         summary = self.store.refresh_run_state(run_id, now=self.clock())
         return {**summary, **({"timed_out": True} if timed_out else {})}
 

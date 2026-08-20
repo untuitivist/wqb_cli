@@ -273,7 +273,10 @@ def main(argv: list[str] | None = None) -> None:
             parser.error(f"Unknown command: {args.command}")
             code = 2
     except Exception as exc:
-        write_json({"ok": False, "error_type": type(exc).__name__, "detail": str(exc)})
+        write_json(
+            {"ok": False, "error_type": type(exc).__name__, "detail": str(exc)},
+            getattr(args, "output", None),
+        )
         code = 1
     sys.exit(code)
 

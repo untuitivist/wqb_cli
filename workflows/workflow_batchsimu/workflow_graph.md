@@ -89,6 +89,7 @@ flowchart TD
 - family 必须包含数据清理或 reduction、一个有经济含义的核心比较关系，以及有证据时才加入的约束性细节；只换 `rank/scale/zscore` 外层包装不构成新 family。
 - unary/binary/ternary 按唯一字段数定义，不按 operator 嵌套层数定义；多字段只能服务同一个机制。
 - 禁止正负孪生、可交换参数重复、反对称关系反向重复、等价 AST、混合独立收益机制和未支持 operator。
+- `design_mode = SOURCE_REPLICATION_WITH_FIXED_PORTS` 仅用于复现有明确来源的固定 `alpha_func` 库：来源已经把不同固定窗口定义为不同函数时可保留为独立实验臂，但必须记录原式、来源和固定参数，且不得据此生成新的窗口网格；不受 live inventory 支持的原式只能在 I 前完成一次固定移植并逐项登记，J 后禁止改变。
 - expression 唯一不代表 PnL 独立；扩展前必须使用实际 IS-PnL 路径做相关性聚类。
 - 一个权威 run 只能有一个 settings cell。不同 region、delay、universe 或其他关键设置必须使用不同 run。
 - 诊断、canary 和已退役 run 不得混入权威 run 的 family denominator。

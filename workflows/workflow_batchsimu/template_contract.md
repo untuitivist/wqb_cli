@@ -45,6 +45,16 @@ template_LLM
 - 同一 authoritative run 只能包含一个 settings hash，并且同一 family/version 只能包含一个 epoch。
 - `expression_hash` 覆盖含两行 header 的完整表达式；`calculation_hash` 只覆盖可执行正文，用于跨 epoch 防止重复计算。
 
+## 来源复现模式
+
+`design_mode = SOURCE_REPLICATION_WITH_FIXED_PORTS` 用于验证社区帖子、论文或其他明确来源已经给出的固定 `alpha_func` 库。它不是普通模板设计的降级通道，必须额外满足：
+
+- H 对每个 family 记录原始表达式、可定位来源、固定参数和 `FORUM_EXACT_NORMALIZED` 或 `FORUM_PORTED_FIXED` provenance。
+- 只有来源本身将不同固定窗口声明为不同函数时，才允许把这些函数保留为独立实验臂；不得从一个来源函数自行展开窗口、平滑、阈值、符号或 wrapper 网格。
+- 原式包含当前 live inventory 不支持的 operator，或存在可证明的 arity/type 错误时，H 可定义一个固定移植；必须记录逐项原因、替代计算和 operator contract，且 I/J/K 不得再自适应修改。
+- exact 与 ported family 使用相同分母规则，但 K 必须保留 provenance 分层，不能把移植结果表述成原式的直接实证。
+- 除上述来源定义的固定函数身份外，正负孪生、可交换重复、反对称反向重复和等价计算仍然禁止。
+
 ## I：candidate 格式
 
 I 必须解析全部 placeholder。可入库 expression 不允许残留 `{...}`，但必须保留模板的两行 header、变量赋值和最终 `template_LLM` 行。

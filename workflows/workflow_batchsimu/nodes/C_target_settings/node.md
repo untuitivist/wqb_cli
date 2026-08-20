@@ -40,7 +40,8 @@ wqb sim options --output <node_dir>\simulation_options.json
 
 - 一个权威 run 只有一个 settings hash。
 - region 选择必须比较目标 tower、倍率或机会、数据覆盖与研究拥挤度，并在 `settings_rationale.md` 记录证据；不得仅沿用上一次 run。
-- region、delay、universe、instrumentType、language、decay、neutralization、truncation、pasteurization、unitHandling、nanHandling、visualization 和 testPeriod 必须显式记录。
+- region、delay、universe、instrumentType、language、decay、neutralization、truncation、pasteurization、unitHandling、nanHandling 和 visualization 必须显式记录。
+- `testPeriod` 默认不写入 simulation payload；只有 B/F 明确设计了独立测试期时才允许发送，并必须记录采用它的理由。C 仍需在 settings rationale 中明确写出“省略”或具体值，避免把缺省与遗漏混淆。
 - 本节点只读取并冻结提交额度，不扩大 A 的提交授权。额度为 0 不阻止 simulation，但 M 必须记录 no-op 或继续到后续平台提交日。
 - 若目标是比较 settings，必须把每个 settings cell 作为不同 run，而不是在一个 manifest 中混合。
 

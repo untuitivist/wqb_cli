@@ -1917,6 +1917,7 @@ class SqliteStore:
             run = conn.execute("SELECT state FROM runs WHERE id = ?", (run_id,)).fetchone()
             if not run:
                 raise KeyError(f"Unknown run id: {run_id}")
+            self._supersede_resolved_poll_attempts(conn, run_id, now=now)
             counts = {
                 str(row["state"]): int(row["count"])
                 for row in conn.execute(
@@ -2230,6 +2231,88 @@ class SqliteStore:
             (run_id,),
         ).fetchone()[0]
         return {"simulation": int(simulation), "enrichment": int(enrichment)}
+
+    def _supersede_resolved_poll_attempts(
+        self,
+        conn: sqlite3.Connection,
+        run_id: str,
+        *,
+        now: float,
+    ) -> None:
+        reason = "source_experiment_resolved_by_another_attempt"
+        item_update = conn.execute(
+            """
+            UPDATE simulation_items
+            SET state = 'SUPERSEDED',
+                last_error = COALESCE(last_error, ?),
+                claim_owner = NULL
+            WHERE state IN ('BATCHED', 'POLLING')
+              AND claim_owner IS NULL
+              AND batch_id IN (
+                  SELECT id
+                  FROM simulation_batches
+                  WHERE run_id = ?
+                    AND state IN ('POLLING', 'CHILD_POLLING')
+                    AND claim_owner IS NULL
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM simulation_queue q
+                  WHERE q.experiment_id = simulation_items.experiment_id
+              )
+            """,
+            (reason, run_id),
+        )
+        superseded_items = int(item_update.rowcount)
+        if superseded_items == 0:
+            return
+
+        batch_update = conn.execute(
+            """
+            UPDATE simulation_batches
+            SET state = CASE
+                    WHEN NOT EXISTS (
+                        SELECT 1 FROM simulation_items i
+                        WHERE i.batch_id = simulation_batches.id
+                          AND i.state <> 'SUPERSEDED'
+                    ) THEN 'SUPERSEDED'
+                    WHEN EXISTS (
+                        SELECT 1 FROM simulation_items i
+                        WHERE i.batch_id = simulation_batches.id
+                          AND i.state = 'PERMANENT_FAILURE'
+                    ) THEN 'PARTIAL_FAILURE'
+                    WHEN EXISTS (
+                        SELECT 1 FROM simulation_items i
+                        WHERE i.batch_id = simulation_batches.id
+                          AND i.state = 'RETRIED'
+                    ) THEN 'RETRIED'
+                    ELSE 'COMPLETE'
+                END,
+                last_error = COALESCE(last_error, ?),
+                claim_owner = NULL,
+                updated_at = ?
+            WHERE run_id = ?
+              AND state IN ('POLLING', 'CHILD_POLLING')
+              AND claim_owner IS NULL
+              AND NOT EXISTS (
+                  SELECT 1 FROM simulation_items i
+                  WHERE i.batch_id = simulation_batches.id
+                    AND i.state IN ('BATCHED', 'POLLING')
+              )
+            """,
+            (reason, now, run_id),
+        )
+        self._event(
+            conn,
+            run_id,
+            "SIMULATION_ATTEMPTS_SUPERSEDED",
+            payload={
+                "reason": reason,
+                "items": superseded_items,
+                "batches": int(batch_update.rowcount),
+            },
+            now=now,
+        )
 
     def _refresh_batch_from_items(self, conn: sqlite3.Connection, batch_id: str, *, now: float) -> None:
         counts = {

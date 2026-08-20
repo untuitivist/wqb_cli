@@ -784,7 +784,7 @@ class SqliteSimuTests(unittest.TestCase):
                 ["rank(close)", "rank(volume)", "rank(returns)"],
             )
 
-    def test_first_terminal_result_wins_and_run_waits_for_late_progress_attempts(self) -> None:
+    def test_first_terminal_result_wins_and_supersedes_late_progress_attempts(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             enqueued = store.enqueue(
@@ -843,11 +843,39 @@ class SqliteSimuTests(unittest.TestCase):
                 now=1013.0,
             )
 
-            still_draining = store.refresh_run_state(enqueued.run_id, now=1013.0)
-            self.assertEqual(still_draining["state"], "RUNNING")
-            self.assertEqual(still_draining["counts"], {"READY": 1})
-            self.assertEqual(still_draining["queues"], {"simulation": 0, "enrichment": 0})
+            completed = store.refresh_run_state(enqueued.run_id, now=1013.0)
+            self.assertEqual(completed["state"], "COMPLETED")
+            self.assertEqual(completed["counts"], {"READY": 1})
+            self.assertEqual(completed["queues"], {"simulation": 0, "enrichment": 0})
+            with store.connect() as conn:
+                late_batch = conn.execute(
+                    "SELECT state FROM simulation_batches WHERE id = ?",
+                    (second.id,),
+                ).fetchone()[0]
+                late_item = conn.execute(
+                    "SELECT state FROM simulation_items WHERE batch_id = ?",
+                    (second.id,),
+                ).fetchone()[0]
+                sweep_event = conn.execute(
+                    """
+                    SELECT payload_json FROM api_events
+                    WHERE run_id = ? AND event_type = 'SIMULATION_ATTEMPTS_SUPERSEDED'
+                    """,
+                    (enqueued.run_id,),
+                ).fetchone()
+            self.assertEqual(late_batch, "SUPERSEDED")
+            self.assertEqual(late_item, "SUPERSEDED")
+            self.assertEqual(
+                json.loads(sweep_event["payload_json"]),
+                {
+                    "reason": "source_experiment_resolved_by_another_attempt",
+                    "items": 1,
+                    "batches": 1,
+                },
+            )
 
+            # A remote result that arrives after the local sweep cannot replace
+            # the first valid result or revive the superseded batch.
             store.complete_parent(
                 second.id,
                 alpha_id="alpha-late",
@@ -856,9 +884,9 @@ class SqliteSimuTests(unittest.TestCase):
                 response=envelope(200, {"status": "COMPLETE", "alpha": "alpha-late"}),
                 now=1014.0,
             )
-            completed = store.refresh_run_state(enqueued.run_id, now=1014.0)
+            completed_after_late_result = store.refresh_run_state(enqueued.run_id, now=1014.0)
 
-            self.assertEqual(completed["state"], "COMPLETED")
+            self.assertEqual(completed_after_late_result["state"], "COMPLETED")
             with store.connect() as conn:
                 experiment_row = conn.execute(
                     "SELECT alpha_id FROM experiments WHERE run_id = ?",

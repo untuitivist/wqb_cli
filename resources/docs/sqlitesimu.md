@@ -104,7 +104,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 运行队列与历史账本分离：
 
 - `simulation_queue` 是表达式待回测队列。`POST /simulations` 返回 `201` 只新增一个持久化 attempt，不消费源表达式；sender 按 `last_attempt_at` 公平轮转，默认 10 秒后允许未决表达式再次发送。
-- 同一表达式可能同时存在多个 progress attempt。第一个有效 COMPLETE/ERROR 终态原子认领 experiment；其他晚到 attempt 只把自身标为 `SUPERSEDED`，不能覆盖结果或重复进入 PnL。
+- 同一表达式可能同时存在多个 progress attempt。第一个有效 COMPLETE/ERROR 终态原子认领 experiment；源表达式离开 `simulation_queue` 后，未被 worker 占用的兄弟 attempt 会在本地批量标为 `SUPERSEDED`，不再等待或请求其远端终态。已经在途的晚到结果同样只能把自身标为 `SUPERSEDED`，不能覆盖结果或重复进入 PnL。
 - 只有拿到 alpha id，或已确认该表达式永久失败后，才在同一事务中删除 `simulation_queue` 行。
 - 拿到 alpha id 时，同一事务会先删除 `simulation_queue` 行，再写入 `enrichment_queue`。
 - `enrichment_queue` 是 alpha 详情/PnL 待处理队列。只有详情和 PnL 都持久化、experiment 进入 `READY` 后才删除。
@@ -134,7 +134,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 - `204 / 401 / 429` 都按 `wqb.WQBSession` 的异常会话状态处理；即使两层重登耗尽，也只延期当前工作，不会把 experiment 写成永久失败。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父 progress URL 和 child simulation ID 会一直按 `Retry-After` 检查；瞬时网络、认证和可重试 HTTP 错误只累计诊断次数，不会因本地次数预算而丢弃。
-- 父/child 的 COMPLETE、ERROR 或 CANCELLED 一旦处理，就退出活跃轮询集合；run 会等所有晚到重复 attempt 都退出后才进入终态。
+- 父/child 的 COMPLETE、ERROR 或 CANCELLED 一旦处理，就退出活跃轮询集合；某一 attempt 已经消费源表达式后，其他重复 attempt 由本地收割退出，因此不会让已完成 run 永久等待远端冗余任务。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
 - 到期的父任务、child 和 enrichment 轮询优先于继续建批和 simulate，避免大批 manifest 让结果消费饥饿；未到 `not_before` 的任务不会阻塞新的 simulate 请求。
 - enrichment 内部优先完成已经保存 detail 的 `ENRICH_PNL`，使每个 alpha 尽快闭环为 `READY` 并删除待办，而不是先积压整批 detail。

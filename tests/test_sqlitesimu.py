@@ -1908,6 +1908,52 @@ class SqliteSimuTests(unittest.TestCase):
                 ).fetchone()[0]
             self.assertEqual(state, "RETRIED")
 
+    def test_fail_child_is_recorded_as_a_permanent_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            store = initialized_store(temp_dir)
+            enqueued = store.enqueue(
+                parse_manifest(
+                    [
+                        {"expression": "close", "settings": SETTINGS},
+                        {"expression": "volume", "settings": SETTINGS},
+                    ]
+                ),
+                now=1000.0,
+            )
+            batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+            assert batch is not None
+            store.mark_simulate_started(batch.id, now=1000.0)
+            store.complete_parent(
+                batch.id,
+                alpha_id=None,
+                child_ids=["child-fail", "child-pending"],
+                parent_status="COMPLETE",
+                response=envelope(200, {"status": "COMPLETE"}),
+                now=1001.0,
+            )
+            item = store.next_child_item(enqueued.run_id, now=1001.0)
+            assert item is not None
+            runtime = SqliteSimuRuntime(
+                store,
+                FixedResponseGateway(envelope(200, {"status": "FAIL"})),
+            )
+
+            runtime._poll_child(item, now=1001.0)
+
+            summary = store.run_summary(enqueued.run_id)
+            self.assertEqual(
+                summary["counts"],
+                {"CHILD_POLLING": 1, "PERMANENT_FAILURE": 1},
+            )
+            with store.connect() as conn:
+                state, error = conn.execute(
+                    "SELECT state, last_error FROM simulation_items "
+                    "WHERE batch_id = ? AND ordinal = 0",
+                    (batch.id,),
+                ).fetchone()
+            self.assertEqual(state, "PERMANENT_FAILURE")
+            self.assertEqual(error, "child_status_fail")
+
     def test_step_rotates_ready_work_classes_to_prevent_starvation(self) -> None:
         class AlwaysReadyStore:
             def next_poll_batch(self, run_id: str, *, now: float) -> str:

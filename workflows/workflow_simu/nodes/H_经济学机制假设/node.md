@@ -14,6 +14,7 @@ H 不负责写表达式，不负责调 operator，不负责调回测参数，也
 - G 的社区、文档、平台、论文检索产物
 
 可选：
+- G 的 `reality_evidence_index.json`；每个 `completed[]` 条目必须提供 `evidence_id` 与可直接验证的 `stored_path`
 - B 的 `level_gap.md`
 - E 的 `super_constraints.json`
 - K 的 `diagnosis.md`
@@ -26,10 +27,35 @@ H 必须严格按下面顺序执行：
 2. 用 `wqb data field <field_id>` 读取字段描述、dataset、category、coverage 等信息
 3. 基于字段描述提炼 1 到 3 个机制关键词
 4. 读取 G 已完成的社区、文档、平台、论文检索结果
-5. 验证字段类型、单位、coverage、缺失值编码和 VECTOR reduction 要求
-6. 定义允许的单字段组件、同机制字段关系和禁止组合
-7. 写出预期方向不确定性与可证伪条件
-8. 形成机制契约与优先级
+5. 如果 G 产生了 Wind reality evidence，先验证每个 `EvidenceRecord` 的 hash、provider contract version、实体代码、as-of/period、unit/source/warnings/completeness，再解释其支持边界
+6. 验证字段类型、单位、coverage、缺失值编码和 VECTOR reduction 要求
+7. 定义允许的单字段组件、同机制字段关系和禁止组合
+8. 写出预期方向不确定性与可证伪条件
+9. 形成机制契约与优先级
+
+## Wind standing
+
+H 的 Wind standing 是 **supplemental**，不是第二个 G。
+
+- 默认只消费 G 已经形成的 Wind `EvidenceRecord`。
+- 如果某个现有 evidence 的实体、报告期或口径存在一个可以通过单次查询消除的关键歧义，允许创建一个**独立的 H clarification plan**；它必须复用同一 `RUN_ID` 与同一 `research_freeze.json`，只包含该 clarification check，并重新通过 fresh balance + cost profile + `plan-check` 后由 `execute-plan` 执行。
+- 不得把 G 已完成 checks 复制进新的 H plan；否则新 `plan_id` 会把旧请求视为未执行并产生重复调用风险。
+- 如果缺口需要重新做多来源搜索、多个实体取数或新的机制族探索，必须回退 G；H 不得为了方便把 G 的工作搬进自己。
+- H clarification 只能引用 frozen `mechanism_families.json` 中已有的 mechanism id，不能新增机制族。
+- H 不得把 Wind 观察直接升级成 `BACKTEST_EVIDENCE`，也不得据此新增未经 F 的 BRAIN 字段。
+
+## 证据 standing
+
+H 应在机制契约中显式区分至少以下 standing：
+
+- `BRAIN_FIELD_METADATA`
+- `PRIMARY_DOCUMENT`
+- `WIND_REALITY_OBSERVATION`
+- `ACADEMIC_MECHANISM`
+- `COMMUNITY_EXPERIENCE`
+- `BACKTEST_EVIDENCE`（只有 J/K 之后才可能存在）
+
+不同 standing 证明不同主张，不得合并成一个无语义 confidence score。
 
 ## 推荐 CLI
 
@@ -40,25 +66,17 @@ wqb data field "volume" --output <node_dir>/field_meta__volume.json
 wqb data field "vwap" --output <node_dir>/field_meta__vwap.json
 wqb data field "returns" --output <node_dir>/field_meta__returns.json
 
-# arxiv-cli - 注意：论文搜索主要是 G 的职责
-# 如果 H 读取 G 的结果，只有 G 证据不足时才补搜
-arxiv --help
-arxiv search query --help
-arxiv search raw --help
+# 验证 G 给出的 Wind evidence：从 reality_evidence_index.json 的 completed[].stored_path 读取实际记录路径
+wqb evidence verify <completed.stored_path> --output <node_dir>/wind_verify__quality.json
 
-# arxiv-cli - 补充搜索机制关键词（如果 G 不够）
-arxiv search query --all "momentum" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__momentum.json
-arxiv search query --all "volatility" --category q-fin.ST --max-results 10 --sort-by relevance --output <node_dir>/arxiv__volatility.json
-
-# arxiv-cli - 复杂查询特定机制
-arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --max-results 8 --sort-by relevance --output <node_dir>/arxiv__momentum_mechanism.json
-
-# arxiv-cli - 先 dry-run 预览
-arxiv search query --all "momentum" --category q-fin.ST --dry-run
-arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --dry-run
-
-# arxiv-cli - 文本格式快速检查
-arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum factor\")" --max-results 5 --format text
+# 只在一个关键歧义可用单次补查消除时，创建只含该 check 的独立 clarification plan
+# plan 中必须复用同一 RUN_ID + research_freeze.json，不得复制 G 已完成 checks
+wqb evidence wind plan-check `
+  --input <node_dir>/wind_clarification_plan.json `
+  --output <node_dir>/wind_clarification_plan_check.json
+wqb evidence wind execute-plan `
+  --input <node_dir>/wind_clarification_plan.json `
+  --output <node_dir>/wind_clarification_evidence_index.json
 ```
 
 说明：
@@ -73,10 +91,28 @@ arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum fac
 - `field_unit_contracts.json`
 - `mechanism_contracts.json`
 - `mechanism_priority.md`
+- `reality_checks.json`
 - `node_summary.md`
 
 可选：
 - `field_meta__*.json`
+- `wind_verify__*.json`
+- `wind_clarification_plan.json`
+- `wind_clarification_plan_check.json`
+- `wind_clarification_evidence_index.json`
+
+`reality_checks.json` 中每条至少包含：
+
+- `mechanism_id`
+- `provider`
+- `evidence_refs`
+- `observation`
+- `supports`
+- `contradicts`
+- `limitations`
+- `standing`
+- `provider_contract_version`
+- `as_of_or_period`
 
 ## 字段筛选规则
 
@@ -97,6 +133,10 @@ arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum fac
 3. 这类机制在论文里通常对应什么经济学故事
 4. 为什么它适合当前 tower，而不是别的字段更适合
 
+如果存在 Wind reality evidence，还必须回答第五个问题：
+
+5. 现实观察对这个机制是支持、削弱、冲突还是仅提供背景；它的 provider/source/time/completeness 边界是什么
+
 每条 `mechanism_contracts.json` 还必须包含：
 
 - `mechanism_id`
@@ -109,13 +149,15 @@ arxiv search raw "cat:q-fin.ST AND (all:\"price momentum\" OR all:\"momentum fac
 - `allowed_relations`
 - `forbidden_relations`
 - `evidence_refs`
+- `reality_evidence_refs`
 
 ## 成功条件
 
 - `mechanism_hypotheses.json` 中每条机制都明确绑定到具体字段
 - 每条机制都有来自 G 的社区证据、文档或平台证据、论文或研报证据
 - 字段单位、VECTOR reduction 和 Group 输入均有明确契约
-- H 输出后，I 可以在不重新解释经济学含义或猜测数据类型的前提下直接构造表达式
+- 如果引用 Wind，每个 `evidence_id` 都通过完整性验证且只在其证明边界内使用
+- H 输出后，I 可以在不重新解释经济学含义、猜测数据类型或再次查询 Wind 的前提下直接构造表达式
 
 ## 明确边界
 
@@ -124,12 +166,14 @@ H 负责：
 - 解释字段经济学含义
 - 判断机制是否成立
 - 做字段优先级排序
+- 解释已取得的现实观察对 falsification contract 的影响
 
 H 不负责：
 - 写 alpha 表达式
 - 选 operator 细节
 - 调 decay、truncation、neutralization
 - 为了过指标临时拼第二机制
+- 把 Wind 当成新的 BRAIN datafield universe
 
 ## 下一跳
 

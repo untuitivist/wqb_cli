@@ -6,11 +6,12 @@ import threading
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import requests
 
-from wqb_cli.core.auth import clear_worldquantbrain_cookies, session_from_cookies
-from wqb_cli.core.client import AutoAuthPolicy, WqbClient
+from wqb_cli.core.auth import clear_worldquantbrain_cookies, resolve_login_payload, session_from_cookies
+from wqb_cli.core.client import AutoAuthPolicy, WQB_ACCEPT, WqbClient
 from wqb_cli.core.registry import EndpointRegistry
 
 
@@ -47,6 +48,20 @@ class SequenceSession:
         if not self.responses:
             raise AssertionError("unexpected request")
         return self.responses.pop(0)
+
+
+class AuthResolutionTests(unittest.TestCase):
+    def test_process_wqb_credentials_are_used_without_keyring_lookup(self) -> None:
+        with patch.dict(
+            "os.environ",
+            {"WQB_EMAIL": "process@example.com", "WQB_PASSWORD": "process-secret"},
+            clear=False,
+        ), patch("wqb_cli.core.auth.get_secret") as get_secret:
+            payload = resolve_login_payload()
+
+        self.assertEqual(payload["email"], "process@example.com")
+        self.assertEqual(payload["password"], "process-secret")
+        get_secret.assert_not_called()
 
 
 class ClientPrepareTests(unittest.TestCase):
@@ -186,7 +201,9 @@ class ClientPrepareTests(unittest.TestCase):
         self.assertEqual([call[0][0] for call in session.calls], ["GET", "POST", "GET"])
         auth_call = session.calls[1]
         self.assertEqual(auth_call[1]["auth"], ("researcher@example.com", "secret"))
-        self.assertEqual(auth_call[1]["json"], {"expiry": 3600})
+        self.assertIsNone(auth_call[1]["json"])
+        self.assertEqual(auth_call[1]["headers"]["Accept"], WQB_ACCEPT)
+        self.assertEqual(auth_call[1]["headers"]["Content-Type"], "application/json")
         authentication = result["response"]["authentication"]
         self.assertEqual(authentication["replays"], 1)
         self.assertFalse(authentication["exhausted"])
@@ -338,6 +355,29 @@ class ClientPrepareTests(unittest.TestCase):
         self.assertEqual(len(session.calls), 1)
         self.assertNotIn("authentication", result["response"])
 
+    def test_login_sends_only_captcha_on_wire(self) -> None:
+        session = SequenceSession([FakeResponse(201)])
+        client = self.auto_auth_client(session)
+        prepared = client.prepare(
+            client.registry.get("/authentication"),
+            "POST",
+            json_body={
+                "email": "researcher@example.com",
+                "password": "secret",
+                "expiry": 3600,
+                "captcha": "captcha-token",
+            },
+        )
+
+        result = client.call_once(prepared)
+
+        self.assertTrue(result["ok"])
+        auth_call = session.calls[0]
+        self.assertEqual(auth_call[1]["auth"], ("researcher@example.com", "secret"))
+        self.assertEqual(auth_call[1]["json"], {"captcha": "captcha-token"})
+        self.assertEqual(auth_call[1]["headers"]["Accept"], WQB_ACCEPT)
+        self.assertEqual(auth_call[1]["headers"]["Content-Type"], "application/json")
+
     def test_login_requires_wqb_sessions_expected_201_status(self) -> None:
         session = SequenceSession([FakeResponse(204)])
         client = self.auto_auth_client(session)
@@ -355,6 +395,11 @@ class ClientPrepareTests(unittest.TestCase):
 
         self.assertFalse(result["ok"])
         self.assertEqual(result["response"]["status_code"], 204)
+        auth_call = session.calls[0]
+        self.assertEqual(auth_call[1]["auth"], ("researcher@example.com", "secret"))
+        self.assertIsNone(auth_call[1]["json"])
+        self.assertEqual(auth_call[1]["headers"]["Accept"], WQB_ACCEPT)
+        self.assertEqual(auth_call[1]["headers"]["Content-Type"], "application/json")
 
     def test_global_reauthentication_has_strict_attempt_bounds(self) -> None:
         policy = AutoAuthPolicy(request_replays=2, login_attempts=2, delay_seconds=0)

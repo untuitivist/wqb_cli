@@ -200,7 +200,7 @@ def handle_auth(args: argparse.Namespace) -> int:
         if result.get("ok"):
             save_cookie_payload(client.session, args.cookies)
         write_json(result)
-        return 0
+        return 0 if result.get("ok") else 1
     if args.auth_command == "logout":
         endpoint = registry.get("/authentication")
         prepared = client.prepare(endpoint, "DELETE")

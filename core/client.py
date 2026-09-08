@@ -17,6 +17,7 @@ from .registry import Endpoint, EndpointRegistry
 
 
 MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
+WQB_ACCEPT = "application/json;version=2.0"
 WQB_SESSION_REAUTH_STATUSES = frozenset({204, 401, 429})
 
 
@@ -116,7 +117,7 @@ class WqbClient:
             url=self.registry.base_url + resolved,
             params=params or {},
             json_body=json_body,
-            headers={},
+            headers={"Accept": WQB_ACCEPT},
             auth=auth,
             mutating=mutating,
             executable=executable,
@@ -283,28 +284,25 @@ class WqbClient:
     def _request_once(self, prepared: PreparedRequest) -> requests.Response:
         auth = prepared.auth
         json_body = prepared.json_body
-        if (
-            auth is None
-            and prepared.endpoint == "/authentication"
-            and prepared.method == "POST"
-            and isinstance(json_body, dict)
-        ):
-            email = json_body.get("email")
-            password = json_body.get("password")
-            if email and password:
-                auth = (str(email), str(password))
-                json_body = {
-                    key: value
-                    for key, value in json_body.items()
-                    if key not in {"email", "password"}
-                }
+        headers = dict(prepared.headers)
         if prepared.endpoint == "/authentication" and prepared.method == "POST":
+            if auth is None and isinstance(json_body, dict):
+                email = json_body.get("email")
+                password = json_body.get("password")
+                if email and password:
+                    auth = (str(email), str(password))
+            captcha = None
+            if isinstance(json_body, dict):
+                captcha = json_body.get("captcha") or json_body.get("recaptcha")
+            json_body = {"captcha": captcha} if captcha else None
+            headers["Content-Type"] = "application/json"
             clear_worldquantbrain_cookies(self.session)
         return self.session.request(
             prepared.method,
             prepared.url,
             params=prepared.params,
             json=json_body,
+            headers=headers,
             auth=auth,
             timeout=60,
             allow_redirects=False,
@@ -367,11 +365,8 @@ class WqbClient:
                 "reason": "credentials_unavailable",
                 "attempts": [],
             }
-        json_body = {
-            key: value
-            for key, value in payload.items()
-            if key not in {"email", "password"}
-        }
+        captcha = payload.get("captcha") or payload.get("recaptcha")
+        json_body = {"captcha": captcha} if captcha else None
         attempts: list[dict[str, Any]] = []
         for attempt in range(1, self.auto_auth_policy.login_attempts + 1):
             try:
@@ -381,6 +376,10 @@ class WqbClient:
                     self.registry.base_url + "/authentication",
                     params={},
                     json=json_body,
+                    headers={
+                        "Accept": WQB_ACCEPT,
+                        "Content-Type": "application/json",
+                    },
                     auth=(email, password),
                     timeout=60,
                     allow_redirects=False,

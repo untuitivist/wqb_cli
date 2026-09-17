@@ -61,24 +61,26 @@ git clone https://github.com/untuitivist/wqb_cli.git
 cd wqb_cli
 ```
 
-Install in editable mode:
+Install a regular runtime copy in the WQBRAIN environment:
 
 ```powershell
 conda activate WQBRAIN
-python -m pip install -e .
+python -m pip install .
 ```
 
-Confirm the CLI is available:
+The checkout is for development and building distributions only. Run production commands from a separate research workspace with WQBRAIN activated, not through the checkout or a development-directory PYTHONPATH. Editable installs belong in a separate development environment, never in the WQBRAIN runtime environment.
+
+Confirm the installed CLI is available from your research workspace:
 
 ```powershell
 wqb --help
 wqb auth status
 ```
 
-If `wqb` is not on `PATH`, run commands through Python from the parent directory:
+If `wqb` is not on `PATH`, use the activated environment's installed module from the research workspace:
 
 ```powershell
-python -m wqb_cli --help
+python -I -m wqb_cli --help
 ```
 
 ## Command Overview
@@ -339,11 +341,11 @@ version = "0.4.0"
 
 ## Authentication
 
-Create a local environment file:
+Resolve the installed runtime's local directory, then create or edit its `.env` file. Do not put runtime credentials in the development checkout:
 
 ```powershell
-New-Item -ItemType Directory -Force local
-Copy-Item .env.example local/.env
+$WqbLocal = python -I -c "from wqb_cli.core.paths import LOCAL_ROOT; print(LOCAL_ROOT)"
+New-Item -ItemType Directory -Force $WqbLocal
 ```
 
 Fill in one of the following credential pairs:
@@ -372,7 +374,7 @@ Check authentication:
 wqb auth status
 ```
 
-Cookies are stored locally:
+Cookies are stored relative to the installed package directory, not the current working directory:
 
 ```text
 local/auth/cookies.json
@@ -575,6 +577,14 @@ Commands that wait for platform-side results return only after a final result, a
 
 Local data is not bundled and must not be committed.
 
+The `local/` input paths below refer to the installed package's runtime data, not the development checkout. Resolve the directory in the active environment:
+
+```powershell
+$WqbLocal = python -I -c "from wqb_cli.core.paths import LOCAL_ROOT; print(LOCAL_ROOT)"
+```
+
+Copy data and credentials into that directory when migrating from an editable install. Back up runtime data before package upgrades; keep research outputs and run databases in a separate workspace. Community refreshes must inspect export coverage and preserve existing documentation when a new export omits it.
+
 Recommended layout:
 
 ```text
@@ -637,7 +647,7 @@ Community data is imported from WebDataScope exports.
 Build SQLite:
 
 ```powershell
-wqb community export --source local/community/WQPCommunityState_20260520_103908.json
+wqb community export --source (Join-Path $WqbLocal "community/WQPCommunityState_20260918_001150.json")
 ```
 
 If `--source` is omitted, the CLI searches for the latest `WQPCommunityState_*.json` or `*.wqcs` under the local community directory.
@@ -728,18 +738,21 @@ Do not commit:
 
 ### `ModuleNotFoundError: No module named 'wqb_cli'`
 
-Run tests with the parent directory on `PYTHONPATH`:
+Activate the runtime environment and check its regular installation:
 
 ```powershell
-$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
-python -m pytest tests
+conda activate WQBRAIN
+python -m pip show wqb-cli
+python -I -m wqb_cli --help
 ```
 
-Or install editable mode again:
+If the package is missing, install a built wheel using its actual path:
 
 ```powershell
-python -m pip install -e .
+python -m pip install path/to/wqb_cli-version-py3-none-any.whl
 ```
+
+Do not repair runtime imports by adding the development checkout to PYTHONPATH or installing editable mode in WQBRAIN. Source-based tests belong in a separate development environment.
 
 ### `WARNING: Ignoring invalid distribution ~qb-cli`
 

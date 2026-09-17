@@ -61,24 +61,26 @@ git clone https://github.com/untuitivist/wqb_cli.git
 cd wqb_cli
 ```
 
-以 editable 模式安装：
+在 WQBRAIN 环境中进行普通安装，得到独立的运行副本：
 
 ```powershell
 conda activate WQBRAIN
-python -m pip install -e .
+python -m pip install .
 ```
 
-确认 CLI 可用：
+仓库目录只用于开发和构建发行包。日常命令应在独立研究工作区内，通过 WQBRAIN 环境中的已安装版本运行；不得从开发目录运行，也不得把开发目录加入运行环境的 PYTHONPATH。editable 安装只用于另建的开发环境，不用于 WQBRAIN 运行环境。
+
+切换到研究工作区后，确认已安装 CLI 可用：
 
 ```powershell
 wqb --help
 wqb auth status
 ```
 
-如果 `wqb` 不在 `PATH`，可以从父目录使用 Python 模块方式运行：
+如果 `wqb` 不在 `PATH`，可以在研究工作区使用当前环境中已安装的模块：
 
 ```powershell
-python -m wqb_cli --help
+python -I -m wqb_cli --help
 ```
 
 ## 命令总览
@@ -347,11 +349,11 @@ version = "0.4.0"
 
 ## 认证
 
-创建本地环境文件：
+先定位已安装版本的运行数据目录，再在其中创建或编辑 `.env`；不要把运行凭证写入开发仓库：
 
 ```powershell
-New-Item -ItemType Directory -Force local
-Copy-Item .env.example local/.env
+$WqbLocal = python -I -c "from wqb_cli.core.paths import LOCAL_ROOT; print(LOCAL_ROOT)"
+New-Item -ItemType Directory -Force $WqbLocal
 ```
 
 填写以下任一组账号字段：
@@ -380,7 +382,7 @@ wqb auth login
 wqb auth status
 ```
 
-cookie 保存在：
+cookie 保存在已安装包目录下的以下相对位置，而不是当前工作目录下：
 
 ```text
 local/auth/cookies.json
@@ -577,6 +579,14 @@ CLI 区分 API 接收成功和最终提交成功：
 
 本地数据不随仓库发布，也不要提交。
 
+下文输入数据布局中的 `local/` 指已安装包的运行数据目录，不是开发仓库。可在激活的环境中定位：
+
+```powershell
+$WqbLocal = python -I -c "from wqb_cli.core.paths import LOCAL_ROOT; print(LOCAL_ROOT)"
+```
+
+从 editable 安装迁移时，应将数据和凭证复制到此目录；升级前备份运行数据。研究输出和 run 数据库保存在独立研究工作区。刷新社区库前必须检查导出覆盖范围；新导出没有文档时，不得因此清空已有文档。
+
 推荐结构：
 
 ```text
@@ -639,7 +649,7 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 构建 SQLite：
 
 ```powershell
-wqb community export --source local/community/WQPCommunityState_20260520_103908.json
+wqb community export --source (Join-Path $WqbLocal "community/WQPCommunityState_20260918_001150.json")
 ```
 
 如果省略 `--source`，CLI 会在本地 community 目录中寻找最新的 `WQPCommunityState_*.json` 或 `*.wqcs`。
@@ -730,18 +740,21 @@ python -m build
 
 ### `ModuleNotFoundError: No module named 'wqb_cli'`
 
-运行测试时把父目录加入 `PYTHONPATH`：
+激活运行环境并检查普通安装：
 
 ```powershell
-$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
-python -m pytest tests
+conda activate WQBRAIN
+python -m pip show wqb-cli
+python -I -m wqb_cli --help
 ```
 
-或重新 editable 安装：
+如果尚未安装，使用实际构建出的 wheel 路径安装：
 
 ```powershell
-python -m pip install -e .
+python -m pip install path/to/wqb_cli-version-py3-none-any.whl
 ```
+
+不要通过把开发目录加入 PYTHONPATH 或在 WQBRAIN 中 editable 安装来修复运行环境。源码测试应在独立开发环境中执行。
 
 ### `WARNING: Ignoring invalid distribution ~qb-cli`
 

@@ -81,6 +81,244 @@ wqb auth status
 python -m wqb_cli --help
 ```
 
+## 命令总览
+
+以下按使用场景排列仓库内置命令，命令名称和层级与实际解析器一致；额外安装的插件可能提供更多入口。`<...>` 表示必填位置参数，`[...]` 表示可选位置参数；命名选项不在树中逐项展开，请通过各层 `--help` 查看。
+
+```text
+wqb  # WorldQuant BRAIN 命令行工具
+├─ sim                                                           # 平台回测：创建、查询与等待结果
+├─ sqlitesimu                                                    # 本地 SQLite 持久化批量回测引擎
+├─ alpha                                                         # Alpha 查询、分析、修改与正式提交
+├─ data                                                          # 平台数据目录、字段及算子
+├─ auth                                                          # 登录与认证会话管理
+├─ user                                                          # 当前用户及指定用户的信息与活动
+├─ account                                                       # 邮箱、密码和账号令牌接口
+├─ consultant                                                    # 顾问信息、顾问计划与说明文档
+├─ competition                                                   # 竞赛、规则、排名与 SPC 提交
+├─ event                                                         # 平台活动
+├─ platform                                                      # 平台公共信息与资源
+├─ tutorial                                                      # 平台教程内容
+├─ suggest                                                       # 平台建议接口，各项支持 GET/POST
+├─ search <query>                                                # 平台全局搜索，没有下一级子命令
+├─ community                                                     # 本地社区资料 SQLite，不是在线论坛爬虫
+├─ scope                                                         # 按 REGION_DELAY 查看本地历史研究数据
+├─ shortcut (alias: quick)                                       # 常用组合操作
+├─ config                                                        # 本地配置与平台配置查询
+├─ docs                                                          # 查询 CLI 随包文档
+├─ api                                                           # 按本地 API 注册表直接调用端点
+└─ errors                                                        # 平台错误报告接口
+```
+
+<details>
+<summary>展开完整命令树（中文说明）</summary>
+
+```text
+wqb  # WorldQuant BRAIN 命令行工具
+├─ sim                                                           # 平台回测：创建、查询与等待结果
+│  ├─ options                                                    # 查看回测设置的可用选项
+│  ├─ list                                                       # 查询回测列表
+│  ├─ get <simulation_id>                                        # 读取回测状态或结果，支持等待重试
+│  ├─ create                                                     # 从 --input 创建回测，并等待结果
+│  └─ super-selection                                            # 查询或调用 Super Alpha 选择回测接口
+├─ sqlitesimu                                                    # 本地 SQLite 持久化批量回测引擎
+│  ├─ init                                                       # 初始化回测数据库
+│  ├─ enqueue <input>                                            # 校验 manifest 并入队，不启动执行
+│  ├─ run <input>                                                # manifest 入队并执行，支持并发与持久化
+│  ├─ resume <run_id>                                            # 恢复已有 run，继续执行未完成工作
+│  ├─ status [run_id]                                            # 查看指定 run 或最近多个 run 的状态
+│  ├─ cancel <run_id>                                            # 取消本地 run，保留历史记录
+│  ├─ export <run_id>                                            # 导出指标、checks、PnL 路径与实验记录
+│  ├─ template-validate <input>                                  # 校验模板格式、元数据及候选来源关系
+│  └─ template-report <input>                                    # 从 run 导出生成模板分析报告
+├─ alpha                                                         # Alpha 查询、分析、修改与正式提交
+│  ├─ get <alpha_id>                                             # 获取指定 Alpha 的详情
+│  ├─ list                                                       # 查询自己的 Alpha，支持筛选和排序
+│  ├─ distribution                                               # 查询 Alpha 分布信息
+│  ├─ lists                                                      # 查询平台 Alpha 列表信息
+│  ├─ super-selection                                            # 查询 Super Alpha 选择信息
+│  ├─ unsubmitted                                                # 查询未提交 Alpha 信息
+│  ├─ walkthrough                                                # 获取示例 Alpha 引导信息
+│  ├─ all                                                        # 查询 /alphas 接口下的可见 Alpha
+│  ├─ check <alpha_id>                                           # 获取平台检查结果，支持等待慢速检查
+│  ├─ recordsets <alpha_id>                                      # 列出该 Alpha 可读取的结果数据集
+│  ├─ related <alpha_id>                                         # 查询关联 Alpha
+│  ├─ recordset <alpha_id> <name>                                # 按名称读取结果，如 pnl、turnover 等
+│  ├─ pnl <alpha_id>                                             # 读取 PnL 序列
+│  ├─ sharpe <alpha_id>                                          # 读取 Sharpe 结果序列
+│  ├─ yearly-stats <alpha_id>                                    # 读取年度统计
+│  ├─ patch <alpha_id>                                           # 按 --input 修改 Alpha 属性
+│  ├─ submit <alpha_id>                                          # 正式提交 Alpha，并处理提交等待
+│  ├─ correlation                                                # 查询 Alpha 相关性
+│  │  ├─ self <alpha_id>                                         # 查询自相关检查结果
+│  │  ├─ base <alpha_id>                                         # 查询基础相关性接口
+│  │  ├─ prod <alpha_id>                                         # 查询生产池相关性
+│  │  └─ power-pool <alpha_id>                                   # 查询 Power Pool 相关性
+│  └─ performance-comparison <alpha_id>                          # 查询表现比较结果
+├─ data                                                          # 平台数据目录、字段及算子
+│  ├─ categories                                                 # 查询数据类别
+│  ├─ datasets                                                   # 查询数据集列表
+│  ├─ dataset <dataset_id>                                       # 查询指定数据集详情
+│  ├─ fields                                                     # 查询字段，支持条件筛选
+│  ├─ fields-summary                                             # 查询字段汇总信息
+│  ├─ dataset-search                                             # 搜索数据集，支持 GET/POST
+│  ├─ field <field_id>                                           # 查询指定字段详情
+│  └─ operators                                                  # 查询平台算子列表
+├─ auth                                                          # 登录与认证会话管理
+│  ├─ status                                                     # 查询当前认证状态
+│  ├─ head                                                       # 用 HEAD 请求检查认证接口
+│  ├─ login                                                      # 登录并保存成功认证后的 cookies
+│  ├─ logout                                                     # 注销平台认证会话
+│  ├─ brainlabs                                                  # 调用 BrainLabs 认证接口
+│  ├─ persona                                                    # 调用 Persona 认证接口
+│  ├─ support                                                    # 调用支持站点认证接口
+│  └─ workday                                                    # 调用 Workday 认证接口
+├─ user                                                          # 当前用户及指定用户的信息与活动
+│  ├─ self                                                       # 获取当前用户资料
+│  ├─ consultant-summary                                         # 获取自己的顾问信息摘要
+│  ├─ messages                                                   # 查询自己的消息，支持筛选与分页
+│  ├─ list                                                       # 查询用户列表
+│  ├─ achievements                                               # 查询自己的成就
+│  ├─ simulation-activity                                        # 查询自己的回测活动
+│  ├─ pyramid-alphas                                             # 查询指定日期范围的金字塔 Alpha 活动
+│  ├─ pyramid-multipliers                                        # 查询指定日期范围的金字塔倍率信息
+│  ├─ agreements                                                 # 查询自己的协议信息
+│  ├─ alphas-summary                                             # 查询自己的 Alpha 汇总
+│  ├─ messages-summary                                           # 查询自己的消息摘要
+│  ├─ pyramid-alpha-summary                                      # 查询自己的金字塔 Alpha 汇总
+│  ├─ teams                                                      # 查询自己的团队
+│  ├─ tutorial-steps                                             # 查询自己的教程步骤
+│  ├─ tutorial-summary                                           # 查询自己的教程进度摘要
+│  ├─ consultant-tutorial-summary                                # 查询自己的顾问教程进度
+│  ├─ consultant-tutorial-patch                                  # 修改自己的顾问教程进度
+│  ├─ get <user_id>                                              # 获取指定用户资料
+│  ├─ user-achievements <user_id>                                # 查询指定用户的成就
+│  ├─ user-activities <user_id>                                  # 查询指定用户的活动
+│  ├─ user-diversity <user_id>                                   # 按区域、Delay、数据类别查询多样性
+│  ├─ user-alphas-options <user_id>                              # 查询用户 Alpha 接口选项，不是列出 Alpha
+│  ├─ user-competitions <user_id>                                # 查询指定用户的竞赛信息
+│  └─ user-simulation-settings <user_id>                         # 查询指定用户的回测设置
+├─ account                                                       # 邮箱、密码和账号令牌接口
+│  ├─ email-change                                               # 邮箱修改流程，支持 GET/POST
+│  ├─ email-reverify                                             # 邮箱重新验证流程，支持 GET/POST
+│  ├─ email-verify                                               # 邮箱验证流程，支持 GET/POST
+│  ├─ password-change                                            # 密码修改流程，支持 GET/POST
+│  ├─ password-forgot                                            # 忘记密码流程，支持 GET/POST
+│  ├─ password-reset                                             # 密码重置流程，支持 GET/POST
+│  └─ token                                                      # 账号令牌接口，支持 GET/POST
+├─ consultant                                                    # 顾问信息、顾问计划与说明文档
+│  ├─ get                                                        # 查询顾问信息
+│  ├─ summary                                                    # 查询顾问摘要
+│  ├─ datasets                                                   # 查询顾问数据集
+│  ├─ dos-and-donts                                              # 读取顾问注意事项
+│  ├─ faqs                                                       # 读取顾问常见问题
+│  ├─ osmosis-guide                                              # 读取 Osmosis 分配指南
+│  ├─ visualization-tool                                         # 读取可视化工具说明
+│  ├─ program                                                    # 查询顾问计划信息
+│  ├─ program-language <language>                                # 按语言查询顾问计划内容
+│  └─ boards                                                     # 顾问榜单
+│     └─ leader                                                  # 查询顾问排行榜
+├─ competition                                                   # 竞赛、规则、排名与 SPC 提交
+│  ├─ list                                                       # 查询竞赛列表
+│  ├─ get <competition_id>                                       # 查询指定竞赛详情
+│  ├─ agreement <competition_id>                                 # 读取或提交竞赛协议
+│  ├─ leaderboard <identifier>                                   # 查询竞赛或顾问排行榜及接口选项
+│  ├─ guidelines <competition_id>                                # 读取竞赛规则，实际使用 agreement 接口
+│  ├─ faq <competition_id>                                       # 从竞赛详情中读取 FAQ 地址
+│  └─ spc                                                        # SPC 提示词提交接口
+│     ├─ submissions                                             # 查询提交列表
+│     ├─ submission-history <submission_id>                      # 查询指定提交的历史
+│     ├─ submission-options [submission_id]                      # 查询提交集合或指定提交的接口选项
+│     ├─ create-submission                                       # 新建 SPC 提交
+│     └─ update-submission <submission_id>                       # 更新已有 SPC 提交
+├─ event                                                         # 平台活动
+│  ├─ list                                                       # 查询活动列表
+│  ├─ options                                                    # 查询活动接口选项
+│  └─ get <event_id>                                             # 查询指定活动详情
+├─ platform                                                      # 平台公共信息与资源
+│  ├─ achievements                                               # 查询平台成就定义
+│  ├─ agreements                                                 # 查询平台协议信息
+│  ├─ captcha                                                    # 调用验证码接口
+│  ├─ messages                                                   # 查询平台消息接口
+│  ├─ tags                                                       # 查询标签
+│  ├─ teams                                                      # 查询团队
+│  ├─ video-courses                                              # 查询视频课程
+│  ├─ achievement-icon <achievement_id>                          # 获取成就图标接口响应
+│  └─ competition-level-icon <competition_level_id>              # 获取竞赛等级图标接口响应
+├─ tutorial                                                      # 平台教程内容
+│  ├─ list                                                       # 查询教程列表
+│  ├─ pages                                                      # 查询教程页面列表
+│  ├─ page <page_id>                                             # 获取指定教程页面
+│  └─ slug <tutorial_slug>                                       # 按教程标识获取教程内容
+├─ suggest                                                       # 平台建议接口，各项支持 GET/POST
+│  ├─ examples                                                   # 请求示例建议
+│  ├─ expression                                                 # 请求表达式建议
+│  ├─ fastexpr                                                   # 请求 FASTEXPR 建议
+│  └─ fields                                                     # 请求字段建议
+├─ search <query>                                                # 平台全局搜索，没有下一级子命令
+├─ community                                                     # 本地社区资料 SQLite，不是在线论坛爬虫
+│  ├─ search <query>                                             # 搜索本地帖子、评论、文档等资料
+│  ├─ export                                                     # 将 WebDataScope 导出文件导入本地 SQLite
+│  └─ stats                                                      # 查询本地社区数据库各表数量
+├─ scope                                                         # 按 REGION_DELAY 查看本地历史研究数据
+│  ├─ files                                                      # 查看本地 scope 数据文件位置
+│  ├─ list                                                       # 列出可用范围，例如 USA_1
+│  ├─ show <scope>                                               # 查看指定范围摘要
+│  ├─ top <scope>                                                # 按历史指标给字段、数据集或类别排序
+│  ├─ search <scope> <query>                                     # 搜索范围内的字段、数据集或类别
+│  ├─ neutralization <scope>                                     # 查看不同中性化方式的历史表现
+│  ├─ pickle-summary <scope>                                     # 读取本地 pickle 中的范围摘要
+│  └─ alpha-rows <scope>                                         # 读取历史 Alpha 的属性、设置、IS/OS 行
+├─ shortcut (alias: quick)                                       # 常用组合操作
+│  ├─ whoami                                                     # 快速检查当前认证会话
+│  ├─ simulate                                                   # 创建回测并等待完成
+│  ├─ alpha-report <alpha_id>                                    # 汇总详情、检查、相关性与年度统计
+│  └─ data-fields                                                # 按区域、Delay、股票池等常用条件查字段
+├─ config                                                        # 本地配置与平台配置查询
+│  ├─ init                                                       # 初始化本地 CLI 配置文件
+│  ├─ list                                                       # 列出本地配置
+│  ├─ get <key>                                                  # 获取指定本地配置项
+│  ├─ set <key> <value>                                          # 设置本地配置项
+│  ├─ set-secret <key> <value>                                   # 将敏感配置存入系统 keyring
+│  ├─ platform                                                   # 查询平台配置
+│  └─ competition-levels                                         # 查询竞赛等级配置
+├─ docs                                                          # 查询 CLI 随包文档
+│  ├─ list                                                       # 列出已提供文档的命令节点
+│  └─ show <path>                                                # 读取指定文档
+├─ api                                                           # 按本地 API 注册表直接调用端点
+│  ├─ stats                                                      # 查看本地 API 注册表统计
+│  ├─ list                                                       # 列出已登记端点，可按路径前缀筛选
+│  ├─ show <path>                                                # 查看指定端点定义
+│  ├─ params <path>                                              # 查看查询参数与请求体提示
+│  └─ call <method> <path>                                       # 直接调用端点，支持路径变量、参数和 JSON
+└─ errors                                                        # 平台错误报告接口
+   └─ envelope                                                   # 向平台错误收集接口发送报告
+```
+
+</details>
+
+### 如何选择入口
+
+- `sim` 直接调用平台回测接口；`sqlitesimu` 增加本地数据库、批量队列、并发执行、断点恢复和结果导出。
+- 回测与正式提交不同：`sim create`、`sqlitesimu run` 发起回测，`alpha submit` 才是正式提交入口。命令树不代表已完成研究流程或提交前终检。
+- `community` 查询本地社区资料，`scope` 查询本地历史研究数据，均不代表在线实时数据。`community export` 是将已有社区导出文件导入 SQLite，不是在线爬取论坛。
+- `sqlitesimu cancel` 管理本地 run 并保留历史，不等于撤销平台上所有已发出的回测；默认不会越过仍有效的 worker 租约。
+- `api call` 可直接调用注册表内端点；写操作会发送真实请求，不会自动补齐高层研究检查。
+
+### 逐层查看帮助
+
+```text
+wqb --help
+wqb sim --help
+wqb sim create --help
+wqb alpha correlation --help
+wqb alpha correlation prod --help
+wqb sqlitesimu run --help
+wqb sqlitesimu template-report --help
+```
+
+全局选项包括 `--registry` 和 `--cookies`；多数末级命令支持 `--output`。具体筛选、输入文件、等待时间与并发参数，以相应命令的 `--help` 为准。新增、删除或调整命令时，请同步更新两份 README，并用实际解析器核对命令树。
+
 ## 包元信息
 
 Python distribution 名称：

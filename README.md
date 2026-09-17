@@ -81,6 +81,244 @@ If `wqb` is not on `PATH`, run commands through Python from the parent directory
 python -m wqb_cli --help
 ```
 
+## Command Overview
+
+The built-in commands below are arranged by use case while preserving the actual parser names and hierarchy. Additional installed plugins may expose more commands. `<...>` marks required positional arguments and `[...]` marks optional ones. Named options are omitted from the tree; inspect them with `--help` at each level.
+
+```text
+wqb  # WorldQuant BRAIN command-line toolkit
+├─ sim                                                           # Create, inspect, and wait for platform simulations
+├─ sqlitesimu                                                    # Durable batch simulation engine backed by local SQLite
+├─ alpha                                                         # Inspect, analyze, modify, and formally submit Alphas
+├─ data                                                          # Explore platform datasets, fields, and operators
+├─ auth                                                          # Manage login and authentication sessions
+├─ user                                                          # Inspect current-user and user-specific profiles and activity
+├─ account                                                       # Access email, password, and account-token workflows
+├─ consultant                                                    # Explore consultant information, programs, and guidance
+├─ competition                                                   # Explore competitions, rules, rankings, and SPC submissions
+├─ event                                                         # Explore platform events
+├─ platform                                                      # Explore platform-wide information and resources
+├─ tutorial                                                      # Explore platform tutorial content
+├─ suggest                                                       # Request platform suggestions using GET or POST
+├─ search <query>                                                # Search the platform globally; no subcommands
+├─ community                                                     # Search local community SQLite data, not a live forum crawler
+├─ scope                                                         # Inspect local historical research data by REGION_DELAY
+├─ shortcut (alias: quick)                                       # Run common combined operations
+├─ config                                                        # Manage local configuration and inspect platform settings
+├─ docs                                                          # Discover bundled CLI documentation
+├─ api                                                           # Inspect the local API registry and call registered endpoints
+└─ errors                                                        # Access the platform error-reporting endpoint
+```
+
+<details>
+<summary>Expand the complete command tree</summary>
+
+```text
+wqb  # WorldQuant BRAIN command-line toolkit
+├─ sim                                                           # Create, inspect, and wait for platform simulations
+│  ├─ options                                                    # Inspect available simulation settings
+│  ├─ list                                                       # List simulations
+│  ├─ get <simulation_id>                                        # Read simulation status or results with retry waits
+│  ├─ create                                                     # Create a simulation from --input and wait for results
+│  └─ super-selection                                            # Query or invoke Super Alpha selection simulations
+├─ sqlitesimu                                                    # Durable batch simulation engine backed by local SQLite
+│  ├─ init                                                       # Initialize the simulation database
+│  ├─ enqueue <input>                                            # Validate and enqueue a manifest without executing it
+│  ├─ run <input>                                                # Enqueue and execute a manifest with durable concurrent workers
+│  ├─ resume <run_id>                                            # Resume unfinished work in an existing run
+│  ├─ status [run_id]                                            # Inspect one run or recent runs
+│  ├─ cancel <run_id>                                            # Cancel a local run while preserving its history
+│  ├─ export <run_id>                                            # Export metrics, checks, dated PnL paths, and experiment records
+│  ├─ template-validate <input>                                  # Validate template format, metadata, and candidate lineage
+│  └─ template-report <input>                                    # Build template analysis reports from a run export
+├─ alpha                                                         # Inspect, analyze, modify, and formally submit Alphas
+│  ├─ get <alpha_id>                                             # Get Alpha details
+│  ├─ list                                                       # List your Alphas with filters and sorting
+│  ├─ distribution                                               # Query Alpha distribution information
+│  ├─ lists                                                      # Query platform Alpha list information
+│  ├─ super-selection                                            # Query Super Alpha selection information
+│  ├─ unsubmitted                                                # Query unsubmitted Alpha information
+│  ├─ walkthrough                                                # Read the sample Alpha walkthrough
+│  ├─ all                                                        # List visible Alphas through the /alphas endpoint
+│  ├─ check <alpha_id>                                           # Fetch platform checks and wait for asynchronous results
+│  ├─ recordsets <alpha_id>                                      # List available Alpha recordsets
+│  ├─ related <alpha_id>                                         # Query related Alphas
+│  ├─ recordset <alpha_id> <name>                                # Read a named recordset such as pnl or turnover
+│  ├─ pnl <alpha_id>                                             # Read the PnL series
+│  ├─ sharpe <alpha_id>                                          # Read the Sharpe series
+│  ├─ yearly-stats <alpha_id>                                    # Read yearly statistics
+│  ├─ patch <alpha_id>                                           # Update Alpha properties from --input
+│  ├─ submit <alpha_id>                                          # Formally submit an Alpha and handle submission waits
+│  ├─ correlation                                                # Query Alpha correlations
+│  │  ├─ self <alpha_id>                                         # Query self-correlation results
+│  │  ├─ base <alpha_id>                                         # Query the base correlations endpoint
+│  │  ├─ prod <alpha_id>                                         # Query production-pool correlations
+│  │  └─ power-pool <alpha_id>                                   # Query Power Pool correlations
+│  └─ performance-comparison <alpha_id>                          # Query performance comparisons
+├─ data                                                          # Explore platform datasets, fields, and operators
+│  ├─ categories                                                 # List data categories
+│  ├─ datasets                                                   # List datasets
+│  ├─ dataset <dataset_id>                                       # Get dataset details
+│  ├─ fields                                                     # List data fields with filters
+│  ├─ fields-summary                                             # Query field summaries
+│  ├─ dataset-search                                             # Search datasets using GET or POST
+│  ├─ field <field_id>                                           # Get field details
+│  └─ operators                                                  # List platform operators
+├─ auth                                                          # Manage login and authentication sessions
+│  ├─ status                                                     # Query authentication status
+│  ├─ head                                                       # Check the authentication endpoint with HEAD
+│  ├─ login                                                      # Log in and save authenticated session cookies
+│  ├─ logout                                                     # Log out of the platform session
+│  ├─ brainlabs                                                  # Call the BrainLabs authentication endpoint
+│  ├─ persona                                                    # Call the Persona authentication endpoint
+│  ├─ support                                                    # Call the support authentication endpoint
+│  └─ workday                                                    # Call the Workday authentication endpoint
+├─ user                                                          # Inspect current-user and user-specific profiles and activity
+│  ├─ self                                                       # Get your user profile
+│  ├─ consultant-summary                                         # Get your consultant summary
+│  ├─ messages                                                   # List your messages with filters and pagination
+│  ├─ list                                                       # List users
+│  ├─ achievements                                               # List your achievements
+│  ├─ simulation-activity                                        # Query your simulation activity
+│  ├─ pyramid-alphas                                             # Query your pyramid Alpha activity over a date range
+│  ├─ pyramid-multipliers                                        # Query your pyramid multipliers over a date range
+│  ├─ agreements                                                 # Query your agreements
+│  ├─ alphas-summary                                             # Get your Alpha summary
+│  ├─ messages-summary                                           # Get your message summary
+│  ├─ pyramid-alpha-summary                                      # Get your pyramid Alpha summary
+│  ├─ teams                                                      # List your teams
+│  ├─ tutorial-steps                                             # Query your tutorial steps
+│  ├─ tutorial-summary                                           # Get your tutorial progress summary
+│  ├─ consultant-tutorial-summary                                # Get your consultant tutorial progress
+│  ├─ consultant-tutorial-patch                                  # Update your consultant tutorial progress
+│  ├─ get <user_id>                                              # Get a user profile
+│  ├─ user-achievements <user_id>                                # Query a user's achievements
+│  ├─ user-activities <user_id>                                  # Query a user's activity
+│  ├─ user-diversity <user_id>                                   # Query diversity by region, delay, and data category
+│  ├─ user-alphas-options <user_id>                              # Inspect user Alpha endpoint options, not Alpha rows
+│  ├─ user-competitions <user_id>                                # Query a user's competitions
+│  └─ user-simulation-settings <user_id>                         # Query a user's simulation settings
+├─ account                                                       # Access email, password, and account-token workflows
+│  ├─ email-change                                               # Email change workflow using GET or POST
+│  ├─ email-reverify                                             # Email reverification workflow using GET or POST
+│  ├─ email-verify                                               # Email verification workflow using GET or POST
+│  ├─ password-change                                            # Password change workflow using GET or POST
+│  ├─ password-forgot                                            # Forgot-password workflow using GET or POST
+│  ├─ password-reset                                             # Password reset workflow using GET or POST
+│  └─ token                                                      # Account token endpoint using GET or POST
+├─ consultant                                                    # Explore consultant information, programs, and guidance
+│  ├─ get                                                        # Query consultant information
+│  ├─ summary                                                    # Query the consultant summary
+│  ├─ datasets                                                   # List consultant datasets
+│  ├─ dos-and-donts                                              # Read consultant dos and don'ts
+│  ├─ faqs                                                       # Read consultant FAQs
+│  ├─ osmosis-guide                                              # Read the Osmosis allocation guide
+│  ├─ visualization-tool                                         # Read visualization tool information
+│  ├─ program                                                    # Read consultant program information
+│  ├─ program-language <language>                                # Read consultant program content by language
+│  └─ boards                                                     # Explore consultant boards
+│     └─ leader                                                  # Query the consultant leaderboard
+├─ competition                                                   # Explore competitions, rules, rankings, and SPC submissions
+│  ├─ list                                                       # List competitions
+│  ├─ get <competition_id>                                       # Get competition details
+│  ├─ agreement <competition_id>                                 # Read or submit a competition agreement
+│  ├─ leaderboard <identifier>                                   # Query competition or consultant leaderboards and options
+│  ├─ guidelines <competition_id>                                # Read competition guidelines through the agreement endpoint
+│  ├─ faq <competition_id>                                       # Read the FAQ URL from competition details
+│  └─ spc                                                        # Manage SPC prompt submissions
+│     ├─ submissions                                             # List SPC submissions
+│     ├─ submission-history <submission_id>                      # Read a submission's history
+│     ├─ submission-options [submission_id]                      # Inspect submission collection or item options
+│     ├─ create-submission                                       # Create an SPC submission
+│     └─ update-submission <submission_id>                       # Update an SPC submission
+├─ event                                                         # Explore platform events
+│  ├─ list                                                       # List events
+│  ├─ options                                                    # Inspect event endpoint options
+│  └─ get <event_id>                                             # Get event details
+├─ platform                                                      # Explore platform-wide information and resources
+│  ├─ achievements                                               # List platform achievement definitions
+│  ├─ agreements                                                 # Query platform agreements
+│  ├─ captcha                                                    # Call the CAPTCHA endpoint
+│  ├─ messages                                                   # Query platform messages
+│  ├─ tags                                                       # List tags
+│  ├─ teams                                                      # List teams
+│  ├─ video-courses                                              # List video courses
+│  ├─ achievement-icon <achievement_id>                          # Get the achievement icon endpoint response
+│  └─ competition-level-icon <competition_level_id>              # Get the competition-level icon endpoint response
+├─ tutorial                                                      # Explore platform tutorial content
+│  ├─ list                                                       # List tutorials
+│  ├─ pages                                                      # List tutorial pages
+│  ├─ page <page_id>                                             # Read a tutorial page
+│  └─ slug <tutorial_slug>                                       # Read tutorial content by slug
+├─ suggest                                                       # Request platform suggestions using GET or POST
+│  ├─ examples                                                   # Request example suggestions
+│  ├─ expression                                                 # Request expression suggestions
+│  ├─ fastexpr                                                   # Request FASTEXPR suggestions
+│  └─ fields                                                     # Request field suggestions
+├─ search <query>                                                # Search the platform globally; no subcommands
+├─ community                                                     # Search local community SQLite data, not a live forum crawler
+│  ├─ search <query>                                             # Search local posts, comments, documentation, and articles
+│  ├─ export                                                     # Import a WebDataScope community export into local SQLite
+│  └─ stats                                                      # Inspect local community database table counts
+├─ scope                                                         # Inspect local historical research data by REGION_DELAY
+│  ├─ files                                                      # Locate local scope data files
+│  ├─ list                                                       # List available scopes such as USA_1
+│  ├─ show <scope>                                               # Read a scope summary
+│  ├─ top <scope>                                                # Rank fields, datasets, or categories by historical metrics
+│  ├─ search <scope> <query>                                     # Search a scope's fields, datasets, or categories
+│  ├─ neutralization <scope>                                     # Inspect historical neutralization performance
+│  ├─ pickle-summary <scope>                                     # Read a scope summary from the local pickle
+│  └─ alpha-rows <scope>                                         # Read historical Alpha attributes, settings, and IS/OS rows
+├─ shortcut (alias: quick)                                       # Run common combined operations
+│  ├─ whoami                                                     # Check the current authentication session
+│  ├─ simulate                                                   # Create a simulation and wait for completion
+│  ├─ alpha-report <alpha_id>                                    # Collect Alpha details, checks, correlations, and yearly stats
+│  └─ data-fields                                                # Find fields using region, delay, universe, and other filters
+├─ config                                                        # Manage local configuration and inspect platform settings
+│  ├─ init                                                       # Initialize the local CLI configuration
+│  ├─ list                                                       # List local configuration
+│  ├─ get <key>                                                  # Read a local configuration key
+│  ├─ set <key> <value>                                          # Set a local configuration key
+│  ├─ set-secret <key> <value>                                   # Store a secret in the system keyring
+│  ├─ platform                                                   # Query platform configuration
+│  └─ competition-levels                                         # Query competition-level configuration
+├─ docs                                                          # Discover bundled CLI documentation
+│  ├─ list                                                       # List documented command nodes
+│  └─ show <path>                                                # Read a documentation file
+├─ api                                                           # Inspect the local API registry and call registered endpoints
+│  ├─ stats                                                      # Show API registry statistics
+│  ├─ list                                                       # List registered endpoints, optionally by path prefix
+│  ├─ show <path>                                                # Inspect an endpoint definition
+│  ├─ params <path>                                              # Inspect query parameter and request-body hints
+│  └─ call <method> <path>                                       # Call an endpoint with path variables, parameters, and JSON
+└─ errors                                                        # Access the platform error-reporting endpoint
+   └─ envelope                                                   # Send an envelope to the platform error collector
+```
+
+</details>
+
+### Choosing an Entry Point
+
+- `sim` calls the platform simulation API directly; `sqlitesimu` adds a local database, batch queues, concurrent workers, recovery, and result exports.
+- Simulating is not submitting: `sim create` and `sqlitesimu run` launch simulations; `alpha submit` performs formal Alpha submission. The command tree does not imply that research or final eligibility checks have been completed.
+- `community` reads local community data and `scope` reads local historical research data, not live platform state. Despite its name, `community export` imports an existing community export into SQLite; it does not crawl the forum.
+- `sqlitesimu cancel` manages a local run and preserves history; it does not cancel every simulation already sent to the platform, and it does not bypass an active worker lease by default.
+- `api call` invokes registered endpoints directly. Mutating operations send real requests and do not automatically perform higher-level research checks.
+
+### Exploring Help by Level
+
+```text
+wqb --help
+wqb sim --help
+wqb sim create --help
+wqb alpha correlation --help
+wqb alpha correlation prod --help
+wqb sqlitesimu run --help
+wqb sqlitesimu template-report --help
+```
+
+Global options include `--registry` and `--cookies`; most leaf commands support `--output`. Consult each command's `--help` for filters, input files, wait limits, and concurrency settings. When adding, removing, or changing commands, update both READMEs and verify the trees against the actual parser.
+
 ## Package Metadata
 
 The Python distribution name is `wqb-cli`.

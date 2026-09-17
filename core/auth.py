@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -90,20 +91,31 @@ def resolve_login_payload(
     payload = dict(input_payload or {})
     config = load_config(config_path)
     env = read_dotenv()
+    process_env = os.environ
 
     resolved_email = (
         email
         or payload.get("email")
+        or process_env.get("WQB_EMAIL")
         or env.get("EMAIL")
         or env.get("WQB_EMAIL")
         or config.get("auth", {}).get("email")
     )
+    process_password = process_env.get("WQB_PASSWORD")
+    direct_password = password or payload.get("password") or process_password
     keyring_username = config.get("auth", {}).get("keyring_username") or resolved_email
     keyring_service = config.get("auth", {}).get("keyring_service") or "wqb-cli"
-    keyring_password = get_secret(str(keyring_service), str(keyring_username)) if keyring_username else None
-    resolved_password = password or payload.get("password") or keyring_password
-    if not resolved_password:
-        resolved_password = env.get("PASSWORD") or env.get("WQB_PASSWORD")
+    keyring_password = (
+        get_secret(str(keyring_service), str(keyring_username))
+        if keyring_username and not direct_password
+        else None
+    )
+    resolved_password = (
+        direct_password
+        or keyring_password
+        or env.get("PASSWORD")
+        or env.get("WQB_PASSWORD")
+    )
 
     result = {key: value for key, value in payload.items() if key not in {"email", "password"}}
     result["email"] = str(resolved_email or "")

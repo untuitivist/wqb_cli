@@ -1,0 +1,106 @@
+{
+  "schema_version": "wqb.wind-pilot-validation.v1",
+  "generated_at": "2026-09-08T05:27:15Z",
+  "repository": "untuitivist/wqb_cli",
+  "branch": "codex/wind-evidence",
+  "base_branch": "master",
+  "base_oid": "08eca36460eb7e0272c983d7ff820032a2c40b5a",
+  "local_head_oid": "08eca36460eb7e0272c983d7ff820032a2c40b5a",
+  "working_tree_changes_uncommitted": true,
+  "package_version": "0.4.0",
+  "validation": {
+    "targeted": {
+      "command_scope": [
+        "tests/test_evidence.py",
+        "tests/test_evidence_workflow.py",
+        "tests/test_client.py"
+      ],
+      "passed": 66,
+      "subtests_passed": 2
+    },
+    "full_suite": {
+      "passed": 147,
+      "subtests_passed": 13
+    },
+    "git_diff_check": "pass",
+    "clean_wheel_smoke": "pass"
+  },
+  "build": {
+    "directory": "~/Library/Caches/wqb-wind-final-build-20260908T1330",
+    "wheel": {
+      "name": "wqb_cli-0.4.0-py3-none-any.whl",
+      "size_bytes": 4247648,
+      "sha256": "66cc633ce873e7ee51a2c2b2d516ce8aba26992d560367d9f369b2f75461e5bf"
+    },
+    "sdist": {
+      "name": "wqb_cli-0.4.0.tar.gz",
+      "size_bytes": 3573159,
+      "sha256": "be155c16519543b7a2a2f263551bc7159b8180fe49d3b8dd27a6fc89fe06e2b8"
+    },
+    "top_level_docs_in_artifacts": false,
+    "freeze_schema_imported_from_clean_wheel": "wqb.wind-research-freeze.v1"
+  },
+  "brain_auth": {
+    "wire_contract_fixed": true,
+    "successful_login_observed": "POST /authentication -> 201",
+    "successful_status_observed": "GET /authentication -> 200",
+    "relogin_not_required_for_validation": true
+  },
+  "wind": {
+    "provider_contract_version": "wind-skill:sha256:0321d0acbca84994d15354d88db3c24151fbccf71fd648a92089af03232f9062",
+    "calibration_query_type": "stock_data.get_stock_fundamentals:single:transaction-v1",
+    "calibration_sample_count": 3,
+    "calibration_p50": 0.4,
+    "calibration_p95": 0.4,
+    "calibration_maximum": 0.4,
+    "new_calibration_calls_performed": 0,
+    "treatment_calls_performed": 0
+  },
+  "pilot": {
+    "cell": {
+      "region": "CHN",
+      "delay": 1,
+      "universe": "TOP2000U",
+      "category": "Fundamental",
+      "tower": "CHN/D1/FUNDAMENTAL",
+      "quarter": "2026-Q3",
+      "tower_alpha_count": 0,
+      "needed_to_light": 3,
+      "multiplier": 1.7
+    },
+    "f_status": "NOT_FROZEN",
+    "scope_pending": true,
+    "freeze_smoke": {
+      "expected_result": "rejected",
+      "reason": "candidate_datafields is not frozen: freeze_status=NOT_FROZEN"
+    },
+    "treatment_status": "not_started",
+    "brain_simulation_performed": false,
+    "brain_submission_performed": false,
+    "unresolved_wind_run_events": 0,
+    "blockers": [
+      "legacy Scope assets info_data.bin and all_data.pickle are not available on M5"
+    ]
+  },
+  "admission_contract": {
+    "research_freeze_required_for_g_h": true,
+    "final_f_requires": {
+      "freeze_status": "FROZEN",
+      "complete": true,
+      "scope_pending": false
+    },
+    "all_frozen_fields_require_brain_metadata_snapshot": true,
+    "mechanism_families_must_be_subset_of_frozen_f": true,
+    "freeze_sha256_bound_into_research_plan_id": true,
+    "raw_wind_call_fail_closed": true,
+    "execute_plan_requires_fresh_recorded_balance": true,
+    "execute_plan_ignores_inline_available_points": true,
+    "completed_evidence_exposes_stored_path": true,
+    "no_blind_replay": true
+  },
+  "landing": {
+    "agent_commit_push_merge_allowed": false,
+    "human_final_required": true,
+    "base_drift_observed": false
+  }
+}

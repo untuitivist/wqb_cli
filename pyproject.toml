@@ -22,12 +22,23 @@ dependencies = [
 [project.scripts]
 wqb = "wqb_cli.cli:main"
 
+[project.entry-points."wqb_cli.plugins"]
+evidence = "wqb_cli.evidence.plugin:plugin"
+
 [project.urls]
 Repository = "https://github.com/untuitivist/wqb_cli"
 Author = "https://github.com/untuitivist"
 
 [tool.setuptools]
-packages = ["wqb_cli", "wqb_cli.commands", "wqb_cli.core", "wqb_cli.sqlitesimu"]
+packages = [
+    "wqb_cli",
+    "wqb_cli.commands",
+    "wqb_cli.core",
+    "wqb_cli.sqlitesimu",
+    "wqb_cli.evidence",
+    "wqb_cli.evidence.providers",
+    "wqb_cli.evidence.providers.wind",
+]
 include-package-data = false
 
 [tool.setuptools.package-dir]

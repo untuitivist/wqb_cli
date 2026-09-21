@@ -4,6 +4,16 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 ## 0.6.1 - 2026-09-22
 
+### Fixed
+
+- Use the authenticated forum page's shared CSRF token for community writes and image registration. The Help Center session token previously caused live uploads to fail with HTTP 401.
+
+### Added
+
+- `community create/update --html` with local-image upload, durable SHA-256 asset receipts, exact prepared-body output and post-publication readback.
+- `community image-upload` and the two official user-image endpoints in the raw community API inventory. HTML dry runs validate files entirely offline; uncertain writes remain non-replaying.
+- Replace the existing v0.6.1 release assets with this correction, retaining the same version.
+
 ### Changed
 
 - Standardize the simulation command as `wqb simu`. The former `wqb sim` name is no longer accepted; migrate scripts by replacing that command token with `simu`.

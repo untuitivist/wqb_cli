@@ -22,7 +22,7 @@
 | --- | --- |
 | `wqb simu` | 创建、查询并等待 Regular、Super 和 ALL 回测。 |
 | `wqb sqlitesimu` | 候选入库、批量执行、断点恢复和结果导出。 |
-| `wqb community` | 在线读帖、搜索和社区写请求。 |
+| `wqb community` | 在线读帖、搜索，以及带本地图片的 HTML 发帖。 |
 | `wqb sqlitecom` | 社区增量同步、本地检索和只读 SQL。 |
 
 查看回测设置和请求帮助可从 `wqb simu options`、`wqb simu create --help` 开始。完整层级见[命令总览](#命令总览)，请求格式见后文示例。
@@ -682,6 +682,8 @@ wqb community list --sort updated_at --limit 10
 wqb community search wqb_cli --limit 5
 wqb community get 41706827651991
 wqb community api list
+wqb community create --html post.html --title "Research notes" --topic 18910956638743 --dry-run
+wqb community create --html post.html --title "Research notes" --topic 18910956638743 --output published.json
 wqb sqlitecom sync --sqlite community.sqlite3 --since 2026-09-17 --log sync.log
 wqb sqlitecom search --sqlite community.sqlite3 --author JL40454 --scope topics
 wqb sqlitecom get 41706827651991 --sqlite community.sqlite3
@@ -689,6 +691,8 @@ wqb sqlitecom schema --sqlite community.sqlite3
 wqb sqlitecom sql --sqlite community.sqlite3 --file report.sql --param author=JL40454
 wqb sqlitecom import --sqlite community.sqlite3 --source export.json
 ```
+
+`community create --html` 会上传 HTML 目录内的本地图片、替换图片路径、发布正文并回读帖子。保留自动生成的 `.assets.json` 回执，重试时即可复用已上传图片；`--prepared-output` 可保存实际发送的 JSON 正文。`--dry-run` 不发送 HTTP，结果不确定的写请求不会自动重发。JSON 输入、图片限制与改帖命令详见[社区命令文档](resources/docs/commands/community/README.md)。
 
 同步使用游标分页、更新时间边界和默认48小时重叠，断点持久化；`--max-pages` 暂停后再次执行相同命令即可恢复。新库默认建立完整基线，可用 `--since` 限定首次范围。旧评论编辑未必推动父帖更新时间，定期运行 `--reconcile` 复查完整索引；默认7天内检查过且内容未变的帖子会跳过评论下载。
 
@@ -821,6 +825,8 @@ python -m wqb_cli --help
 以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
 
 ### 0.6.1 - 2026-09-22
+
+- 修复实际社区写入的 CSRF；新增 HTML 文件发帖、本地图片上传、可复用图片回执与独立的 API/网页回读验证。本次替换原 v0.6.1 发布资产；已安装 0.6.1 时，安装 wheel 请加 `--force-reinstall --no-cache-dir`。
 
 - 回测入口与源码模块、解析器和文档统一命名为 `wqb simu`；更新已有脚本时使用这一名称。
 - 回测请求、Regular/Super/ALL 行为与 SQLite schema 7 保持一致。

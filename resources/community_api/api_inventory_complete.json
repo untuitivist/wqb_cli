@@ -1,9 +1,61 @@
 {
   "base_url": "https://support.worldquantbrain.com",
   "homepage": "https://support.worldquantbrain.com/hc/zh-cn/community",
-  "authentication": "BRAIN authentication/support SSO, then a separate Zendesk session; CSRF required for writes.",
-  "verification": "Read-only live probes on 2026-09-22 verified posts, topics, search, comments, SSO and cursor pagination. Writes are documented and untested live.",
+  "authentication": "BRAIN authentication/support SSO, then a separate Zendesk session. Cookie-authenticated API writes use HelpCenter.internal.current_session.shared_csrf_token from the authenticated page, not the Help Center session API csrf_token.",
+  "verification": "2026-09-22: authenticated reads and cursor pagination verified. Authorized image upload and post creation succeeded through the installed CLI (POST 201). Published HTML and image GET returned 200; the post JSON GET returned 404, which is preserved separately from successful page verification.",
   "endpoints": [
+    {
+      "path": "/api/v2/guide/user_images/uploads",
+      "url_template": "https://support.worldquantbrain.com/api/v2/guide/user_images/uploads",
+      "methods": [
+        "POST"
+      ],
+      "description": "Create a temporary signed upload URL and token for one community image.",
+      "params": {},
+      "request_body": {
+        "POST": {
+          "content_type": "image MIME type",
+          "file_size": "positive integer, at most 2000000 bytes"
+        }
+      },
+      "notes": [
+        "Mutating. Follow with a binary PUT to the returned signed URL using only the returned upload headers.",
+        "The temporary upload token and signed URL must not enter public logs."
+      ],
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/user_images/",
+        "https://static.zdassets.com/hc/assets/wysiwyg-8f31b01345d86b9077ebae6bc623dbbe.js"
+      ],
+      "probe": {
+        "POST": "Successful authenticated upload preparation using shared_csrf_token; bytes transferred and image registered on 2026-09-22."
+      }
+    },
+    {
+      "path": "/api/v2/guide/user_images",
+      "url_template": "https://support.worldquantbrain.com/api/v2/guide/user_images",
+      "methods": [
+        "POST"
+      ],
+      "description": "Register a completed image upload and obtain its /hc/user_images/ path.",
+      "params": {},
+      "request_body": {
+        "POST": {
+          "token": "token from the completed upload",
+          "brand_id": "current_brand_id from the authenticated page"
+        }
+      },
+      "notes": [
+        "Mutating. Call only after the binary upload succeeds.",
+        "Use the returned relative path in post HTML. External and local image URLs are not a substitute."
+      ],
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/user_images/",
+        "https://static.zdassets.com/hc/assets/wysiwyg-8f31b01345d86b9077ebae6bc623dbbe.js"
+      ],
+      "probe": {
+        "POST": "HTTP 201 on 2026-09-22; the registered image subsequently returned HTTP 200 and image/png."
+      }
+    },
     {
       "path": "/api/v2/community/topics.json",
       "methods": [
@@ -109,10 +161,12 @@
       ],
       "probe": {
         "GET": "HTTP 200; created_at and updated_at descending; 2026-09-22",
-        "POST": "not executed"
+        "POST": "HTTP 201 from installed wqb community create --html on 2026-09-22; published page title, body and image references read back and matched."
       },
       "url_template": "https://support.worldquantbrain.com/api/v2/community/posts.json",
-      "notes": []
+      "notes": [
+        "The authorized live post returned 404 from its JSON read endpoint but 200 from its HTML page. Preserve the API result and report page verification separately; never create again to compensate for a failed GET."
+      ]
     },
     {
       "path": "/api/v2/community/posts/{post_id}.json",

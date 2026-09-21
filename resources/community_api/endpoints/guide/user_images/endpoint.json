@@ -1,0 +1,26 @@
+{
+  "path": "/api/v2/guide/user_images",
+  "url_template": "https://support.worldquantbrain.com/api/v2/guide/user_images",
+  "methods": [
+    "POST"
+  ],
+  "description": "Register a completed image upload and obtain its /hc/user_images/ path.",
+  "params": {},
+  "request_body": {
+    "POST": {
+      "token": "token from the completed upload",
+      "brand_id": "current_brand_id from the authenticated page"
+    }
+  },
+  "notes": [
+    "Mutating. Call only after the binary upload succeeds.",
+    "Use the returned relative path in post HTML. External and local image URLs are not a substitute."
+  ],
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/user_images/",
+    "https://static.zdassets.com/hc/assets/wysiwyg-8f31b01345d86b9077ebae6bc623dbbe.js"
+  ],
+  "probe": {
+    "POST": "HTTP 201 on 2026-09-22; the registered image subsequently returned HTTP 200 and image/png."
+  }
+}

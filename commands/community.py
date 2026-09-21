@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from typing import Any
 
 from ..core.community_client import CommunityClient, load_community_registry, prepare_community_request
+from ..core.community_publish import image_file, materialize_images, plan_images, upload_image, verify_post_page
 from ..core.io import parse_key_values, read_json_file, write_json
 from ..core.registry import EndpointRegistry
 
@@ -20,8 +22,8 @@ def add_community_parser(subparsers: argparse._SubParsersAction) -> None:
         "search": ("GET", "/api/v2/help_center/community_posts/search.json", ("query",), "Search online posts; offline search is sqlitecom search"),
         "user-posts": ("GET", "/api/v2/community/users/{user_id}/posts.json", ("user_id",), "List a user's posts; me is supported"),
         "user-comments": ("GET", "/api/v2/community/users/{user_id}/comments.json", ("user_id",), "List a user's comments"),
-        "create": ("POST", "/api/v2/community/posts.json", (), "Explicitly publish a post from JSON"),
-        "update": ("PUT", "/api/v2/community/posts/{post_id}.json", ("post_id",), "Explicitly update a post from JSON"),
+        "create": ("POST", "/api/v2/community/posts.json", (), "Publish a post from HTML or JSON, including local images"),
+        "update": ("PUT", "/api/v2/community/posts/{post_id}.json", ("post_id",), "Update a post from HTML or JSON"),
         "delete": ("DELETE", "/api/v2/community/posts/{post_id}.json", ("post_id",), "Explicitly delete a post"),
         "comment-create": ("POST", "/api/v2/community/posts/{post_id}/comments.json", ("post_id",), "Explicitly publish a comment from JSON"),
         "comment-update": ("PUT", "/api/v2/community/posts/{post_id}/comments/{comment_id}.json", ("post_id", "comment_id"), "Explicitly update a comment"),
@@ -44,7 +46,18 @@ def add_community_parser(subparsers: argparse._SubParsersAction) -> None:
             body = command.add_mutually_exclusive_group(required=True)
             body.add_argument("--input", help="JSON request body file")
             body.add_argument("--json", help="Inline JSON request body")
+            if name in {"create", "update"}:
+                body.add_argument("--html", help="UTF-8 HTML file; uploads local images from its directory")
+                command.add_argument("--title", help="Post title; required with create --html")
+                command.add_argument("--topic", dest="post_topic", type=int, help="Forum section ID; required with create --html")
+                command.add_argument("--notify-subscribers", action="store_true", help="Notify subscribers when publishing an HTML file")
+                command.add_argument("--upload-images", action="store_true", help="Upload local images referenced by a JSON input")
+                command.add_argument("--assets-manifest", help="Durable image receipts; defaults beside the HTML/JSON input")
+                command.add_argument("--prepared-output", help="Write the exact JSON body with uploaded image paths before sending")
         _request_options(command)
+    image = community_sub.add_parser("image-upload", help="Upload one image and return its forum image path")
+    image.add_argument("file", help="PNG, JPEG, GIF or WebP image, at most 2 MB")
+    _request_options(image)
     api = community_sub.add_parser("api", help="Inspect the forum API inventory or issue a raw request")
     api_sub = api.add_subparsers(dest="community_api_command", required=True)
     for name in ("stats", "list", "show", "params", "call"):
@@ -73,6 +86,14 @@ def _request_options(parser: argparse.ArgumentParser) -> None:
 def handle_community(args: argparse.Namespace) -> int:
     import json
 
+    if args.community_command == "image-upload":
+        path = Path(args.file).resolve()
+        metadata, content = image_file(path)
+        if args.dry_run:
+            write_json({"ok": True, "dry_run": True, "image": metadata, "mutating": True}, args.output)
+        else:
+            write_json({"ok": True, "image": upload_image(_client(args), path)}, args.output)
+        return 0
     registry = load_community_registry()
     params: dict[str, Any] = {}
     variables: dict[str, Any] = {}
@@ -118,12 +139,56 @@ def handle_community(args: argparse.Namespace) -> int:
             json_body = read_json_file(args.input)
     if getattr(args, "json", None):
         json_body = json.loads(args.json)
+    html_path = getattr(args, "html", None)
+    if html_path:
+        if args.community_command == "create" and (not args.title or not args.post_topic):
+            raise ValueError("create --html requires --title and --topic")
+        json_body = {"post": {"details": Path(html_path).read_text(encoding="utf-8")}}
+        if args.title:
+            json_body["post"]["title"] = args.title
+        if args.post_topic:
+            json_body["post"]["topic_id"] = args.post_topic
+        if args.community_command == "create":
+            json_body["notify_subscribers"] = args.notify_subscribers
     params.update(parse_key_values(args.param))
     prepared = prepare_community_request(registry, method, path, path_vars=variables, params=params, json_body=json_body)
+    image_plan = []
+    post = json_body.get("post") if isinstance(json_body, dict) else None
+    prepare_images = args.community_command in {"create", "update"} and isinstance(post, dict) and isinstance(post.get("details"), str)
+    if prepare_images:
+        source_path = Path(html_path or getattr(args, "input", None) or "community-post.json").resolve()
+        upload_local = bool(html_path or args.upload_images)
+        parsed, image_plan, replacements = plan_images(post["details"], source_path.parent, upload_local=upload_local)
     if args.dry_run:
-        write_json({"ok": True, "dry_run": True, "request": prepared}, args.output)
+        write_json({"ok": True, "dry_run": True, "request": prepared, "images": image_plan}, args.output)
         return 0
-    client = CommunityClient(cookies_path=args.cookies, config_path=args.config_path, brain_registry=EndpointRegistry.load(args.registry), max_wait_seconds=args.max_wait_seconds)
+    client = _client(args)
+    uploaded = []
+    if prepare_images:
+        manifest = Path(args.assets_manifest) if args.assets_manifest else source_path.with_name(source_path.name + ".assets.json")
+        post["details"], uploaded = materialize_images(client, post["details"], source_path.parent, manifest, upload_local=upload_local)
+    if getattr(args, "prepared_output", None):
+        write_json(json_body, args.prepared_output)
     result = client.call(prepared["method"], prepared["url"], params=prepared["params"], json_body=prepared["json"])
+    if prepare_images:
+        result["images"] = uploaded
+        saved = (result["response"].get("body") or {}).get("post") or {}
+        if result["ok"] and saved.get("id"):
+            try:
+                result["verification"] = client.call("GET", f"/api/v2/community/posts/{saved['id']}.json")
+            except Exception as error:
+                result["verification"] = {"ok": False, "error_type": type(error).__name__,
+                                          "message": "The post was saved; retry only its GET to verify publication."}
+            if not result["verification"].get("ok") and saved.get("html_url"):
+                try:
+                    result["page_verification"] = verify_post_page(client, saved)
+                except Exception as error:
+                    result["page_verification"] = {"ok": False, "error_type": type(error).__name__,
+                                                    "message": "The post was saved; inspect its page without creating another post."}
     write_json(result, args.output)
     return 0 if result["ok"] else 1
+
+
+def _client(args: argparse.Namespace) -> CommunityClient:
+    return CommunityClient(cookies_path=args.cookies, config_path=args.config_path,
+                           brain_registry=EndpointRegistry.load(args.registry), max_wait_seconds=args.max_wait_seconds)

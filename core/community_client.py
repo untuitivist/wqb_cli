@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -45,6 +47,7 @@ def community_url(path: str) -> str:
             or parsed.path.startswith("/api/v2/help_center/community/")
             or parsed.path == "/api/v2/help_center/community_posts/search.json"
             or parsed.path == "/api/v2/help_center/sessions.json"
+            or parsed.path in {"/api/v2/guide/user_images/uploads", "/api/v2/guide/user_images"}
         )
     ):
         raise ValueError("Community requests must target the registered HTTPS forum API origin")
@@ -53,6 +56,22 @@ def community_url(path: str) -> str:
 
 def community_resource(address: str) -> str:
     return urlsplit(community_url(address)).path.removesuffix(".json").replace("/api/v2/help_center/community/", "/api/v2/community/")
+
+
+def browser_write_context(html: str) -> dict[str, str]:
+    for match in re.finditer(r"HelpCenter\.internal\s*=\s*", html):
+        try:
+            payload = json.JSONDecoder().raw_decode(html[match.end():])[0]
+        except ValueError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        session = payload.get("current_session") or {}
+        token = session.get("shared_csrf_token")
+        brand = str(payload.get("current_brand_id") or "")
+        if isinstance(token, str) and token and brand.isdecimal():
+            return {"csrf_token": token, "brand_id": brand}
+    return {}
 
 
 def next_page_url(body: dict[str, Any]) -> str | None:
@@ -95,8 +114,11 @@ class CommunityClient:
         self.sleeper = sleeper
         self.authenticated = False
         self.csrf_token: str | None = None
+        self.brand_id: str | None = None
 
     def authenticate(self) -> None:
+        self.csrf_token = None
+        self.brand_id = None
         endpoint = self.brain.registry.get("/authentication/support")
         result = self.brain.call_once(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
         response = result.get("response") or {}
@@ -126,6 +148,8 @@ class CommunityClient:
                 raise CommunityError(f"BRAIN support SSO returned an unexpected redirect origin: {parsed.scheme}://{parsed.hostname}")
             try:
                 reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
+                if reply.status_code == 403 and parsed.path.startswith("/hc/"):
+                    reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
             except requests.RequestException as error:
                 raise CommunityError(f"Support SSO transport failed: {type(error).__name__}") from None
             if reply.status_code in (301, 302, 303, 307, 308):
@@ -137,9 +161,43 @@ class CommunityClient:
             if reply.status_code != 200:
                 raise CommunityError(f"Support SSO failed at {parsed.hostname} (HTTP {reply.status_code}); normal browser login may be required")
             self.authenticated = True
-            self.csrf_token = None
+            context = browser_write_context(reply.text)
+            self.csrf_token = context.get("csrf_token")
+            self.brand_id = context.get("brand_id")
             return
         raise CommunityError("Support SSO exceeded its redirect limit")
+
+    def write_context(self) -> dict[str, str]:
+        if not self.authenticated:
+            self.authenticate()
+        if not self.csrf_token or not self.brand_id:
+            try:
+                reply = self.session.get(SUPPORT_ORIGIN + "/hc/zh-cn/community/posts/new", timeout=self.timeout,
+                                         allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
+            except requests.RequestException as error:
+                raise CommunityError("Forum write context read failed: " + type(error).__name__) from None
+            if reply.status_code != 200:
+                raise CommunityError(f"Forum write context failed (HTTP {reply.status_code})", status_code=reply.status_code)
+            context = browser_write_context(reply.text)
+            self.csrf_token = context.get("csrf_token")
+            self.brand_id = context.get("brand_id")
+        if not self.csrf_token or not self.brand_id:
+            raise CommunityError("Forum page did not provide the shared CSRF token and brand required for writes")
+        return {"csrf_token": self.csrf_token, "brand_id": self.brand_id}
+
+    def post_page(self, address: str, post_id: str) -> requests.Response:
+        parsed = urlsplit(address)
+        expected = r"/hc/[a-z-]+/community/posts/" + re.escape(str(post_id)) + r"(?:-[^/]*)?"
+        if (parsed.scheme != "https" or parsed.hostname != "support.worldquantbrain.com"
+                or parsed.port not in (None, 443) or parsed.username or parsed.password or parsed.query or parsed.fragment
+                or re.fullmatch(expected, parsed.path) is None):
+            raise ValueError("Post verification must read the saved post on the forum origin")
+        if not self.authenticated:
+            self.authenticate()
+        try:
+            return self.session.get(address, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html"})
+        except requests.RequestException as error:
+            raise CommunityError("Post page verification failed: " + type(error).__name__) from None
 
     def _delay(self, reply: requests.Response | None, attempt: int) -> float:
         header = reply.headers.get("Retry-After") if reply is not None else None
@@ -165,10 +223,7 @@ class CommunityClient:
         headers = {"Accept": "application/json"}
         if mutating:
             if self.csrf_token is None:
-                session_body = self.get_json("/api/v2/help_center/sessions.json")
-                self.csrf_token = (session_body.get("current_session") or {}).get("csrf_token")
-                if not self.csrf_token:
-                    raise CommunityError("Forum session did not provide a CSRF token")
+                self.write_context()
             headers.update({"X-CSRF-Token": self.csrf_token, "Origin": SUPPORT_ORIGIN, "Referer": SUPPORT_ORIGIN + "/hc/zh-cn/community"})
         waited = 0.0
         retries = 0

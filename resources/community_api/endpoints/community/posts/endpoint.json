@@ -32,8 +32,10 @@
   ],
   "probe": {
     "GET": "HTTP 200; created_at and updated_at descending; 2026-09-22",
-    "POST": "not executed"
+    "POST": "HTTP 201 from installed wqb community create --html on 2026-09-22; published page title, body and image references read back and matched."
   },
   "url_template": "https://support.worldquantbrain.com/api/v2/community/posts.json",
-  "notes": []
+  "notes": [
+    "The authorized live post returned 404 from its JSON read endpoint but 200 from its HTML page. Preserve the API result and report page verification separately; never create again to compensate for a failed GET."
+  ]
 }

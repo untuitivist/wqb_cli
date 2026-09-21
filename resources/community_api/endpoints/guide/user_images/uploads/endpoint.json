@@ -1,0 +1,26 @@
+{
+  "path": "/api/v2/guide/user_images/uploads",
+  "url_template": "https://support.worldquantbrain.com/api/v2/guide/user_images/uploads",
+  "methods": [
+    "POST"
+  ],
+  "description": "Create a temporary signed upload URL and token for one community image.",
+  "params": {},
+  "request_body": {
+    "POST": {
+      "content_type": "image MIME type",
+      "file_size": "positive integer, at most 2000000 bytes"
+    }
+  },
+  "notes": [
+    "Mutating. Follow with a binary PUT to the returned signed URL using only the returned upload headers.",
+    "The temporary upload token and signed URL must not enter public logs."
+  ],
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/user_images/",
+    "https://static.zdassets.com/hc/assets/wysiwyg-8f31b01345d86b9077ebae6bc623dbbe.js"
+  ],
+  "probe": {
+    "POST": "Successful authenticated upload preparation using shared_csrf_token; bytes transferred and image registered on 2026-09-22."
+  }
+}

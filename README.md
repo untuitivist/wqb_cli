@@ -22,7 +22,7 @@ The direct simulation command is `wqb simu`. Use the following entry points in e
 | --- | --- |
 | `wqb simu` | Create, inspect, and wait for Regular, Super, and ALL simulations. |
 | `wqb sqlitesimu` | Queue candidates in SQLite, execute batches, recover runs, and export results. |
-| `wqb community` | Read and search the online forum, or prepare community write requests. |
+| `wqb community` | Read/search the forum and publish HTML posts with local images. |
 | `wqb sqlitecom` | Incrementally sync the forum, search local content, and run read-only SQL. |
 
 For simulation settings and request previews, start with `wqb simu options` and `wqb simu create --help`. See [Command Overview](#command-overview) for the complete command tree and examples below for request formats.
@@ -680,6 +680,8 @@ wqb community list --sort updated_at --limit 10
 wqb community search wqb_cli --limit 5
 wqb community get 41706827651991
 wqb community api list
+wqb community create --html post.html --title "Research notes" --topic 18910956638743 --dry-run
+wqb community create --html post.html --title "Research notes" --topic 18910956638743 --output published.json
 wqb sqlitecom sync --sqlite community.sqlite3 --since 2026-09-17 --log sync.log
 wqb sqlitecom search --sqlite community.sqlite3 --author JL40454 --scope topics
 wqb sqlitecom get 41706827651991 --sqlite community.sqlite3
@@ -687,6 +689,8 @@ wqb sqlitecom schema --sqlite community.sqlite3
 wqb sqlitecom sql --sqlite community.sqlite3 --file report.sql --param author=JL40454
 wqb sqlitecom import --sqlite community.sqlite3 --source export.json
 ```
+
+`community create --html` uploads local images from the HTML directory, replaces image paths, publishes the body and reads the saved post back. Keep the generated `.assets.json` receipt to reuse uploads on retry. Use `--prepared-output` to save the actual request body. Dry runs make no HTTP requests; uncertain writes are never automatically replayed. See [community commands](resources/docs/commands/community/README.md) for JSON input, image limits and update commands.
 
 Sync uses cursor pagination, an update-time boundary and a default 48-hour overlap. Saved work resumes automatically; --max-pages pauses after a bounded number of index pages. A new database builds a full baseline unless --since limits it. Old comment edits may not update the parent timestamp: periodically use --reconcile to revisit the full index. Unchanged posts with comments checked in the last seven days skip comment downloads.
 
@@ -819,6 +823,8 @@ Release checklist:
 The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
 
 ### 0.6.1 - 2026-09-22
+
+- Fixed live community-write CSRF; added HTML-file posting, local-image uploads, reusable asset receipts and separate API/page verification. The existing v0.6.1 assets are replaced with this correction; reinstall the wheel with `--force-reinstall --no-cache-dir` if 0.6.1 is already installed.
 
 - Standardized the simulation entry point as `wqb simu`, including the source module, parser and documentation. Use this name when updating existing scripts.
 - Simulation payloads, Regular/Super/ALL behavior and SQLite schema 7 are unchanged.

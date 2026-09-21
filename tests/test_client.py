@@ -278,6 +278,7 @@ class ClientPrepareTests(unittest.TestCase):
         bodies = (
             {"detail": "CANCEL_LIMIT_EXCEEDED"},
             {"detail": "CONCURRENT_SIMULATION_LIMIT_EXCEEDED"},
+            {"detail": "DAILY_SIMULATION_LIMIT_EXCEEDED"},
             {"message": "API rate limit exceeded"},
             {"error": "RATE_LIMIT_EXCEEDED"},
         )

@@ -29,11 +29,21 @@ WQB_BACKPRESSURE_MARKERS = frozenset(
 )
 
 
+def is_wqb_daily_simulation_limit(status_code: int | None, body: Any) -> bool:
+    if status_code != 429:
+        return False
+    values = [body.get(key) for key in ("detail", "message", "error", "code")] if isinstance(body, dict) else [body]
+    normalized = " ".join(str(value).strip().casefold().replace("_", " ") for value in values if value)
+    return "daily simulation limit exceeded" in normalized or "daily simulation limit reached" in normalized
+
+
 def is_wqb_backpressure(status_code: int | None, body: Any) -> bool:
     """Distinguish capacity/rate backpressure from authentication-like 429s."""
 
     if status_code != 429:
         return False
+    if is_wqb_daily_simulation_limit(status_code, body):
+        return True
     if isinstance(body, dict):
         values = [body.get(key) for key in ("detail", "message", "error")]
     else:

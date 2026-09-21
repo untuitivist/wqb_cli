@@ -21,7 +21,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 8
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -125,6 +125,18 @@ CREATE TABLE IF NOT EXISTS simulation_items (
     claim_owner TEXT,
     PRIMARY KEY(batch_id, ordinal)
 );
+
+CREATE TABLE IF NOT EXISTS simulation_failures (
+    batch_id TEXT NOT NULL REFERENCES simulation_batches(id),
+    experiment_id TEXT NOT NULL REFERENCES experiments(id),
+    run_id TEXT NOT NULL REFERENCES runs(id),
+    error TEXT NOT NULL,
+    response_json TEXT,
+    created_at REAL NOT NULL,
+    PRIMARY KEY(batch_id, experiment_id)
+);
+CREATE INDEX IF NOT EXISTS idx_simulation_failures_experiment
+    ON simulation_failures(experiment_id);
 
 CREATE TABLE IF NOT EXISTS alphas (
     alpha_id TEXT PRIMARY KEY,
@@ -492,6 +504,28 @@ class SqliteStore:
             if current < 7:
                 for candidate in conn.execute(
                     "SELECT id, payload_json FROM candidates WHERE simulation_type = 'REGION_AGNOSTIC'"
+                ).fetchall():
+                    compatibility_key, batch_limit = scheduling_profile(json.loads(candidate["payload_json"]))
+                    conn.execute(
+                        "UPDATE candidates SET compatibility_key = ?, batch_limit = ? WHERE id = ?",
+                        (compatibility_key, batch_limit, candidate["id"]),
+                    )
+            if current < 8:
+                conn.execute(
+                    """
+                    INSERT OR IGNORE INTO simulation_failures(
+                        batch_id, experiment_id, run_id, error, response_json, created_at
+                    )
+                    SELECT item.batch_id, item.experiment_id, batch.run_id,
+                           COALESCE(item.last_error, 'legacy_simulation_failure'),
+                           item.last_response_json, batch.updated_at
+                    FROM simulation_items item
+                    JOIN simulation_batches batch ON batch.id = item.batch_id
+                    WHERE item.state = 'RETRIED'
+                    """
+                )
+                for candidate in conn.execute(
+                    "SELECT id, payload_json FROM candidates WHERE simulation_type = 'REGULAR'"
                 ).fetchall():
                     compatibility_key, batch_limit = scheduling_profile(json.loads(candidate["payload_json"]))
                     conn.execute(
@@ -905,7 +939,7 @@ class SqliteStore:
         return self.run_summary(run_id)
 
     def next_simulate_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
-        global_not_before = self.runtime_float("simulation_request_not_before")
+        global_not_before = self.simulation_not_before()
         if global_not_before is not None and now < global_not_before:
             return None
         with self.connect() as conn:
@@ -927,7 +961,7 @@ class SqliteStore:
         now: float,
         resend_interval_seconds: float | None = 0.0,
     ) -> BatchRecord | None:
-        global_not_before = self.runtime_float("simulation_request_not_before")
+        global_not_before = self.simulation_not_before()
         if global_not_before is not None and now < global_not_before:
             return None
         resend_cutoff = (
@@ -945,12 +979,11 @@ class SqliteStore:
                 WHERE q.run_id = ?
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
-                  AND (? IS NULL OR q.last_attempt_at <= ?)
-                  AND (e.state <> 'POLLING' OR ? IS NOT NULL)
+                  AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
                 ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT 1
                 """,
-                (run_id, now, resend_cutoff, resend_cutoff, resend_cutoff),
+                (run_id, now, resend_cutoff, resend_cutoff),
             ).fetchone()
             if selected_head is None:
                 return None
@@ -963,8 +996,7 @@ class SqliteStore:
                 WHERE q.run_id = ?
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
-                  AND (? IS NULL OR q.last_attempt_at <= ?)
-                  AND (e.state <> 'POLLING' OR ? IS NOT NULL)
+                  AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
                   AND c.compatibility_key = ?
                 ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT ?
@@ -972,7 +1004,6 @@ class SqliteStore:
                 (
                     run_id,
                     now,
-                    resend_cutoff,
                     resend_cutoff,
                     resend_cutoff,
                     selected_head["compatibility_key"],
@@ -1214,8 +1245,10 @@ class SqliteStore:
         response: dict[str, Any],
         not_before: float,
         now: float,
+        max_retries: int = 1,
     ) -> None:
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (batch_id,)
             ).fetchone()
@@ -1223,77 +1256,39 @@ class SqliteStore:
                 "SELECT experiment_id, ordinal FROM simulation_items WHERE batch_id = ?",
                 (batch_id,),
             ).fetchall()
-            claimed = 0
+            outcomes: list[str] = []
             for item in items:
-                owner = conn.execute(
-                    """
-                    UPDATE experiments
-                    SET state = 'RETRY_WAIT', batch_id = NULL, child_simulation_id = NULL,
-                        alpha_id = NULL, not_before = ?, last_error = ?, updated_at = ?
-                    WHERE id = ? AND batch_id = ?
-                      AND state IN (
-                          'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
-                          'POLLING', 'SIMULATE_UNKNOWN', 'PERMANENT_FAILURE'
-                      )
-                      AND (
-                          state = 'PERMANENT_FAILURE'
-                          OR EXISTS (
-                              SELECT 1 FROM simulation_queue q
-                              WHERE q.experiment_id = experiments.id
-                          )
-                      )
-                    """,
-                    (not_before, error, now, item["experiment_id"], batch_id),
+                outcome = self._retry_simulation_item(
+                    conn, batch_id=batch_id, experiment_id=item["experiment_id"],
+                    ordinal=item["ordinal"], run_id=batch["run_id"], child_id=None,
+                    error=error, response=response, not_before=not_before,
+                    now=now, max_retries=max_retries,
                 )
-                item_state = "RETRIED" if owner.rowcount else "SUPERSEDED"
-                claimed += int(bool(owner.rowcount))
-                conn.execute(
-                    """
-                    UPDATE simulation_items
-                    SET state = ?, last_error = ?, last_response_json = ?, claim_owner = NULL
-                    WHERE batch_id = ? AND ordinal = ?
-                    """,
-                    (
-                        item_state,
-                        error,
-                        _json(response),
-                        batch_id,
-                        item["ordinal"],
-                    ),
-                )
-                if owner.rowcount:
-                    conn.execute(
-                        """
-                        INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at)
-                        VALUES (?, ?, ?)
-                        """,
-                        (item["experiment_id"], batch["run_id"], now),
-                    )
+                if outcome is not None:
+                    outcomes.append(outcome)
+            if not outcomes:
+                return
             conn.execute(
                 """
                 UPDATE simulation_batches
-                SET state = ?, last_error = ?, last_response_json = ?,
+                SET last_error = ?, last_response_json = ?,
                     claim_owner = NULL, updated_at = ?
                 WHERE id = ?
                 """,
-                (
-                    "RETRIED" if claimed else "SUPERSEDED",
-                    error,
-                    _json(response),
-                    now,
-                    batch_id,
-                ),
+                (error, _json(response), now, batch_id),
             )
+            self._refresh_batch_from_items(conn, batch_id, now=now)
             self._event(
                 conn,
                 str(batch["run_id"]),
-                "SIMULATION_BATCH_REQUEUED",
+                "SIMULATION_BATCH_REQUEUED" if "RETRIED" in outcomes else "SIMULATION_BATCH_FAILED",
                 batch_id=batch_id,
                 status_code=_status_code(response),
                 payload={
                     "error": error,
                     "response": response,
-                    "claimed_experiments": claimed,
+                    "claimed_experiments": sum(outcome != "SUPERSEDED" for outcome in outcomes),
+                    "exhausted_experiments": outcomes.count("PERMANENT_FAILURE"),
                 },
                 now=now,
             )
@@ -1688,46 +1683,30 @@ class SqliteStore:
         response: dict[str, Any],
         not_before: float,
         now: float,
+        max_retries: int = 1,
     ) -> None:
         with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
             batch = conn.execute(
                 "SELECT run_id FROM simulation_batches WHERE id = ?", (item.batch_id,)
             ).fetchone()
-            owner = conn.execute(
-                """
-                UPDATE experiments
-                SET state = 'RETRY_WAIT', batch_id = NULL, child_simulation_id = NULL,
-                    alpha_id = NULL, not_before = ?, last_error = ?, updated_at = ?
-                WHERE id = ? AND state = 'CHILD_POLLING' AND batch_id = ?
-                  AND child_simulation_id = ?
-                  AND EXISTS (
-                      SELECT 1 FROM simulation_queue q
-                      WHERE q.experiment_id = experiments.id
-                  )
-                """,
-                (
-                    not_before,
-                    error,
-                    now,
-                    item.experiment_id,
-                    item.batch_id,
-                    item.child_simulation_id,
-                ),
+            outcome = self._retry_simulation_item(
+                conn, batch_id=item.batch_id, experiment_id=item.experiment_id,
+                ordinal=item.ordinal, run_id=batch["run_id"], child_id=item.child_simulation_id,
+                error=error, response=response, not_before=not_before,
+                now=now, max_retries=max_retries,
             )
-            item_state = "RETRIED" if owner.rowcount else "SUPERSEDED"
-            conn.execute(
-                """
-                UPDATE simulation_items
-                SET state = ?, last_error = ?, last_response_json = ?,
-                    claim_owner = NULL
-                WHERE batch_id = ? AND ordinal = ?
-                """,
-                (item_state, error, _json(response), item.batch_id, item.ordinal),
-            )
+            if outcome is None:
+                return
+            event_type = {
+                "RETRIED": "SIMULATION_CHILD_REQUEUED",
+                "PERMANENT_FAILURE": "SIMULATION_CHILD_FAILED",
+                "SUPERSEDED": "SIMULATION_CHILD_SUPERSEDED",
+            }[outcome]
             self._event(
                 conn,
                 str(batch["run_id"]),
-                "SIMULATION_CHILD_REQUEUED" if owner.rowcount else "SIMULATION_CHILD_SUPERSEDED",
+                event_type,
                 experiment_id=item.experiment_id,
                 batch_id=item.batch_id,
                 status_code=_status_code(response),
@@ -1735,6 +1714,115 @@ class SqliteStore:
                 now=now,
             )
             self._refresh_batch_from_items(conn, item.batch_id, now=now)
+
+    def _retry_simulation_item(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        batch_id: str,
+        experiment_id: str,
+        ordinal: int,
+        run_id: str,
+        child_id: str | None,
+        error: str,
+        response: dict[str, Any],
+        not_before: float,
+        now: float,
+        max_retries: int,
+    ) -> str | None:
+        if conn.execute(
+            "SELECT 1 FROM simulation_failures WHERE batch_id = ? AND experiment_id = ?",
+            (batch_id, experiment_id),
+        ).fetchone():
+            return None
+        experiment = conn.execute(
+            """
+            SELECT * FROM experiments
+            WHERE id = ? AND batch_id = ?
+              AND ((? IS NULL AND state IN (
+                  'QUEUED', 'RETRY_WAIT', 'BATCHED', 'SIMULATING',
+                  'POLLING', 'SIMULATE_UNKNOWN', 'PERMANENT_FAILURE'
+              )) OR (state = 'CHILD_POLLING' AND child_simulation_id = ?))
+              AND (state = 'PERMANENT_FAILURE' OR EXISTS (
+                  SELECT 1 FROM simulation_queue WHERE experiment_id = experiments.id
+              ))
+            """,
+            (experiment_id, batch_id, child_id, child_id),
+        ).fetchone()
+        outcome = "SUPERSEDED"
+        if experiment is not None:
+            conn.execute(
+                """
+                INSERT INTO simulation_failures(batch_id, experiment_id, run_id, error, response_json, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (batch_id, experiment_id, run_id, error, _json(response), now),
+            )
+            failures = conn.execute(
+                "SELECT COUNT(*) FROM simulation_failures WHERE experiment_id = ?", (experiment_id,)
+            ).fetchone()[0]
+            retry = failures <= max_retries
+            outcome = "RETRIED" if retry else "PERMANENT_FAILURE"
+            conn.execute(
+                """
+                UPDATE experiments
+                SET state = ?, batch_id = ?, child_simulation_id = ?,
+                    not_before = ?, last_error = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (
+                    "RETRY_WAIT" if retry else "PERMANENT_FAILURE",
+                    None if retry else batch_id, None if retry else child_id,
+                    not_before if retry else 0, error, now, experiment_id,
+                ),
+            )
+            if retry:
+                conn.execute(
+                    "INSERT OR IGNORE INTO simulation_queue(experiment_id, run_id, enqueued_at) VALUES (?, ?, ?)",
+                    (experiment_id, run_id, now),
+                )
+            else:
+                conn.execute("DELETE FROM simulation_queue WHERE experiment_id = ?", (experiment_id,))
+                self._event(
+                    conn, run_id, "SIMULATION_RETRIES_EXHAUSTED", experiment_id=experiment_id,
+                    batch_id=batch_id, status_code=_status_code(response),
+                    payload={"error": error, "failures": failures, "max_retries": max_retries}, now=now,
+                )
+        conn.execute(
+            """
+            UPDATE simulation_items
+            SET state = ?, last_error = ?, last_response_json = ?, claim_owner = NULL
+            WHERE batch_id = ? AND ordinal = ?
+              AND state NOT IN ('COMPLETE', 'RETRIED', 'SUPERSEDED')
+            """,
+            (outcome, error, _json(response), batch_id, ordinal),
+        )
+        return outcome
+
+    def exhaust_simulation_retries(self, run_id: str, *, max_retries: int, now: float) -> None:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            exhausted = conn.execute(
+                """
+                SELECT experiment.id, experiment.last_error, COUNT(*) AS failures
+                FROM experiments experiment
+                JOIN simulation_failures failure ON failure.experiment_id = experiment.id
+                WHERE experiment.run_id = ? AND experiment.state = 'RETRY_WAIT'
+                GROUP BY experiment.id HAVING COUNT(*) > ?
+                """,
+                (run_id, max_retries),
+            ).fetchall()
+            for experiment in exhausted:
+                conn.execute(
+                    "UPDATE experiments SET state = 'PERMANENT_FAILURE', updated_at = ? WHERE id = ?",
+                    (now, experiment["id"]),
+                )
+                conn.execute("DELETE FROM simulation_queue WHERE experiment_id = ?", (experiment["id"],))
+                self._event(
+                    conn, run_id, "SIMULATION_RETRIES_EXHAUSTED", experiment_id=experiment["id"],
+                    payload={"error": experiment["last_error"], "failures": experiment["failures"],
+                             "max_retries": max_retries}, now=now,
+                )
 
     def next_enrichment(self, run_id: str, *, now: float) -> ExperimentRecord | None:
         with self.connect() as conn:
@@ -2098,6 +2186,14 @@ class SqliteStore:
             row = conn.execute("SELECT value FROM runtime_state WHERE key = ?", (key,)).fetchone()
         return float(row["value"]) if row else None
 
+    def simulation_not_before(self) -> float | None:
+        with self.connect() as conn:
+            row = conn.execute(
+                "SELECT MAX(CAST(value AS REAL)) FROM runtime_state "
+                "WHERE key IN ('simulation_request_not_before', 'simulation_daily_not_before')"
+            ).fetchone()
+        return float(row[0]) if row[0] is not None else None
+
     def refresh_run_state(self, run_id: str, *, now: float) -> dict[str, Any]:
         with self.connect() as conn:
             run = conn.execute("SELECT state FROM runs WHERE id = ?", (run_id,)).fetchone()
@@ -2190,6 +2286,8 @@ class SqliteStore:
             "updated_at": run["updated_at"],
             "started_at": run["started_at"],
             "finished_at": run["finished_at"],
+            "simulation_not_before": self.simulation_not_before(),
+            "daily_limit_not_before": self.runtime_float("simulation_daily_not_before"),
         }
 
     def list_runs(self, *, limit: int = 20) -> list[dict[str, Any]]:
@@ -2260,6 +2358,8 @@ class SqliteStore:
                     e.priority,
                     e.attempts,
                     e.enrich_attempts,
+                    (SELECT COUNT(*) FROM simulation_failures failure
+                     WHERE failure.experiment_id = e.id) AS simulation_failures,
                     e.alpha_id,
                     e.last_error,
                     e.metadata_json,
@@ -2627,8 +2727,6 @@ def scheduling_profile(payload: dict[str, Any]) -> tuple[str, int]:
     instrument_type = str(settings.get("instrumentType") or "").upper()
     if simulation_type in {"SUPER", "REGION_AGNOSTIC"}:
         batch_limit = 1
-    elif region == "GLB":
-        batch_limit = 5 if language == "FASTEXPR" else 1
     else:
         batch_limit = 10 if language == "FASTEXPR" else 1
     compatibility = {

@@ -176,7 +176,7 @@ class RegionAgnosticTests(unittest.TestCase):
         self.policy = RuntimePolicy(concurrent=False, max_attempts=1, resend_interval_seconds=None)
         self.assertEqual(self.runtime().run(run_id)["state"], "COMPLETED")
 
-    def test_failed_and_unknown_all_do_not_block_other_candidates_or_repeat(self):
+    def test_failed_all_retries_once_while_unknown_is_not_repeated(self):
         run_id = self.enqueue([candidate("invalid()"), candidate("unknown()"), candidate()])
         original = self.gateway.call
 
@@ -190,7 +190,10 @@ class RegionAgnosticTests(unittest.TestCase):
         summary = self.runtime().run(run_id)
         self.assertEqual(summary["state"], "BLOCKED")
         self.assertEqual(summary["counts"], {"PERMANENT_FAILURE": 1, "READY": 1, "SIMULATE_UNKNOWN": 1})
-        self.assertEqual(sum(call[0] == "POST" for call in self.gateway.calls), 3)
+        posted = [call[3]["regular"] for call in self.gateway.calls if call[0] == "POST"]
+        self.assertEqual(len(posted), 4)
+        self.assertEqual(posted.count("invalid()"), 2)
+        self.assertEqual(posted.count("unknown()"), 1)
 
     def test_no_resend_preserves_remote_poll_and_retries_explicit_rejection(self):
         run_id = self.enqueue([candidate()])

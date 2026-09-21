@@ -237,16 +237,20 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
         "--no-resend", action="store_true",
         help="Keep collecting accepted simulations without posting them again; rejected requests can retry",
     )
-    parser.add_argument("--max-attempts", type=int, default=5)
-    parser.add_argument("--retry-seconds", type=float, default=5.0)
+    parser.add_argument("--max-attempts", type=int, default=5, help="Maximum enrichment failure attempts")
+    parser.add_argument(
+        "--max-simulation-retries", type=int, default=1,
+        help="Retries after a confirmed simulation failure; exhausted experiments are recorded and skipped",
+    )
+    parser.add_argument("--retry-seconds", type=float, default=10.0)
     parser.add_argument("--idle-sleep-seconds", type=float, default=1.0)
     parser.add_argument(
         "--resend-seconds",
         type=float,
         default=10.0,
         help=(
-            "Minimum delay before an unresolved expression can be sent again; "
-            "the sender remains active until a terminal result consumes it"
+            "Minimum delay before an accepted pending expression can be sent again; "
+            "confirmed failures use --retry-seconds instead"
         ),
     )
     parser.add_argument(
@@ -282,6 +286,7 @@ def _run(
         raise ValueError("result-workers and enrichment-workers must be at least 1")
     policy = RuntimePolicy(
         max_attempts=args.max_attempts,
+        max_simulation_retries=args.max_simulation_retries,
         default_retry_seconds=args.retry_seconds,
         idle_sleep_seconds=args.idle_sleep_seconds,
         resend_interval_seconds=None if args.no_resend else args.resend_seconds,

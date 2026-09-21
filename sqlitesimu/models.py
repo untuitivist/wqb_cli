@@ -53,7 +53,8 @@ class EnqueueResult:
 @dataclass(frozen=True)
 class RuntimePolicy:
     max_attempts: int = 5
-    default_retry_seconds: float = 5.0
+    max_simulation_retries: int = 1
+    default_retry_seconds: float = 10.0
     idle_sleep_seconds: float = 1.0
     resend_interval_seconds: float | None = 10.0
     lease_seconds: float = 300.0

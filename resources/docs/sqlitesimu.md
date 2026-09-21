@@ -111,12 +111,12 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 - `SIMULATE_UNKNOWN` 可能已经在服务器创建 simulation，因此不自动删除其 `simulation_queue` 行，必须先人工核对。
 - queue 行会被真实 `DELETE`；`experiments`、batch、Location、API event 和结果表继续保留，因而删除待办不会破坏恢复、导出和审计。
 
-`status` 和最终 run JSON 的 `queues.simulation`、`queues.enrichment` 可直接检查两级待办数量。旧数据库首次打开时会自动升级为 schema v5：v1 数据回填未完成队列，v2 的 simulation request 状态和事件统一迁移到 `SIMULATING / SIMULATE_UNKNOWN` 术语，v4 queue 无损补齐 attempt 轮转字段。
+`status` 和最终 run JSON 的 `queues.simulation`、`queues.enrichment` 可直接检查两级待办数量。旧数据库自动升级为 schema v8，保留历史、地区子结果和队列；`simulation_failures` 持久保存已确认失败的 attempt，重启不重置重试预算。
 
 终止状态：
 
 - `READY`：详情和 PnL 都已保存。
-- `PERMANENT_FAILURE`：服务器明确返回的不可重试 simulation 错误，或 enrichment 读取错误超过预算。
+- `PERMANENT_FAILURE`：明确拒绝的非法请求、已确认 simulation 失败且重试预算耗尽，或 enrichment 读取错误超过预算。
 - `SIMULATE_UNKNOWN`：`POST /simulations` 时连接中断或返回无法确认，可能已经在服务器创建 simulation。
 - `CANCELLED`：用户显式终止的未完成 simulate 待办；历史仍可导出。
 
@@ -126,19 +126,19 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 ## 与旧脚本一致的行为
 
-- REGULAR FASTEXPR 仍以 region 和 delay 为主要批次边界，普通区域单批最多 10 条。
+- REGULAR FASTEXPR 仍以 region 和 delay 为主要批次边界，包括 GLB 在内单批最多 10 条；ALL、Super 和 Python 保持单对象请求。
 - POST `/simulations` 成功必须是 `201`，并持久化 `Location`。
-- `429` 和服务器并发限制不会消耗失败预算，按 `Retry-After` 继续等待。
+- 并发或频率限制不消耗失败预算，按 `Retry-After` 等待，缺省10秒。日限错误 `DAILY_SIMULATION_LIMIT_EXCEEDED` 则持久暂停发送至下一个 `America/New_York` 零点，自动处理夏令时，已受理结果继续收集。`status.daily_limit_not_before` 显示恢复时间戳。
 - 客户端不设置 `8 / 4 / 3` 等并发槽位上限；持续发起 simulate 请求，由 BRAIN 的 `429` 和 `Retry-After` 提供背压。
 - `201` 只登记 Location；源表达式在首个有效终态前仍留在发送队列，按最久未发送顺序循环产生 attempt，以持续填充服务器可用并发。
-- `204 / 401 / 429` 都按 `wqb.WQBSession` 的异常会话状态处理；即使两层重登耗尽，也只延期当前工作，不会把 experiment 写成永久失败。
+- `204 / 401` 和认证类 `429` 尝试自动续登；明确并发、频率、每日限额类 `429` 不重新认证。两层重登耗尽后延期当前工作。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父 progress URL 和 child simulation ID 会一直按 `Retry-After` 检查；瞬时网络、认证和可重试 HTTP 错误只累计诊断次数，不会因本地次数预算而丢弃。
 - 父/child 的 COMPLETE、ERROR 或 CANCELLED 一旦处理，就退出活跃轮询集合；某一 attempt 已经消费源表达式后，其他重复 attempt 由本地收割退出，因此不会让已完成 run 永久等待远端冗余任务。
 - 父任务完成后按 ordinal 将 children 映射回原 experiment，再逐个读取 child alpha id。
 - 到期的父任务、child 和 enrichment 轮询优先于继续建批和 simulate，避免大批 manifest 让结果消费饥饿；未到 `not_before` 的任务不会阻塞新的 simulate 请求。
 - enrichment 内部优先完成已经保存 detail 的 `ENRICH_PNL`，使每个 alpha 尽快闭环为 `READY` 并删除待办，而不是先积压整批 detail。
-- 旧脚本识别的资源不足、执行异常、运行过久错误会重新排队。
+- 已确认 ERROR、FAIL、CANCELLED 默认重试一次，再失败记录该实验并继续后续实验；可用 `--max-simulation-retries` 调整。该重试按 `--retry-seconds` 等待，与 `--resend-seconds` 或 `--no-resend` 无关。
 - PnL 使用 record 第 2 列，先 forward-fill，再 diff；首项保存为 `nan`。
 - alpha 详情扁平化为旧 24 字段，并从 `MATCHES_PYRAMID` 和 `DATA_USAGE:SINGLE_DATA_SET` 生成 pyramids。
 
@@ -148,7 +148,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 | --- | --- | --- |
 | 源任务 | 结果落库后删除源表行，完成前可能被再次随机抽中 | `201` 后继续按最久未发送顺序抽取；首个终态消费 queue，candidate/experiment 和 attempt 作为历史账本保留 |
 | 尾批 | 少于 2 条会跳过 | 单条也 simulate，避免永久滞留 |
-| 批次安全 | 只按 region、delay 分组，统一最多 10 条 | 额外隔离 instrument type、language；GLB 最多 5 条 |
+| 批次安全 | 只按 region、delay 分组，统一最多 10 条 | 额外隔离 type、instrument type、language；包括 GLB 的 Regular 最多 10 条 |
 | 并发 | 槽位检查已注释，依赖服务端 429 | 不做客户端槽位计数，依赖服务端 429/Retry-After |
 | 重复 simulate | 未完成源行会被重复抽中 | 明确 `201` 的未决表达式会公平重发；`POST` 结果不确定时仍阻塞该表达式，等待其他已知 progress attempt 或人工核对 |
 | progress 读取 | 非 200 保留 URL，后续继续检查 | 父和 child 的瞬时读取错误同样无限延期；明确终态后退出活跃集合但保留历史账本 |
@@ -157,7 +157,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 | 术语 | simulation POST 也常写作 submit | simulation 一律使用 simulate；submit 仅表示 `wqb alpha submit` 入库提交 |
 | 详情/PnL | 两个线程并行，部分错误无限循环 | 分阶段持久化；普通读取错误受 `max-attempts` 限制 |
 | 结果表 | 单个宽表 | 规范化表为主，保留同名兼容视图 |
-| 输出 | 持续打印日志 | 执行过程静默，结束时输出一份 JSON |
+| 输出 | 持续打印日志 | 日限触发时记录恢复时间，结束时输出一份 JSON；详细请求和失败历史保存在数据库 |
 
 这些变动用于确定性、崩溃恢复和工作流接入，不改变 alpha expression 或 BRAIN simulation payload。
 
@@ -165,7 +165,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 CoreClient 的默认策略参考安装环境中的 `wqb.WQBSession`：
 
-- `204 / 401 / 429` 都触发重新认证，不只处理 `401`。
+- `204 / 401` 和认证类 `429` 触发重新认证；明确的容量、频率、日限错误交由调度等待。
 - 初始业务请求失败后最多重放 3 次；每次认证最多 POST 3 次，间隔 2 秒。
 - 多线程同时发现失效时通过 generation 和锁共享一次成功登录。
 - 登录前清除当前 session 中旧的 BRAIN cookie；旧版扁平 cookie 文件只加载到 API host 一次，避免父域和 host 域同时发送新旧会话值。
@@ -184,7 +184,7 @@ alpha 等待与 simulation 轮询原先存在直接调用 `requests.Session` 和
 
 - `runs`、`candidates`、`experiments`
 - `simulation_queue`、`enrichment_queue`（只保存未消费待办）
-- `simulation_batches`、`simulation_items`
+- `simulation_batches`、`simulation_items`、`simulation_failures`
 - `alphas`、`alpha_metrics`、`alpha_checks`、`alpha_pnl`
 - `api_events`、`outbox_events`
 

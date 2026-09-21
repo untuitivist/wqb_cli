@@ -827,7 +827,8 @@ The history below follows versions recorded by package metadata and GitHub relea
 - Fixed live community-write CSRF; added HTML-file posting, local-image uploads, reusable asset receipts and separate API/page verification. The existing v0.6.1 assets are replaced with this correction; reinstall the wheel with `--force-reinstall --no-cache-dir` if 0.6.1 is already installed.
 
 - Standardized the simulation entry point as `wqb simu`, including the source module, parser and documentation. Use this name when updating existing scripts.
-- Simulation payloads, Regular/Super/ALL behavior and SQLite schema 7 are unchanged.
+- Compatible Regular batches now contain up to 10 candidates, including GLB, and dispatch continuously with server backpressure. Confirmed simulation failures retry once, then are recorded and skipped. Schema 8 preserves failed-attempt history and retry budgets across restarts; ALL and Super retain single-object requests.
+- Daily quota rejections pause new simulations until the next America/New_York midnight, including daylight-saving changes, while accepted results continue collecting. The pause survives restarts.
 
 ### 0.6.0 - 2026-09-22
 

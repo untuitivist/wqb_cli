@@ -422,6 +422,7 @@ class SqliteSimuTests(unittest.TestCase):
         bodies = (
             {"detail": "CANCEL_LIMIT_EXCEEDED"},
             {"detail": "CONCURRENT_SIMULATION_LIMIT_EXCEEDED"},
+            {"detail": "DAILY_SIMULATION_LIMIT_EXCEEDED"},
             {"message": "API rate limit exceeded"},
             {"error": "RATE_LIMIT_EXCEEDED"},
         )
@@ -1908,7 +1909,7 @@ class SqliteSimuTests(unittest.TestCase):
                 ).fetchone()[0]
             self.assertEqual(state, "RETRIED")
 
-    def test_fail_child_is_recorded_as_a_permanent_failure(self) -> None:
+    def test_fail_child_is_permanent_when_simulation_retries_are_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             enqueued = store.enqueue(
@@ -1936,6 +1937,7 @@ class SqliteSimuTests(unittest.TestCase):
             runtime = SqliteSimuRuntime(
                 store,
                 FixedResponseGateway(envelope(200, {"status": "FAIL"})),
+                policy=sequential_policy(max_simulation_retries=0),
             )
 
             runtime._poll_child(item, now=1001.0)

@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import logging
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+from ..core.client import is_wqb_daily_simulation_limit
+
 import math
 import queue
 import threading
@@ -39,6 +45,8 @@ class SqliteSimuRuntime:
         self._work_cursor = 0
         if self.policy.max_attempts < 1:
             raise ValueError("max_attempts must be at least 1")
+        if self.policy.max_simulation_retries < 0:
+            raise ValueError("max_simulation_retries must not be negative")
         if self.policy.default_retry_seconds <= 0 or self.policy.idle_sleep_seconds <= 0:
             raise ValueError("retry and idle sleep durations must be positive")
         if self.policy.resend_interval_seconds is not None and self.policy.resend_interval_seconds < 0:
@@ -66,6 +74,9 @@ class SqliteSimuRuntime:
         try:
             self.store.mark_run_running(run_id, now=started)
             self.store.recover_interrupted(run_id, now=started)
+            self.store.exhaust_simulation_retries(
+                run_id, max_retries=self.policy.max_simulation_retries, now=started
+            )
             if self.policy.concurrent:
                 return self._run_concurrent(
                     run_id,
@@ -188,7 +199,9 @@ class SqliteSimuRuntime:
         while not stop.is_set():
             if self._step_simulation(run_id, now=self.clock()):
                 continue
-            stop.wait(self.policy.idle_sleep_seconds)
+            not_before = self.store.simulation_not_before()
+            delay = max(self.policy.idle_sleep_seconds, (not_before or 0) - self.clock())
+            stop.wait(delay)
 
     def _result_lane(
         self,
@@ -329,6 +342,19 @@ class SqliteSimuRuntime:
             )
             return
 
+        if is_wqb_daily_simulation_limit(status_code, _body(result)):
+            retry_at = _next_eastern_midnight(observed_at)
+            self.store.set_runtime_float("simulation_daily_not_before", retry_at, now=observed_at)
+            self.store.retry_simulate(
+                batch.id, response=result, not_before=retry_at,
+                error=_error_detail(result, "daily_simulation_limit_exceeded"), now=observed_at,
+            )
+            logging.getLogger(__name__).warning(
+                "Daily simulation limit reached; sender waits until %s (America/New_York).",
+                datetime.fromtimestamp(retry_at, ZoneInfo("America/New_York")).isoformat(),
+            )
+            return
+
         if status_code in SQLITESIMU_REAUTH_STATUSES:
             retry_at = observed_at + _retry_seconds(result, self.policy.default_retry_seconds)
             if status_code == 429:
@@ -395,17 +421,12 @@ class SqliteSimuRuntime:
                 response=result,
                 not_before=observed_at + self.policy.default_retry_seconds,
                 now=observed_at,
+                max_retries=self.policy.max_simulation_retries,
             )
             return
         if status_code == 200 and status in _SIMULATION_FAILURE_STATUSES:
-            if isinstance(batch.payload, dict) and batch.payload.get("type") == "REGION_AGNOSTIC":
-                error = _error_detail(result, f"parent_status_{status.lower()}")
-                if not _is_retryable_simulation_error(error):
-                    self.store.fail_batch(
-                        batch.id, state="PERMANENT_FAILURE", error=error, response=result, now=observed_at
-                    )
-                    return
-            children = _child_ids(body)
+            is_region_agnostic = isinstance(batch.payload, dict) and batch.payload.get("type") == "REGION_AGNOSTIC"
+            children = [] if is_region_agnostic else _child_ids(body)
             if children:
                 self._complete_parent(batch, body, result, now=observed_at)
             else:
@@ -415,6 +436,7 @@ class SqliteSimuRuntime:
                     response=result,
                     not_before=observed_at + self.policy.default_retry_seconds,
                     now=observed_at,
+                    max_retries=self.policy.max_simulation_retries,
                 )
             return
         if status_code == 200:
@@ -545,32 +567,15 @@ class SqliteSimuRuntime:
                     now=observed_at,
                 )
             return
-        if status_code == 200 and status in _SIMULATION_RETRY_STATUSES:
+        if status_code == 200 and status in _SIMULATION_RETRY_STATUSES | _SIMULATION_FAILURE_STATUSES:
             self.store.retry_child(
                 item,
                 error=_error_detail(result, f"child_status_{status.lower()}"),
                 response=result,
                 not_before=observed_at + self.policy.default_retry_seconds,
                 now=observed_at,
+                max_retries=self.policy.max_simulation_retries,
             )
-            return
-        if status_code == 200 and status in _SIMULATION_FAILURE_STATUSES:
-            error = _error_detail(result, f"child_status_{status.lower()}")
-            if _is_retryable_simulation_error(error):
-                self.store.retry_child(
-                    item,
-                    error=error,
-                    response=result,
-                    not_before=observed_at + self.policy.default_retry_seconds,
-                    now=observed_at,
-                )
-            else:
-                self.store.fail_child(
-                    item,
-                    error=error,
-                    response=result,
-                    now=observed_at,
-                )
             return
         if status_code == 200:
             self.store.defer_child_poll(
@@ -806,6 +811,12 @@ def _simulation_id(location: Any) -> str | None:
     return value or None
 
 
+def _next_eastern_midnight(now: float) -> float:
+    eastern = ZoneInfo("America/New_York")
+    tomorrow = datetime.fromtimestamp(now, eastern).date() + timedelta(days=1)
+    return datetime(tomorrow.year, tomorrow.month, tomorrow.day, tzinfo=eastern).timestamp()
+
+
 def _retry_seconds(
     result: dict[str, Any],
     default: float,
@@ -838,16 +849,6 @@ def _payload_size(payload: Any) -> int:
 def _is_retryable_get(status_code: int | None) -> bool:
     return status_code is None or status_code in {404, 408, 425, 429} or (
         status_code is not None and 500 <= status_code < 600
-    )
-
-
-def _is_retryable_simulation_error(error: str) -> bool:
-    return error.startswith(
-        (
-            "There was an error while running",
-            "Your simulation probably took too much resource.",
-            "Your simulation has been running too long.",
-        )
     )
 
 

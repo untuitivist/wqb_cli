@@ -6,6 +6,8 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 ### Fixed
 
+- Retry confirmed simulation failures once by default, then record and skip exhausted experiments. Confirmed retries are no longer blocked by the pending-simulation resend interval.
+- Distinguish daily simulation quota from concurrency/rate limits and authentication. A confirmed daily limit persists a pause until the next America/New_York midnight, with daylight-saving handling, while accepted results continue collecting.
 - Use the authenticated forum page's shared CSRF token for community writes and image registration. The Help Center session token previously caused live uploads to fail with HTTP 401.
 
 ### Added
@@ -18,7 +20,8 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 
 - Standardize the simulation command as `wqb simu`. The former `wqb sim` name is no longer accepted; migrate scripts by replacing that command token with `simu`.
 - Rename the command module, parser, handler, argument destination, tests and generated documentation to match `simu`.
-- Update command examples and workflows. Request payloads, Regular/Super/ALL behavior and the SQLite simulation schema are unchanged.
+- Update command examples and workflows. Compatible FASTEXPR Regular batches, including GLB, contain up to 10 candidates and continue dispatching without awaiting prior results. HTTP 429 respects Retry-After with a 10-second fallback.
+- SQLite schema 8 retains confirmed failure attempts and migrates historical retry records. `--max-simulation-retries` controls the persistent budget independently of request throttling and enrichment retries. ALL, Super and Python keep single-object scheduling.
 
 ## 0.6.0 - 2026-09-22
 

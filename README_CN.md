@@ -14,6 +14,19 @@
 - 作者：[wiz](https://github.com/untuitivist)
 - 许可证：GPL-3.0-only with Commons Clause，详见 [LICENSE](LICENSE)。
 
+## 常用入口
+
+直接回测命令统一为 `wqb simu`。0.6.1 的示例和脚本使用以下入口：
+
+| 命令 | 用途 |
+| --- | --- |
+| `wqb simu` | 创建、查询并等待 Regular、Super 和 ALL 回测。 |
+| `wqb sqlitesimu` | 候选入库、批量执行、断点恢复和结果导出。 |
+| `wqb community` | 在线读帖、搜索和社区写请求。 |
+| `wqb sqlitecom` | 社区增量同步、本地检索和只读 SQL。 |
+
+查看回测设置和请求帮助可从 `wqb simu options`、`wqb simu create --help` 开始。完整层级见[命令总览](#命令总览)，请求格式见后文示例。
+
 ## Agent-Native 设计
 
 `wqb-cli` 的设计目标是让 agent 可以在不依赖浏览器状态、不依赖人工点击的情况下，可检查、可复用、可追踪地操作 BRAIN 工作流：
@@ -33,7 +46,7 @@
 - REGULAR FASTEXPR、REGULAR PYTHON、SUPER 和 REGION_AGNOSTIC/ALL 回测命令。
 - alpha 列表、详情、检查、recordsets、相关性、提交等命令。
 - 基于 `data_all` / `all_data.pickle` 的本地字段筛选。
-- 在线社区访问、SQLite 增量同步、WebDataScope 数据导入与本地检索。
+- 在线社区访问、SQLite 增量同步、WebDataScope 数据导入、本地检索与只读 SQL。
 - 随包发布的 API endpoint inventory 与命令文档。
 - `workflows/` 下的小规模自适应流程与模板群批量流程文档。
 
@@ -89,7 +102,7 @@ python -I -m wqb_cli --help
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ simu                                                                        # 平台回测：创建、查询与等待结果
+├─ simu                                                          # 平台回测：创建、查询与等待结果
 ├─ sqlitesimu                                                    # 本地 SQLite 持久化批量回测引擎
 ├─ alpha                                                         # Alpha 查询、分析、修改与正式提交
 ├─ data                                                          # 平台数据目录、字段及算子
@@ -118,7 +131,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ simu                                                                        # 平台回测：创建、查询与等待结果
+├─ simu                                                          # 平台回测：创建、查询与等待结果
 │  ├─ options                                                    # 查看回测设置的可用选项
 │  ├─ list                                                       # 查询回测列表
 │  ├─ get <simulation_id>                                        # 读取回测状态或结果，支持等待重试
@@ -809,7 +822,7 @@ python -m wqb_cli --help
 
 ### 0.6.1 - 2026-09-22
 
-- 回测入口统一为 `wqb simu`，源码模块、解析器和文档同步命名；已有脚本中的 `wqb sim` 需改为 `wqb simu`，旧名称不再接受。
+- 回测入口与源码模块、解析器和文档统一命名为 `wqb simu`；更新已有脚本时使用这一名称。
 - 回测请求、Regular/Super/ALL 行为与 SQLite schema 7 保持一致。
 
 ### 0.6.0 - 2026-09-22

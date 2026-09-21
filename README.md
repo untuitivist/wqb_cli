@@ -14,6 +14,19 @@ It is built for coding agents and long-running research agents first, not as a t
 - Author: [wiz](https://github.com/untuitivist)
 - License: GPL-3.0-only with Commons Clause. See [LICENSE](LICENSE).
 
+## Main Commands
+
+The direct simulation command is `wqb simu`. Use the following entry points in examples and scripts for version 0.6.1:
+
+| Command | Purpose |
+| --- | --- |
+| `wqb simu` | Create, inspect, and wait for Regular, Super, and ALL simulations. |
+| `wqb sqlitesimu` | Queue candidates in SQLite, execute batches, recover runs, and export results. |
+| `wqb community` | Read and search the online forum, or prepare community write requests. |
+| `wqb sqlitecom` | Incrementally sync the forum, search local content, and run read-only SQL. |
+
+For simulation settings and request previews, start with `wqb simu options` and `wqb simu create --help`. See [Command Overview](#command-overview) for the complete command tree and examples below for request formats.
+
 ## Agent-Native Design
 
 `wqb-cli` is designed so an agent can operate it safely and inspectably without relying on browser state or manual clicking:
@@ -33,7 +46,7 @@ It is built for coding agents and long-running research agents first, not as a t
 - Simulation commands for REGULAR FASTEXPR, REGULAR PYTHON, SUPER and REGION_AGNOSTIC/ALL backtests.
 - Alpha commands for listing, checking, recordsets, correlations, and submit workflows.
 - Local data commands for `data_all` / `all_data.pickle` screening.
-- Local community-data import and search commands.
+- Online community access, SQLite incremental sync, local imports, search, and read-only SQL.
 - Bundled endpoint inventory and command documentation.
 - Workflow documents for bounded adaptive simulations and durable template-family batches under `workflows/`.
 
@@ -89,7 +102,7 @@ The built-in commands below are arranged by use case while preserving the actual
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ simu                                                                        # Create, inspect, and wait for platform simulations
+├─ simu                                                          # Create, inspect, and wait for platform simulations
 ├─ sqlitesimu                                                    # Durable batch simulation engine backed by local SQLite
 ├─ alpha                                                         # Inspect, analyze, modify, and formally submit Alphas
 ├─ data                                                          # Explore platform datasets, fields, and operators
@@ -118,7 +131,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ simu                                                                        # Create, inspect, and wait for platform simulations
+├─ simu                                                          # Create, inspect, and wait for platform simulations
 │  ├─ options                                                    # Inspect available simulation settings
 │  ├─ list                                                       # List simulations
 │  ├─ get <simulation_id>                                        # Read simulation status or results with retry waits
@@ -807,7 +820,7 @@ The history below follows versions recorded by package metadata and GitHub relea
 
 ### 0.6.1 - 2026-09-22
 
-- Standardized the simulation entry point as `wqb simu`, including the source module, parser and documentation. Replace `wqb sim` in existing scripts with `wqb simu`; the old name is no longer accepted.
+- Standardized the simulation entry point as `wqb simu`, including the source module, parser and documentation. Use this name when updating existing scripts.
 - Simulation payloads, Regular/Super/ALL behavior and SQLite schema 7 are unchanged.
 
 ### 0.6.0 - 2026-09-22

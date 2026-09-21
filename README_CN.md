@@ -89,7 +89,7 @@ python -I -m wqb_cli --help
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ sim                                                           # 平台回测：创建、查询与等待结果
+├─ sim (alias: simu)                                                           # 平台回测：创建、查询与等待结果
 ├─ sqlitesimu                                                    # 本地 SQLite 持久化批量回测引擎
 ├─ alpha                                                         # Alpha 查询、分析、修改与正式提交
 ├─ data                                                          # 平台数据目录、字段及算子
@@ -117,7 +117,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ sim                                                           # 平台回测：创建、查询与等待结果
+├─ sim (alias: simu)                                                           # 平台回测：创建、查询与等待结果
 │  ├─ options                                                    # 查看回测设置的可用选项
 │  ├─ list                                                       # 查询回测列表
 │  ├─ get <simulation_id>                                        # 读取回测状态或结果，支持等待重试
@@ -176,6 +176,12 @@ wqb  # WorldQuant BRAIN 命令行工具
 │  ├─ support                                                    # 调用支持站点认证接口
 │  └─ workday                                                    # 调用 Workday 认证接口
 ├─ user                                                          # 当前用户及指定用户的信息与活动
+│  ├─ activity <activity_name>                                   # 指定活动的历史记录
+│  ├─ osmosis-summary                                            # Osmosis 分配汇总
+│  ├─ osmosis-scale-status                                       # Osmosis 积分缩放进度
+│  ├─ streak                                                     # 连续活跃记录
+│  ├─ tags                                                       # 当前用户标签与列表
+│  ├─ submission-activity                                        # 提交活动历史
 │  ├─ self                                                       # 获取当前用户资料
 │  ├─ consultant-summary                                         # 获取自己的顾问信息摘要
 │  ├─ messages                                                   # 查询自己的消息，支持筛选与分页
@@ -344,7 +350,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.4.0"
+version = "0.5.0"
 ```
 
 ## 认证
@@ -454,6 +460,12 @@ wqb data operators --help
 wqb sim create --help
 ```
 
+## API 清单与用户资源更新
+
+2026-09-22 核对 131 个已有及新发现路径，API 目录从 109 条扩展到 127 条。`api list/show/params/call` 可使用新路径及 schema 结构；探测区分只读证据和服务器声明的方法，没有执行写接口，也不打包个人标签等私有选项值。详见[更新报告](resources/api_inventory/reports/api_refresh_20260922.md)。
+
+新增用户命令 `activity <activity_name>`、`osmosis-summary`、`osmosis-scale-status`、`streak`、`tags` 和 `submission-activity`。积分缩放状态正常返回 204 时不再触发重新认证；详见[命令示例](resources/docs/commands/user/README.md)。
+
 ## Alpha 列表示例
 
 查询某个 region/delay 下近期 ACTIVE REGULAR alpha：
@@ -525,6 +537,10 @@ REGULAR FASTEXPR multi-simulation 必须相同的设置范围限定为：
 - `language`
 
 ### SQLite 批量回测
+
+`sim`（别名 `simu`）和 `sqlitesimu` 均支持 REGION_AGNOSTIC/ALL：ALL/D1，LARGE、MEDIUM 或 SMALL，单个父请求完成后采集每个地区的子 Alpha 详情和 PnL。官方不支持把 ALL 放入 HTTP batch 数组；SQLite 同一队列可以交错发送单条 ALL 和 Regular 批次，共用派发与服务器背压。
+
+`sim create --dry-run` 预览请求。`sqlitesimu run ... --no-resend` 或 `resume ... --no-resend` 持续收集已受理任务，避免重复 POST。导出新增 `region_agnostic_children`；父 Alpha 不存在独立 PnL，也不按子地区数增加实验数。详见[持久化回测说明](resources/docs/commands/sqlitesimu/README.md)。
 
 工作流只生成批量表达式、由 CLI 独立发起 simulate、轮询、重试和结果入库时：
 
@@ -787,6 +803,12 @@ python -m wqb_cli --help
 ## 版本记录
 
 以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
+
+### 0.5.0 - 2026-09-22
+
+- 新增：sim/simu 与 sqlitesimu 原生 ALL、schema 7 地区子结果、no-resend 与 dry-run、18 条 API 注册路径及用户活动/Osmosis 命令。
+- 修复：结果尚未就绪时的 enrichment 处理、端点正常 204 的认证误判；保留 Regular 和 Super 请求形式。
+- 此源码/wheel 版本与上方历史 GitHub Release 链接分开记录。
 
 ### 0.4.0 - 2026-08-18
 

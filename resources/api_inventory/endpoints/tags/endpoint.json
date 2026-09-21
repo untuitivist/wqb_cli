@@ -2,7 +2,10 @@
   "path": "/tags",
   "url_template": "https://api.worldquantbrain.com/tags",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST"
   ],
   "source": [
     "platform_frontend"
@@ -533,5 +536,39 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/tags",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "POST": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "type": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 96
+      }
+    }
+  }
 }

@@ -14,6 +14,7 @@ from .auth import (
     save_cookie_payload,
 )
 from .registry import Endpoint, EndpointRegistry
+from .simulation import validate_region_agnostic_payload
 
 
 MUTATING_METHODS = {"POST", "PATCH", "PUT", "DELETE"}
@@ -74,6 +75,7 @@ class PreparedRequest:
     mutating: bool
     executable: bool
     reason: str | None = None
+    success_statuses: tuple[int, ...] = ()
 
 
 class WqbClient:
@@ -117,6 +119,8 @@ class WqbClient:
         auth: tuple[str, str] | None = None,
     ) -> PreparedRequest:
         method = method.upper()
+        if endpoint.path == "/simulations" and method == "POST":
+            validate_region_agnostic_payload(json_body)
         path_vars = path_vars or {}
         resolved = endpoint.path
         missing = []
@@ -131,6 +135,9 @@ class WqbClient:
         reason = None
         if missing:
             reason = "missing_path_variables: " + ", ".join(missing)
+        success_statuses = tuple(endpoint.raw.get("success_statuses_by_method", {}).get(method, ()))
+        if any(not isinstance(status, int) or not 200 <= status < 300 for status in success_statuses):
+            raise ValueError("Declared success statuses must be HTTP 2xx codes")
         return PreparedRequest(
             endpoint=endpoint.path,
             method=method,
@@ -142,6 +149,7 @@ class WqbClient:
             mutating=mutating,
             executable=executable,
             reason=reason,
+            success_statuses=success_statuses,
         )
 
     def call_once(
@@ -340,6 +348,8 @@ class WqbClient:
     ) -> bool:
         if not enabled or prepared.endpoint == "/authentication":
             return False
+        if response.status_code in prepared.success_statuses:
+            return False
         if response.status_code not in self.auto_auth_policy.statuses:
             return False
         return not is_wqb_backpressure(response.status_code, self._response_body_value(response))
@@ -358,6 +368,8 @@ class WqbClient:
     ) -> bool:
         if prepared.endpoint == "/authentication" and prepared.method == "POST":
             return response.status_code == 201
+        if prepared.success_statuses:
+            return response.status_code in prepared.success_statuses
         return 200 <= response.status_code < 400
 
     def _ensure_authenticated(self, observed_generation: int) -> dict[str, Any]:

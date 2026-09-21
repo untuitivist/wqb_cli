@@ -53,3 +53,11 @@
   "signature": "str"
 }
 ```
+
+## API refresh 2026-09-22
+
+Observed by passive platform network capture.
+
+- Advertised methods: GET, HEAD, OPTIONS, POST.
+- Live OPTIONS status: 200. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

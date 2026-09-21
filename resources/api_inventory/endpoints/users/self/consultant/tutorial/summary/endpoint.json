@@ -3,6 +3,8 @@
   "url_template": "https://api.worldquantbrain.com/users/self/consultant/tutorial/summary",
   "methods": [
     "GET",
+    "HEAD",
+    "OPTIONS",
     "PATCH"
   ],
   "source": [
@@ -110,5 +112,43 @@
       "status": "skipped_mutating",
       "reason": "PATCH may mutate remote state; not executed by inventory test."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/self/consultant/tutorial/summary",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "active": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": false
+      },
+      "currentStep": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "status": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "steps": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

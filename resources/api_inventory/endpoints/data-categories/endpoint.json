@@ -2,7 +2,9 @@
   "path": "/data-categories",
   "url_template": "https://api.worldquantbrain.com/data-categories",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "platform_dynamic_capture",
@@ -1220,5 +1222,124 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/data-categories",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "datasetCount": {
+        "type": "integer",
+        "required": false,
+        "readOnly": true
+      },
+      "fieldCount": {
+        "type": "integer",
+        "required": false,
+        "readOnly": true
+      },
+      "alphaCount": {
+        "type": "integer",
+        "required": false,
+        "readOnly": true
+      },
+      "userCount": {
+        "type": "integer",
+        "required": false,
+        "readOnly": true
+      },
+      "valueScore": {
+        "type": "float",
+        "required": false,
+        "readOnly": true
+      },
+      "region": {
+        "type": "list",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "string",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "children": {
+        "type": "field",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "nested object",
+          "required": false,
+          "readOnly": true,
+          "children": {
+            "id": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "name": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "datasetCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "fieldCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "alphaCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "userCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "valueScore": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "region": {
+              "type": "list",
+              "required": false,
+              "readOnly": true,
+              "child": {
+                "type": "string",
+                "required": true,
+                "readOnly": false
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

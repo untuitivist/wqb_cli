@@ -3,6 +3,7 @@
   "url_template": "https://api.worldquantbrain.com/events",
   "methods": [
     "GET",
+    "HEAD",
     "OPTIONS"
   ],
   "source": [
@@ -379,5 +380,95 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/events",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 200
+      },
+      "type": {
+        "type": "field",
+        "required": true,
+        "readOnly": false
+      },
+      "category": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "start": {
+        "type": "datetime",
+        "required": true,
+        "readOnly": false
+      },
+      "end": {
+        "type": "datetime",
+        "required": true,
+        "readOnly": false
+      },
+      "timezone": {
+        "type": "field",
+        "required": true,
+        "readOnly": false
+      },
+      "language": {
+        "type": "choice",
+        "required": false,
+        "readOnly": false
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 1000
+      },
+      "register": {
+        "type": "url",
+        "required": false,
+        "readOnly": false
+      },
+      "recording": {
+        "type": "url",
+        "required": false,
+        "readOnly": false
+      },
+      "venue": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 200
+      },
+      "city": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "country": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      }
+    }
+  }
 }

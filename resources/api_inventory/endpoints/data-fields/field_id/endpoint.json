@@ -2,7 +2,8 @@
   "path": "/data-fields/{field_id}",
   "url_template": "https://api.worldquantbrain.com/data-fields/{field_id}",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD"
   ],
   "source": [
     "rocky-d/wqb"
@@ -73,5 +74,18 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/data-fields/{field_id}",
+    "method": "OPTIONS",
+    "status_code": 400,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

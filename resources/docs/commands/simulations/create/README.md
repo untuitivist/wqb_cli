@@ -2,6 +2,10 @@
 
 Create a simulation and wait for the final platform result.
 
+`simu` is an alias of `sim`. `--dry-run` validates and previews the payload without a simulation request.
+
+REGION_AGNOSTIC uses one JSON object with `type: REGION_AGNOSTIC`, a `regular` expression and ALL/D1 settings with LARGE, MEDIUM or SMALL universe. Arrays containing ALL are rejected before HTTP. Completion resolves the RA_PARENT Alpha, then each regional RA_CHILD detail and PnL under `region_agnostic`; the parent has no PnL. Child Alpha IDs must not be polled as child simulation IDs. The simulation receipt remains in the output if child collection fails.
+
 Command:
 
 ```powershell
@@ -34,8 +38,9 @@ Parallel and batch constraints:
 
 - `REGULAR_FASTEXPR_MULTI`: max 10 expressions in one request. Use 10 outside `GLB`, 5 for `GLB`.
 - `REGULAR_PYTHON`: no multi-simulation; one expression per request.
-- `SUPER`: one SUPER request per simulation; external concurrency max 3.
-- External REGULAR concurrency: max 8 outside `GLB`, max 4 for `GLB`.
+- `SUPER`: one SUPER request per simulation.
+- `REGION_AGNOSTIC`: one parent object per request; ALL is not supported in HTTP batch arrays.
+- Current simulation capacity is controlled by BRAIN's 429 / Retry-After responses. The CLI does not impose a fixed number of simulation slots.
 
 Examples:
 

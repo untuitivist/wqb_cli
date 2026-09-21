@@ -43,3 +43,11 @@
 - Status: `skipped_mutating`
 - Tested path: `/errors/api/2/envelope`
 - Reason: POST may mutate remote state; not executed by inventory test.
+
+## API refresh 2026-09-22
+
+Observed by passive platform network capture.
+
+- Advertised methods: POST.
+- Live OPTIONS status: 404. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

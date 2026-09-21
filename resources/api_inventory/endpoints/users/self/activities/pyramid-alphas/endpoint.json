@@ -2,7 +2,8 @@
   "path": "/users/self/activities/pyramid-alphas",
   "url_template": "https://api.worldquantbrain.com/users/self/activities/pyramid-alphas",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD"
   ],
   "source": [
     "observed_platform"
@@ -95,5 +96,18 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/self/activities/pyramid-alphas",
+    "method": "OPTIONS",
+    "status_code": 405,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

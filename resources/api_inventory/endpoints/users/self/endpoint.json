@@ -2,7 +2,12 @@
   "path": "/users/self",
   "url_template": "https://api.worldquantbrain.com/users/self",
   "methods": [
-    "GET"
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "PUT"
   ],
   "source": [
     "rocky-d/wqb"
@@ -279,5 +284,469 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/self",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "PUT": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "email": {
+        "type": "email",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "telephone": {
+        "type": "string",
+        "required": false,
+        "readOnly": false,
+        "maxLength": 45
+      },
+      "firstName": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "lastName": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "fullName": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "gender": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "dateCreated": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "dateVerified": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "dateApproved": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "verified": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": true
+      },
+      "approved": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": true
+      },
+      "address": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "street": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 128
+          },
+          "city": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 45
+          },
+          "state": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 45
+          },
+          "postalCode": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 45
+          },
+          "country": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "education": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "university": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "major": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "maxLength": 128
+          },
+          "degree": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "stem": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "graduationYear": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false,
+            "minValue": 1950,
+            "maxValue": 2032
+          },
+          "gpa": {
+            "type": "float",
+            "required": false,
+            "readOnly": false
+          },
+          "maxGPA": {
+            "type": "float",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "employment": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": false,
+        "children": {
+          "employer": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "maxLength": 128
+          },
+          "business": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 256
+          },
+          "title": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 256
+          },
+          "description": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "maxLength": 256
+          },
+          "nonPublicInformation": {
+            "type": "boolean",
+            "required": true,
+            "readOnly": false
+          },
+          "participationPermitted": {
+            "type": "boolean",
+            "required": true,
+            "readOnly": false
+          },
+          "finance": {
+            "type": "boolean",
+            "required": true,
+            "readOnly": false
+          },
+          "investmentAdvisory": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "brokerage": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "fundamentalResearch": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "proprietaryTrading": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "serviceEngagement": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "employerServices": {
+            "type": "string",
+            "required": false,
+            "readOnly": false
+          },
+          "exposureStatus": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "exposureDetails": {
+            "type": "string",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "recruitment": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": false,
+        "children": {
+          "englishProficiency": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "codingProficiency": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "roleInterest": {
+            "type": "field",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "resume": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "children": {
+          "dateCreated": {
+            "type": "datetime",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "image": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "children": {
+          "url": {
+            "type": "field",
+            "required": false,
+            "readOnly": true
+          }
+        }
+      },
+      "settings": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": false,
+        "children": {
+          "communication": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": false,
+            "children": {
+              "allowSMS": {
+                "type": "boolean",
+                "required": false,
+                "readOnly": false
+              }
+            }
+          },
+          "privacy": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": false,
+            "children": {
+              "name": {
+                "type": "nested object",
+                "required": false,
+                "readOnly": false,
+                "children": {
+                  "visibility": {
+                    "type": "choice",
+                    "required": true,
+                    "readOnly": false
+                  },
+                  "moderation": {
+                    "type": "choice",
+                    "required": false,
+                    "readOnly": true
+                  }
+                }
+              },
+              "image": {
+                "type": "nested object",
+                "required": false,
+                "readOnly": false,
+                "children": {
+                  "visibility": {
+                    "type": "choice",
+                    "required": true,
+                    "readOnly": false
+                  },
+                  "moderation": {
+                    "type": "choice",
+                    "required": false,
+                    "readOnly": true
+                  }
+                }
+              }
+            }
+          },
+          "allowTracking": {
+            "type": "boolean",
+            "required": false,
+            "readOnly": false
+          },
+          "client": {
+            "type": "field",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "onboarding": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "children": {
+          "status": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "auxiliary": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "agree": {
+            "type": "field",
+            "required": true,
+            "readOnly": false,
+            "child": {
+              "type": "choice",
+              "required": true,
+              "readOnly": false
+            }
+          },
+          "password": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "confirmation": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "captcha": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "unverifiedEmail": {
+            "type": "email",
+            "required": false,
+            "readOnly": true
+          },
+          "campaign": {
+            "type": "nested object",
+            "required": false,
+            "readOnly": false,
+            "children": {
+              "campaign": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "maxLength": 90
+              },
+              "source": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "maxLength": 90
+              },
+              "medium": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "maxLength": 90
+              },
+              "term": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "maxLength": 90
+              },
+              "content": {
+                "type": "string",
+                "required": false,
+                "readOnly": false,
+                "maxLength": 90
+              }
+            }
+          }
+        }
+      },
+      "geniusLevel": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "level": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

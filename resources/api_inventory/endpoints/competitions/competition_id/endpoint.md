@@ -48,3 +48,11 @@
   "universityBoard": "bool"
 }
 ```
+
+## API refresh 2026-09-22
+
+Competition details.
+
+- Advertised methods: GET.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

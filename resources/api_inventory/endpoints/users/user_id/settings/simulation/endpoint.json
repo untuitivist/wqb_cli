@@ -2,7 +2,10 @@
   "path": "/users/{user_id}/settings/simulation",
   "url_template": "https://api.worldquantbrain.com/users/{user_id}/settings/simulation",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST"
   ],
   "source": [
     "platform_dynamic_capture"
@@ -84,5 +87,133 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/{user_id}/settings/simulation",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "POST": {
+      "instrumentType": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "region": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "universe": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "delay": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "decay": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false,
+        "minValue": 0,
+        "maxValue": 512
+      },
+      "neutralization": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "truncation": {
+        "type": "float",
+        "required": true,
+        "readOnly": false,
+        "minValue": 0,
+        "maxValue": 1
+      },
+      "lookback": {
+        "type": "integer",
+        "required": false,
+        "readOnly": false,
+        "minValue": 0,
+        "maxValue": 1024
+      },
+      "pasteurization": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "unitHandling": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "nanHandling": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "selectionHandling": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "selectionLimit": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false,
+        "minValue": 10,
+        "maxValue": 1000
+      },
+      "maxTrade": {
+        "type": "choice",
+        "required": false,
+        "readOnly": false
+      },
+      "maxPosition": {
+        "type": "choice",
+        "required": false,
+        "readOnly": false
+      },
+      "language": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "visualization": {
+        "type": "boolean",
+        "required": true,
+        "readOnly": false
+      },
+      "testPeriod": {
+        "type": "string",
+        "required": false,
+        "readOnly": false,
+        "minValue": "P0Y0M0D",
+        "maxValue": "P6Y0M0D"
+      },
+      "componentActivation": {
+        "type": "choice",
+        "required": false,
+        "readOnly": false
+      },
+      "simulationMode": {
+        "type": "choice",
+        "required": false,
+        "readOnly": false
+      }
+    }
+  }
 }

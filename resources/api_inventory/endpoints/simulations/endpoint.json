@@ -9,12 +9,24 @@
   "source": [
     "platform_dynamic_capture",
     "platform_frontend",
-    "rocky-d/wqb"
+    "rocky-d/wqb",
+    "https://api.worldquantbrain.com/tutorial-pages/region-agnostic-alpha",
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
   ],
   "description": "Simulation collection and simulation creation. / Discovered from platform frontend bundle.",
   "safe_probe": true,
   "params": {},
-  "request_body": "POST creates simulation. Do not auto-probe POST.",
+  "request_body": {
+    "content_type": "application/json",
+    "types": [
+      "REGULAR",
+      "SUPER",
+      "REGION_AGNOSTIC"
+    ],
+    "region_agnostic": "One object with type REGION_AGNOSTIC, ALL/D1 settings and regular expression. Arrays containing ALL are unsupported.",
+    "regular_and_super": "Existing request forms are preserved; inspect live OPTIONS for current settings choices."
+  },
   "notes": [],
   "probe": {
     "probed": true,
@@ -382,5 +394,271 @@
         ]
       }
     }
+  },
+  "live_probe": {
+    "path": "/simulations",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "POST": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "parent": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "children": {
+        "type": "list",
+        "required": false,
+        "readOnly": false,
+        "child": {
+          "type": "string",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "type": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "settings": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "instrumentType": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "region": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "universe": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "delay": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "decay": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 512
+          },
+          "neutralization": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "truncation": {
+            "type": "float",
+            "required": true,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 1
+          },
+          "lookback": {
+            "type": "integer",
+            "required": false,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 1024
+          },
+          "pasteurization": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "unitHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "nanHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "selectionHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "selectionLimit": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false,
+            "minValue": 10,
+            "maxValue": 1000
+          },
+          "maxTrade": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "maxPosition": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "language": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "visualization": {
+            "type": "boolean",
+            "required": true,
+            "readOnly": false
+          },
+          "testPeriod": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "minValue": "P0Y0M0D",
+            "maxValue": "P6Y0M0D"
+          },
+          "componentActivation": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "simulationMode": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "regular": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 60000
+      },
+      "combo": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "selection": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "status": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "message": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "location": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "links": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "progress": {
+        "type": "float",
+        "required": false,
+        "readOnly": true
+      },
+      "alpha": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "visualizations": {
+        "type": "list",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "is": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "origin": {
+        "type": "string",
+        "required": false,
+        "readOnly": false
+      }
+    }
+  },
+  "region_agnostic": {
+    "type": "REGION_AGNOSTIC",
+    "expression_key": "regular",
+    "region": "ALL",
+    "delay": 1,
+    "universes": [
+      "LARGE",
+      "MEDIUM",
+      "SMALL"
+    ],
+    "batch_supported": false,
+    "parent_type": "RA_PARENT",
+    "child_type": "RA_CHILD",
+    "child_regions": [
+      "USA",
+      "EUR",
+      "ASI",
+      "GLB"
+    ],
+    "parent_pnl": "NOT_APPLICABLE",
+    "completion": "Fetch parent Alpha, then every child Alpha and its PnL",
+    "source": [
+      "https://api.worldquantbrain.com/tutorial-pages/region-agnostic-alpha",
+      "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+      "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+    ]
   }
 }

@@ -16,3 +16,11 @@ wqb competition spc update-submission SUBMISSION_ID --method PATCH --json "{\"we
 ```
 
 `PUT` and `PATCH` mutate platform state and were not executed during inventory validation.
+
+## API refresh 2026-09-22
+
+Read SPC submission weight history or replace/partially update a prompt submission.
+
+- Advertised methods: GET, PATCH, PUT.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

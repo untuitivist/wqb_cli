@@ -44,3 +44,11 @@
 - Status: `skipped_mutating`
 - Tested path: `/data-sets/search`
 - Reason: POST may mutate remote state; not executed by inventory test.
+
+## API refresh 2026-09-22
+
+Dataset search helper. / Discovered from platform frontend bundle.
+
+- Advertised methods: GET, HEAD, POST.
+- Live OPTIONS status: 500. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

@@ -43,3 +43,11 @@
 - Status: `skipped_mutating`
 - Tested path: `/suggest/expression`
 - Reason: POST may mutate remote state; not executed by inventory test.
+
+## API refresh 2026-09-22
+
+Expression suggestion. / Discovered from platform frontend bundle.
+
+- Advertised methods: GET, POST.
+- Live OPTIONS status: 404. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

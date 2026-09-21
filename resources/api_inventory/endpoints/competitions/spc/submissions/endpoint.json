@@ -3,6 +3,8 @@
   "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions",
   "methods": [
     "GET",
+    "HEAD",
+    "OPTIONS",
     "POST"
   ],
   "source": [
@@ -131,5 +133,79 @@
       "status": "skipped_mutating",
       "reason": "POST creates a remote SPC submission; not executed during inventory validation."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/competitions/spc/submissions",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "POST": {
+      "id": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 200
+      },
+      "prompt": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 10000
+      },
+      "sampleOutput": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 10000
+      },
+      "model": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "modelVersion": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 100
+      },
+      "weight": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false,
+        "minValue": 0.0,
+        "maxValue": 1.0
+      },
+      "updateFrequency": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "lastModified": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "status": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

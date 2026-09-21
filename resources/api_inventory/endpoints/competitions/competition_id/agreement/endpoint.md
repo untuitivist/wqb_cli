@@ -43,3 +43,11 @@
 - Status: `skipped_mutating`
 - Tested path: `/competitions/challenge/agreement`
 - Reason: POST may mutate remote state; not executed by inventory test.
+
+## API refresh 2026-09-22
+
+Competition agreement.
+
+- Advertised methods: GET, POST.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

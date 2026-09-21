@@ -1,0 +1,34 @@
+{
+  "path": "/users/{user_id}/activities/{activity_name}",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/activities/{activity_name}",
+  "methods": [
+    "GET",
+    "HEAD"
+  ],
+  "source": [
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+  ],
+  "description": "Named user activity history, including base-payment, other-payment, referrals, simulations and submissions.",
+  "safe_probe": true,
+  "params": {
+    "date>": "Inclusive lower date bound observed as date>=YYYY-MM-DD in the frontend",
+    "limit": "Result limit",
+    "offset": "Pagination offset"
+  },
+  "request_body": null,
+  "notes": [],
+  "live_probe": {
+    "path": "/users/{user_id}/activities/{activity_name}",
+    "method": "OPTIONS",
+    "status_code": 405,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
+}

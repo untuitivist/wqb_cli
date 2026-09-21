@@ -217,6 +217,7 @@ class SqliteSimuPlugin:
                 "checks": store.check_results(args.run_id),
                 "simued_alpha_is_pnl": store.compatibility_results(args.run_id),
                 "pnl_paths": store.pnl_paths(args.run_id),
+                "region_agnostic_children": store.region_agnostic_results(args.run_id),
             }
             context.write_json(payload, args.output)
             return 0
@@ -232,6 +233,10 @@ def _add_database_argument(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--no-resend", action="store_true",
+        help="Keep collecting accepted simulations without posting them again; rejected requests can retry",
+    )
     parser.add_argument("--max-attempts", type=int, default=5)
     parser.add_argument("--retry-seconds", type=float, default=5.0)
     parser.add_argument("--idle-sleep-seconds", type=float, default=1.0)
@@ -279,7 +284,7 @@ def _run(
         max_attempts=args.max_attempts,
         default_retry_seconds=args.retry_seconds,
         idle_sleep_seconds=args.idle_sleep_seconds,
-        resend_interval_seconds=args.resend_seconds,
+        resend_interval_seconds=None if args.no_resend else args.resend_seconds,
         result_workers=args.result_workers,
         enrichment_workers=args.enrichment_workers,
     )

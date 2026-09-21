@@ -89,7 +89,7 @@ The built-in commands below are arranged by use case while preserving the actual
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ sim                                                           # Create, inspect, and wait for platform simulations
+├─ sim (alias: simu)                                                           # Create, inspect, and wait for platform simulations
 ├─ sqlitesimu                                                    # Durable batch simulation engine backed by local SQLite
 ├─ alpha                                                         # Inspect, analyze, modify, and formally submit Alphas
 ├─ data                                                          # Explore platform datasets, fields, and operators
@@ -117,7 +117,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ sim                                                           # Create, inspect, and wait for platform simulations
+├─ sim (alias: simu)                                                           # Create, inspect, and wait for platform simulations
 │  ├─ options                                                    # Inspect available simulation settings
 │  ├─ list                                                       # List simulations
 │  ├─ get <simulation_id>                                        # Read simulation status or results with retry waits
@@ -176,6 +176,12 @@ wqb  # WorldQuant BRAIN command-line toolkit
 │  ├─ support                                                    # Call the support authentication endpoint
 │  └─ workday                                                    # Call the Workday authentication endpoint
 ├─ user                                                          # Inspect current-user and user-specific profiles and activity
+│  ├─ activity <activity_name>                                   # Named activity history
+│  ├─ osmosis-summary                                            # Osmosis allocation summary
+│  ├─ osmosis-scale-status                                       # Osmosis scaling progress
+│  ├─ streak                                                     # Activity streak history
+│  ├─ tags                                                       # Current user tags and lists
+│  ├─ submission-activity                                        # Submission activity history
 │  ├─ self                                                       # Get your user profile
 │  ├─ consultant-summary                                         # Get your consultant summary
 │  ├─ messages                                                   # List your messages with filters and pagination
@@ -336,7 +342,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.4.0"
+version = "0.5.0"
 ```
 
 ## Authentication
@@ -454,6 +460,12 @@ wqb data operators --help
 wqb sim create --help
 ```
 
+## API Refresh and User Resources
+
+The 2026-09-22 API refresh covers 131 existing/discovered paths and expands the catalog from 109 to 127. `api list/show/params/call` exposes the new paths and schema shapes. Probe evidence distinguishes successful read metadata from advertised methods; writes were not exercised and private option choices are excluded. See [the refresh report](resources/api_inventory/reports/api_refresh_20260922.md).
+
+New user commands include `activity <activity_name>`, `osmosis-summary`, `osmosis-scale-status`, `streak`, `tags` and `submission-activity`. Normal scaling-status HTTP 204 responses do not trigger authentication replay. See [user resource examples](resources/docs/commands/user/README.md).
+
 ## Alpha Listing Examples
 
 Recent ACTIVE REGULAR alphas for a region/delay:
@@ -525,6 +537,10 @@ For REGULAR FASTEXPR multi-simulation, the shared settings requirement is limite
 - `language`
 
 ### Durable SQLite Batch Simulations
+
+Both `sim` (also `simu`) and `sqlitesimu` support REGION_AGNOSTIC/ALL. ALL uses a single parent object, ALL/D1 and LARGE/MEDIUM/SMALL, then collects every regional child Alpha and PnL. The server does not support ALL in HTTP batch arrays. A SQLite run can interleave individual ALL requests with Regular batches using the same sender and backpressure.
+
+Use `sim create --dry-run` for a request preview. Use `sqlitesimu run ... --no-resend` or `resume ... --no-resend` to keep collecting accepted work without repeatedly posting it. Export includes `region_agnostic_children`; RA parents have no PnL and remain one experiment each. See [the durable simulation guide](resources/docs/commands/sqlitesimu/README.md).
 
 To let a workflow generate candidates while the CLI independently runs simulations, polls, retries, and persists results:
 
@@ -785,6 +801,12 @@ Release checklist:
 ## Version History
 
 The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
+
+### 0.5.0 - 2026-09-22
+
+- Added: native ALL support in sim/simu and sqlitesimu, schema 7 with regional child results, no-resend and dry-run controls, 18 newly registered API paths and user activity/Osmosis commands.
+- Fixed: pending enrichment responses and normal endpoint-specific HTTP 204 responses. Existing Regular and Super request forms remain supported.
+- This source/wheel version is separate from the historical GitHub release link above.
 
 ### 0.4.0 - 2026-08-18
 

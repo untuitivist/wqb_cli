@@ -4,13 +4,34 @@ import argparse
 
 from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
-from ..core.io import read_json_file, write_json
+from ..core.io import parse_key_values, read_json_file, write_json
 from ..core.registry import EndpointRegistry
+
+
+ADDITIONAL_READ_ENDPOINTS = {
+    "activity": "/users/{user_id}/activities/{activity_name}",
+    "osmosis-summary": "/users/{user_id}/osmosis/summary",
+    "osmosis-scale-status": "/users/{user_id}/osmosis/scale-points/ALL",
+    "streak": "/users/self/streak",
+    "tags": "/users/self/tags",
+    "submission-activity": "/users/self/activities/submissions",
+}
 
 
 def add_user_parser(subparsers: argparse._SubParsersAction) -> None:
     user = subparsers.add_parser("user", help="User API commands")
     user_sub = user.add_subparsers(dest="user_command", required=True)
+
+    for name, path in ADDITIONAL_READ_ENDPOINTS.items():
+        resource = user_sub.add_parser(name, help=f"GET {path}")
+        if "{user_id}" in path:
+            resource.add_argument("--user-id", default="self", help="User id; defaults to self")
+        else:
+            resource.set_defaults(user_id="self")
+        if name == "activity":
+            resource.add_argument("activity_name", help="Activity name from user-activities, e.g. base-payment")
+        resource.add_argument("--param", action="append", help="Query parameter KEY=VALUE")
+        resource.add_argument("--output", help="Write JSON result to file")
 
     self_parser = user_sub.add_parser("self", help="GET /users/self")
     self_parser.add_argument("--output", help="Write JSON result to file")
@@ -73,6 +94,18 @@ def add_user_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def handle_user(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    if args.user_command in ADDITIONAL_READ_ENDPOINTS:
+        endpoint = registry.get(ADDITIONAL_READ_ENDPOINTS[args.user_command])
+        client = WqbClient(registry, session_from_cookies(args.cookies))
+        path_vars = {"user_id": args.user_id}
+        if args.user_command == "activity":
+            path_vars["activity_name"] = args.activity_name
+        prepared = client.prepare(
+            endpoint, "GET", path_vars=path_vars, params=parse_key_values(args.param)
+        )
+        result = client.call(prepared)
+        write_json(result, args.output)
+        return 0 if result.get("ok") else 1
     if args.user_command == "self":
         endpoint = registry.get("/users/self")
         client = WqbClient(registry, session_from_cookies(args.cookies))

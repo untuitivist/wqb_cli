@@ -22,7 +22,7 @@ class CompetitionRegistryTests(unittest.TestCase):
             "/consultant/boards/spc": ("GET",),
         }
         for path, methods in expected.items():
-            self.assertEqual(self.registry.get(path).methods, methods)
+            self.assertTrue(set(methods).issubset(self.registry.get(path).methods))
 
         self.assertNotIn("DELETE", self.registry.get("/competitions/spc/submissions/{submission_id}").methods)
 

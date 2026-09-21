@@ -65,5 +65,14 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/competitions/{competition_id}",
+    "method": "OPTIONS",
+    "status_code": "SKIPPED_NO_OBSERVED_ID",
+    "advertised_methods": [],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

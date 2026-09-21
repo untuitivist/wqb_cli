@@ -7,3 +7,6 @@ recursive-include resources/docs *.md *.json
 recursive-include workflows *.md
 recursive-exclude local *
 prune local
+prune research_runs
+prune build
+global-exclude *.py[cod]

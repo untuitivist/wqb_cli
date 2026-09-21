@@ -1,0 +1,28 @@
+{
+  "path": "/users/{user_id}/osmosis/scale-points",
+  "url_template": "https://api.worldquantbrain.com/users/{user_id}/osmosis/scale-points",
+  "methods": [
+    "POST"
+  ],
+  "source": [
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+  ],
+  "description": "Start asynchronous Osmosis point scaling; frontend uses POST with no JSON body.",
+  "safe_probe": false,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "live_probe": {
+    "path": "/users/{user_id}/osmosis/scale-points",
+    "method": "OPTIONS",
+    "status_code": 405,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
+}

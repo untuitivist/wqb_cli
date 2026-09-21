@@ -2,7 +2,9 @@
   "path": "/consultant/boards/{board_type}",
   "url_template": "https://api.worldquantbrain.com/consultant/boards/{board_type}",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "observed_platform",
@@ -99,5 +101,107 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/consultant/boards/{board_type}",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "user": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "weightFactor": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "valueFactor": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "dailyOsmosisRank": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "dataFieldsUsed": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "submissionsCount": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "meanProdCorrelation": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "meanSelfCorrelation": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "superAlphaSubmissionsCount": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "superAlphaMeanProdCorrelation": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "superAlphaMeanSelfCorrelation": {
+        "type": "decimal",
+        "required": true,
+        "readOnly": false
+      },
+      "university": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "country": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "users": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "universityCity": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "universityCountry": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "aggregate": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      }
+    }
+  }
 }

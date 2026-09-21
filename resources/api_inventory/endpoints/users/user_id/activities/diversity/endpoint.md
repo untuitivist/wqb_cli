@@ -62,3 +62,11 @@
   "count": "int"
 }
 ```
+
+## API refresh 2026-09-22
+
+按 Region、Delay、Data Category 返回 alpha 提交分布。
+
+- Advertised methods: GET, HEAD.
+- Live OPTIONS status: 405. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

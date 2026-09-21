@@ -1,0 +1,35 @@
+{
+  "path": "/data-fields/{field_id}/visualize",
+  "url_template": "https://api.worldquantbrain.com/data-fields/{field_id}/visualize",
+  "methods": [
+    "POST"
+  ],
+  "source": [
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+  ],
+  "description": "Request a field visualization. Frontend uses POST with instrumentType, region, delay and universe query parameters; response format is not yet verified.",
+  "safe_probe": false,
+  "params": {
+    "instrumentType": "Frontend-observed query parameter",
+    "region": "Frontend-observed query parameter",
+    "delay": "Frontend-observed query parameter",
+    "universe": "Frontend-observed query parameter"
+  },
+  "request_body": null,
+  "notes": [
+    "OPTIONS returned HTTP 400 without scope parameters. POST and response media have not been live-tested; inspect the current server contract before executing."
+  ],
+  "live_probe": {
+    "path": "/data-fields/{field_id}/visualize",
+    "method": "OPTIONS",
+    "status_code": 400,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
+}

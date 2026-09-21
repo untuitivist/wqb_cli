@@ -2,7 +2,9 @@
   "path": "/video-courses",
   "url_template": "https://api.worldquantbrain.com/video-courses",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "platform_frontend"
@@ -107,5 +109,65 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/video-courses",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "category": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "videos": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "duration": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 255
+      },
+      "sequence": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false,
+        "minValue": 0,
+        "maxValue": 4294967295
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "lastModified": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from ..core.simulation import region_agnostic_child_ids
 from .models import (
     EXPERIMENT_TERMINAL_STATES,
     BatchItemRecord,
@@ -20,7 +21,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -177,6 +178,30 @@ CREATE TABLE IF NOT EXISTS alpha_pnl (
     cumulative REAL,
     pnl_delta REAL,
     PRIMARY KEY(alpha_id, ordinal)
+);
+
+CREATE TABLE IF NOT EXISTS region_agnostic_children (
+    parent_alpha_id TEXT NOT NULL REFERENCES alphas(alpha_id),
+    child_alpha_id TEXT NOT NULL,
+    region TEXT,
+    state TEXT NOT NULL DEFAULT 'SIM_DONE',
+    detail_json TEXT,
+    pnl_response_json TEXT,
+    pnl_records INTEGER NOT NULL DEFAULT 0,
+    updated_at REAL NOT NULL,
+    PRIMARY KEY(parent_alpha_id, child_alpha_id)
+);
+
+CREATE TABLE IF NOT EXISTS region_agnostic_child_pnl (
+    parent_alpha_id TEXT NOT NULL,
+    child_alpha_id TEXT NOT NULL,
+    ordinal INTEGER NOT NULL,
+    date_value TEXT,
+    cumulative REAL,
+    pnl_delta REAL,
+    PRIMARY KEY(parent_alpha_id, child_alpha_id, ordinal),
+    FOREIGN KEY(parent_alpha_id, child_alpha_id)
+        REFERENCES region_agnostic_children(parent_alpha_id, child_alpha_id)
 );
 
 CREATE TABLE IF NOT EXISTS api_events (
@@ -464,6 +489,15 @@ class SqliteStore:
                 )
             if current < 6:
                 _migrate_alpha_checks_v6(conn)
+            if current < 7:
+                for candidate in conn.execute(
+                    "SELECT id, payload_json FROM candidates WHERE simulation_type = 'REGION_AGNOSTIC'"
+                ).fetchall():
+                    compatibility_key, batch_limit = scheduling_profile(json.loads(candidate["payload_json"]))
+                    conn.execute(
+                        "UPDATE candidates SET compatibility_key = ?, batch_limit = ? WHERE id = ?",
+                        (compatibility_key, batch_limit, candidate["id"]),
+                    )
             conn.execute(
                 "CREATE INDEX IF NOT EXISTS idx_batches_claimable "
                 "ON simulation_batches(run_id, state, claim_owner, not_before, created_at)"
@@ -891,12 +925,15 @@ class SqliteStore:
         run_id: str,
         *,
         now: float,
-        resend_interval_seconds: float = 0.0,
+        resend_interval_seconds: float | None = 0.0,
     ) -> BatchRecord | None:
         global_not_before = self.runtime_float("simulation_request_not_before")
         if global_not_before is not None and now < global_not_before:
             return None
-        resend_cutoff = now - max(0.0, resend_interval_seconds)
+        resend_cutoff = (
+            now - max(0.0, resend_interval_seconds)
+            if resend_interval_seconds is not None else None
+        )
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             selected_head = conn.execute(
@@ -907,11 +944,13 @@ class SqliteStore:
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
-                  AND e.not_before <= ? AND q.last_attempt_at <= ?
+                  AND e.not_before <= ?
+                  AND (? IS NULL OR q.last_attempt_at <= ?)
+                  AND (e.state <> 'POLLING' OR ? IS NOT NULL)
                 ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT 1
                 """,
-                (run_id, now, resend_cutoff),
+                (run_id, now, resend_cutoff, resend_cutoff, resend_cutoff),
             ).fetchone()
             if selected_head is None:
                 return None
@@ -923,7 +962,9 @@ class SqliteStore:
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
-                  AND e.not_before <= ? AND q.last_attempt_at <= ?
+                  AND e.not_before <= ?
+                  AND (? IS NULL OR q.last_attempt_at <= ?)
+                  AND (e.state <> 'POLLING' OR ? IS NOT NULL)
                   AND c.compatibility_key = ?
                 ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT ?
@@ -931,6 +972,8 @@ class SqliteStore:
                 (
                     run_id,
                     now,
+                    resend_cutoff,
+                    resend_cutoff,
                     resend_cutoff,
                     selected_head["compatibility_key"],
                     int(selected_head["batch_limit"]),
@@ -1697,9 +1740,10 @@ class SqliteStore:
         with self.connect() as conn:
             row = conn.execute(
                 """
-                SELECT e.*
+                SELECT e.*, c.simulation_type
                 FROM enrichment_queue q
                 JOIN experiments e ON e.id = q.experiment_id
+                JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
                   AND q.claim_owner IS NULL AND e.not_before <= ?
                 ORDER BY CASE e.state WHEN 'ENRICH_PNL' THEN 0 ELSE 1 END,
@@ -1721,9 +1765,10 @@ class SqliteStore:
             conn.execute("BEGIN IMMEDIATE")
             row = conn.execute(
                 """
-                SELECT e.*
+                SELECT e.*, c.simulation_type
                 FROM enrichment_queue q
                 JOIN experiments e ON e.id = q.experiment_id
+                JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ? AND e.state IN ('SIM_DONE', 'ENRICH_PNL')
                   AND q.claim_owner IS NULL AND e.not_before <= ?
                 ORDER BY CASE e.state WHEN 'ENRICH_PNL' THEN 0 ELSE 1 END,
@@ -1750,13 +1795,17 @@ class SqliteStore:
         alpha_id = experiment.alpha_id
         if not alpha_id:
             raise ValueError("Cannot enrich an experiment without alpha_id")
+        if experiment.simulation_type == "REGION_AGNOSTIC":
+            region_agnostic_child_ids(detail, alpha_id)
         metrics = _extract_metrics(detail)
         checks = detail.get("is", {}).get("checks", []) if isinstance(detail.get("is"), dict) else []
         with self.connect() as conn:
             conn.execute(
                 """
-                INSERT OR REPLACE INTO alphas(alpha_id, experiment_id, run_id, candidate_id, detail_json, fetched_at)
+                INSERT INTO alphas(alpha_id, experiment_id, run_id, candidate_id, detail_json, fetched_at)
                 VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(alpha_id) DO UPDATE SET
+                    detail_json = excluded.detail_json, fetched_at = excluded.fetched_at
                 """,
                 (
                     alpha_id,
@@ -1823,6 +1872,138 @@ class SqliteStore:
                 payload={"alpha_id": alpha_id},
                 now=now,
             )
+
+    def region_agnostic_children(
+        self, experiment: ExperimentRecord, *, now: float
+    ) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            parent = conn.execute(
+                "SELECT detail_json FROM alphas WHERE alpha_id = ? AND experiment_id = ?",
+                (experiment.alpha_id, experiment.id),
+            ).fetchone()
+            if parent is None:
+                raise ValueError("Region-agnostic parent detail is missing")
+            child_ids = region_agnostic_child_ids(json.loads(parent["detail_json"]), experiment.alpha_id)
+            conn.executemany(
+                "INSERT OR IGNORE INTO region_agnostic_children(parent_alpha_id, child_alpha_id, updated_at) "
+                "VALUES (?, ?, ?)",
+                [(experiment.alpha_id, child_id, now) for child_id in child_ids],
+            )
+            rows = conn.execute(
+                "SELECT * FROM region_agnostic_children WHERE parent_alpha_id = ? ORDER BY child_alpha_id",
+                (experiment.alpha_id,),
+            ).fetchall()
+            if {row["child_alpha_id"] for row in rows} != set(child_ids):
+                raise ValueError("Region-agnostic parent child identities changed")
+        return [dict(row) for row in rows]
+
+    def save_region_agnostic_child_detail(
+        self, experiment: ExperimentRecord, child_id: str, detail: dict[str, Any], *, now: float
+    ) -> None:
+        settings = detail.get("settings")
+        region = settings.get("region") if isinstance(settings, dict) else None
+        if (
+            detail.get("id") != child_id or detail.get("type") != "RA_CHILD"
+            or region not in {"USA", "EUR", "ASI", "GLB"}
+        ):
+            raise ValueError("Unexpected region-agnostic child identity, type or region")
+        with self.connect() as conn:
+            cursor = conn.execute(
+                "UPDATE region_agnostic_children SET detail_json = ?, region = ?, state = 'ENRICH_PNL', "
+                "updated_at = ? WHERE parent_alpha_id = ? AND child_alpha_id = ? AND state = 'SIM_DONE'",
+                (_json(detail), region, now, experiment.alpha_id, child_id),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("Region-agnostic child is not awaiting detail")
+            self._release_region_agnostic_enrichment(conn, experiment, now=now)
+            self._event(
+                conn, experiment.run_id, "RA_CHILD_DETAIL_SAVED", experiment_id=experiment.id,
+                status_code=200, payload={"parent": experiment.alpha_id, "child": child_id, "region": region},
+                now=now,
+            )
+
+    def save_region_agnostic_child_pnl(
+        self, experiment: ExperimentRecord, child_id: str,
+        points: Iterable[tuple[str | None, float | None, float | None]],
+        *, response: dict[str, Any], now: float,
+    ) -> None:
+        points = list(points)
+        if not points or any(date_value is None for date_value, _, _ in points):
+            raise ValueError("Region-agnostic child PnL must contain dated observations")
+        if len({point[0] for point in points}) != len(points):
+            raise ValueError("Region-agnostic child PnL contains duplicate dates")
+        with self.connect() as conn:
+            cursor = conn.execute(
+                "UPDATE region_agnostic_children SET state = 'READY', pnl_response_json = ?, "
+                "pnl_records = ?, updated_at = ? WHERE parent_alpha_id = ? AND child_alpha_id = ? "
+                "AND state = 'ENRICH_PNL'",
+                (_json(response), len(points), now, experiment.alpha_id, child_id),
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("Region-agnostic child is not awaiting PnL")
+            conn.executemany(
+                "INSERT INTO region_agnostic_child_pnl "
+                "(parent_alpha_id, child_alpha_id, ordinal, date_value, cumulative, pnl_delta) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                [(experiment.alpha_id, child_id, ordinal, *point) for ordinal, point in enumerate(points)],
+            )
+            self._release_region_agnostic_enrichment(conn, experiment, now=now)
+            self._event(
+                conn, experiment.run_id, "RA_CHILD_READY", experiment_id=experiment.id,
+                status_code=200, payload={"parent": experiment.alpha_id, "child": child_id, "pnl_records": len(points)},
+                now=now,
+            )
+
+    @staticmethod
+    def _release_region_agnostic_enrichment(
+        conn: sqlite3.Connection, experiment: ExperimentRecord, *, now: float
+    ) -> None:
+        conn.execute(
+            "UPDATE experiments SET enrich_attempts = 0, not_before = ?, updated_at = ? WHERE id = ?",
+            (now, now, experiment.id),
+        )
+        conn.execute("UPDATE enrichment_queue SET claim_owner = NULL WHERE experiment_id = ?", (experiment.id,))
+
+    def finish_region_agnostic_parent(self, experiment: ExperimentRecord, *, now: float) -> None:
+        children = self.region_agnostic_children(experiment, now=now)
+        if any(child["state"] != "READY" or child["pnl_records"] <= 0 for child in children):
+            raise ValueError("Cannot complete a region-agnostic parent before every child has PnL")
+        if len({child["region"] for child in children}) != len(children):
+            raise ValueError("Region-agnostic children must have distinct regions")
+        with self.connect() as conn:
+            conn.execute(
+                "UPDATE experiments SET state = 'READY', enrich_attempts = 0, not_before = 0, updated_at = ? "
+                "WHERE id = ?", (now, experiment.id),
+            )
+            conn.execute("DELETE FROM enrichment_queue WHERE experiment_id = ?", (experiment.id,))
+            self._event(
+                conn, experiment.run_id, "RA_PARENT_READY", experiment_id=experiment.id, status_code=200,
+                payload={"parent": experiment.alpha_id, "children": [child["child_alpha_id"] for child in children],
+                         "regions": [child["region"] for child in children], "parent_pnl": "NOT_APPLICABLE"},
+                now=now,
+            )
+
+    def region_agnostic_results(self, run_id: str) -> list[dict[str, Any]]:
+        with self.connect() as conn:
+            rows = conn.execute(
+                "SELECT children.*, alphas.experiment_id FROM region_agnostic_children children "
+                "JOIN alphas ON alphas.alpha_id = children.parent_alpha_id WHERE alphas.run_id = ? "
+                "ORDER BY alphas.experiment_id, children.region, children.child_alpha_id", (run_id,),
+            ).fetchall()
+            results = []
+            for row in rows:
+                result = dict(row)
+                detail = result.pop("detail_json")
+                result["detail"] = json.loads(detail) if detail else None
+                response = result.pop("pnl_response_json")
+                result["pnl_response"] = json.loads(response) if response else None
+                result["pnl"] = [dict(point) for point in conn.execute(
+                    "SELECT ordinal, date_value, cumulative, pnl_delta FROM region_agnostic_child_pnl "
+                    "WHERE parent_alpha_id = ? AND child_alpha_id = ? ORDER BY ordinal",
+                    (result["parent_alpha_id"], result["child_alpha_id"]),
+                )]
+                results.append(result)
+        return results
 
     def save_pnl(
         self,
@@ -2124,8 +2305,9 @@ class SqliteStore:
                     p.pnl_delta
                 FROM experiments e
                 JOIN alphas a ON a.experiment_id = e.id
+                JOIN candidates c ON c.id = e.candidate_id
                 LEFT JOIN alpha_pnl p ON p.alpha_id = a.alpha_id
-                WHERE e.run_id = ? AND e.state = 'READY'
+                WHERE e.run_id = ? AND e.state = 'READY' AND c.simulation_type <> 'REGION_AGNOSTIC'
                 ORDER BY e.id, p.ordinal
                 """,
                 (run_id,),
@@ -2443,7 +2625,7 @@ def scheduling_profile(payload: dict[str, Any]) -> tuple[str, int]:
     language = str(settings.get("language") or "FASTEXPR").upper()
     region = str(settings.get("region") or "").upper()
     instrument_type = str(settings.get("instrumentType") or "").upper()
-    if simulation_type == "SUPER":
+    if simulation_type in {"SUPER", "REGION_AGNOSTIC"}:
         batch_limit = 1
     elif region == "GLB":
         batch_limit = 5 if language == "FASTEXPR" else 1
@@ -2552,6 +2734,7 @@ def _experiment_from_row(row: sqlite3.Row) -> ExperimentRecord:
         state=str(row["state"]),
         alpha_id=row["alpha_id"],
         attempts=int(row["enrich_attempts"]),
+        simulation_type=str(row["simulation_type"]),
     )
 
 

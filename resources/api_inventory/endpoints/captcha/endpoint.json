@@ -2,7 +2,10 @@
   "path": "/captcha",
   "url_template": "https://api.worldquantbrain.com/captcha",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "POST"
   ],
   "source": [
     "platform_dynamic_capture"
@@ -62,5 +65,19 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/captcha",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "POST",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  }
 }

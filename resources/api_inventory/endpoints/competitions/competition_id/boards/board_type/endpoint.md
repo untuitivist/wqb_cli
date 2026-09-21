@@ -27,3 +27,11 @@ wqb competition leaderboard PAC2026 --board-type leader --method OPTIONS
 ```
 
 Consultant boards are a parallel generic namespace and use `--scope consultant`.
+
+## API refresh 2026-09-22
+
+Generic competition leaderboard. Use OPTIONS to discover the fields, filters, and aggregations available for a competition and board type.
+
+- Advertised methods: GET.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

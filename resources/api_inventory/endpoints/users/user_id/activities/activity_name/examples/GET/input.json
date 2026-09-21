@@ -1,0 +1,8 @@
+{
+  "path_vars": {
+    "user_id": "self",
+    "activity_name": "ACTIVITY_NAME"
+  },
+  "params": {},
+  "json_body": null
+}

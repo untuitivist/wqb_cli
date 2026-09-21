@@ -29,10 +29,12 @@ from .core.plugins import PluginLoadError, discover_plugins, register_plugins
 from .core.registry import EndpointRegistry
 from .sdk import CliPlugin, PluginContext
 from .sqlitesimu.plugin import plugin as sqlitesimu_plugin
+from . import __version__
 
 
 def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="wqb", description="Agent-first WorldQuant BRAIN API CLI")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--registry", help="Path to api_inventory_complete.json")
     parser.add_argument("--cookies", help="Path to cookies.json; default is wqb_cli/local/auth/cookies.json")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -259,7 +261,7 @@ def main(argv: list[str] | None = None) -> None:
             code = handle_search(args, load_registry(args))
         elif args.command in {"shortcut", "quick"}:
             code = handle_shortcut(args, load_registry(args))
-        elif args.command == "sim":
+        elif args.command in {"sim", "simu"}:
             code = handle_sim(args, load_registry(args))
         elif args.command == "scope":
             code = handle_scope(args)

@@ -41,7 +41,7 @@ class SqliteSimuRuntime:
             raise ValueError("max_attempts must be at least 1")
         if self.policy.default_retry_seconds <= 0 or self.policy.idle_sleep_seconds <= 0:
             raise ValueError("retry and idle sleep durations must be positive")
-        if self.policy.resend_interval_seconds < 0:
+        if self.policy.resend_interval_seconds is not None and self.policy.resend_interval_seconds < 0:
             raise ValueError("resend interval must not be negative")
         if self.policy.lease_seconds <= 0:
             raise ValueError("lease_seconds must be positive")
@@ -398,6 +398,13 @@ class SqliteSimuRuntime:
             )
             return
         if status_code == 200 and status in _SIMULATION_FAILURE_STATUSES:
+            if isinstance(batch.payload, dict) and batch.payload.get("type") == "REGION_AGNOSTIC":
+                error = _error_detail(result, f"parent_status_{status.lower()}")
+                if not _is_retryable_simulation_error(error):
+                    self.store.fail_batch(
+                        batch.id, state="PERMANENT_FAILURE", error=error, response=result, now=observed_at
+                    )
+                    return
             children = _child_ids(body)
             if children:
                 self._complete_parent(batch, body, result, now=observed_at)
@@ -463,7 +470,10 @@ class SqliteSimuRuntime:
             self.store.complete_parent(
                 batch.id,
                 alpha_id=_alpha_id(body),
-                child_ids=_child_ids(body),
+                child_ids=(
+                    [] if isinstance(batch.payload, dict) and batch.payload.get("type") == "REGION_AGNOSTIC"
+                    else _child_ids(body)
+                ),
                 parent_status=_simulation_status(body) or "COMPLETE",
                 response=result,
                 now=now,
@@ -615,20 +625,42 @@ class SqliteSimuRuntime:
                 now=now,
             )
             return
+        child = None
+        alpha_id = experiment.alpha_id
         path = "/alphas/{alpha_id}"
-        if experiment.state == "ENRICH_PNL":
-            path = "/alphas/{alpha_id}/recordsets/pnl"
         try:
+            if experiment.state == "ENRICH_PNL":
+                path = "/alphas/{alpha_id}/recordsets/pnl"
+                if experiment.simulation_type == "REGION_AGNOSTIC":
+                    children = self.store.region_agnostic_children(experiment, now=now)
+                    child = next((item for item in children if item["state"] != "READY"), None)
+                    if child is None:
+                        self.store.finish_region_agnostic_parent(experiment, now=now)
+                        return
+                    alpha_id = child["child_alpha_id"]
+                    if child["state"] == "SIM_DONE":
+                        path = "/alphas/{alpha_id}"
             result = self.gateway.call(
                 "GET",
                 path,
-                path_vars={"alpha_id": experiment.alpha_id},
+                path_vars={"alpha_id": alpha_id},
             )
         except ApiTransportError as exc:
             self._defer_or_fail_enrichment(experiment, _transport_result(exc), now=self.clock())
             return
+        except (TypeError, ValueError) as exc:
+            self._defer_or_fail_enrichment(
+                experiment, {}, now=self.clock(), detail=f"invalid_region_agnostic_result: {exc}"
+            )
+            return
 
         observed_at = self.clock()
+        if _status_code(result) == 200 and _response(result).get("retry_after") is not None:
+            self.store.defer_enrichment(
+                experiment, not_before=observed_at + _retry_seconds(result, self.policy.default_retry_seconds),
+                error="enrichment_pending", terminal=False, increment_attempt=False, now=observed_at,
+            )
+            return
         if _status_code(result) != 200:
             status_code = _status_code(result)
             if status_code in SQLITESIMU_REAUTH_STATUSES:
@@ -657,7 +689,14 @@ class SqliteSimuRuntime:
             return
         body = _body(result)
         try:
-            if experiment.state == "SIM_DONE":
+            if child is not None:
+                if child["state"] == "SIM_DONE":
+                    self.store.save_region_agnostic_child_detail(experiment, alpha_id, body, now=observed_at)
+                else:
+                    self.store.save_region_agnostic_child_pnl(
+                        experiment, alpha_id, pnl_points(body), response=result, now=observed_at
+                    )
+            elif experiment.state == "SIM_DONE":
                 if not body:
                     raise ValueError("alpha detail body is empty")
                 self.store.save_alpha_detail(experiment, body, response=result, now=observed_at)

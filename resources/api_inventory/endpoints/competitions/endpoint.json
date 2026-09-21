@@ -2,7 +2,9 @@
   "path": "/competitions",
   "url_template": "https://api.worldquantbrain.com/competitions",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "observed_platform",
@@ -196,5 +198,183 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/competitions",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "name": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "universities": {
+        "type": "list",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "countries": {
+        "type": "list",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "excludedCountries": {
+        "type": "list",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "status": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "teamBased": {
+        "type": "boolean",
+        "required": true,
+        "readOnly": false
+      },
+      "startDate": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": false
+      },
+      "endDate": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": false
+      },
+      "signUpStartDate": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": false
+      },
+      "signUpEndDate": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": false
+      },
+      "signUpDate": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "team": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "id": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          },
+          "type": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "name": {
+            "type": "string",
+            "required": true,
+            "readOnly": false,
+            "maxLength": 200
+          },
+          "university": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          }
+        }
+      },
+      "scoring": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "leaderboard": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "prizeBoard": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": false
+      },
+      "universityBoard": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "submissions": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": false
+      },
+      "faq": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 128
+      },
+      "progress": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "helpText": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      }
+    }
+  }
 }

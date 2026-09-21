@@ -37,3 +37,11 @@
   "detail": "str"
 }
 ```
+
+## API refresh 2026-09-22
+
+Discovered from platform frontend bundle.
+
+- Advertised methods: GET.
+- Live OPTIONS status: 404. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

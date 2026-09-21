@@ -2,7 +2,20 @@
 
 All notable changes are grouped by the package versions evidenced in `pyproject.toml` and the GitHub release history.
 
-## Unreleased
+## 0.5.0 - 2026-09-22
+
+### Added
+
+- Native REGION_AGNOSTIC/ALL support in `sim` (alias `simu`), raw simulation requests and `sqlitesimu`, with single-parent requests, regional child details/PnL and resumable schema-v7 storage.
+- `sim create --dry-run` and `sqlitesimu --no-resend` runtime options. Regular and ALL can share one durable run while ALL is always sent as an individual HTTP object.
+- Refreshed 131 API paths against current platform references and read-only probes, growing the catalog from 109 to 127 paths. Added schema shapes, explicit advertised-method evidence, per-endpoint docs and a refresh report without private option choices.
+- User commands for named activity history, Osmosis summary and scaling status, activity streaks, tags and submission activity.
+- `wqb --version` reports the installed runtime version for deployment verification.
+
+### Fixed
+
+- Normal Osmosis scaling-status HTTP 204 responses no longer trigger authentication replay when the endpoint contract declares them successful.
+- Enrichment honors successful HTTP responses with Retry-After before parsing results; RA parents never request or fabricate parent PnL. Unknown POST outcomes remain isolated.
 
 ### Changed
 

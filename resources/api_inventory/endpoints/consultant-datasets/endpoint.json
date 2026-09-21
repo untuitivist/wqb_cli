@@ -57,5 +57,14 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/consultant-datasets",
+    "method": "OPTIONS",
+    "status_code": 404,
+    "advertised_methods": [],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

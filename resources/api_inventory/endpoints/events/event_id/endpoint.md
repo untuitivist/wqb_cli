@@ -40,3 +40,11 @@
   "venue": "null"
 }
 ```
+
+## API refresh 2026-09-22
+
+Event details. / Discovered from platform frontend bundle.
+
+- Advertised methods: GET.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

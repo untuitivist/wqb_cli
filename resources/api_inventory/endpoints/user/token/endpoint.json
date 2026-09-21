@@ -55,5 +55,17 @@
       "status": "skipped_mutating",
       "reason": "POST may mutate remote state; not executed by inventory test."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/user/token",
+    "method": "OPTIONS",
+    "status_code": 405,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

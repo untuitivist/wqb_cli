@@ -3,6 +3,8 @@
   "url_template": "https://api.worldquantbrain.com/suggest/examples",
   "methods": [
     "GET",
+    "HEAD",
+    "OPTIONS",
     "POST"
   ],
   "source": [
@@ -144,5 +146,42 @@
       "status": "skipped_mutating",
       "reason": "POST may mutate remote state; not executed by inventory test."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/suggest/examples",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "settings": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "type": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "regular": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

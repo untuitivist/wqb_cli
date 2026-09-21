@@ -50,6 +50,19 @@ class SequenceSession:
 
 
 class ClientPrepareTests(unittest.TestCase):
+    def test_declared_no_content_success_does_not_reauthenticate(self) -> None:
+        registry = EndpointRegistry({"endpoints": [{
+            "path": "/users/{user_id}/osmosis/scale-points/ALL", "methods": ["GET"],
+            "success_statuses_by_method": {"GET": [200, 204]},
+        }]})
+        session = SequenceSession([FakeResponse(204)])
+        client = WqbClient(registry, session)
+        prepared = client.prepare(registry.list()[0], "GET", path_vars={"user_id": "self"})
+        result = client.call_once(prepared)
+        self.assertTrue(result["ok"])
+        self.assertNotIn("authentication", result["response"])
+        self.assertEqual(len(session.calls), 1)
+
     @staticmethod
     def auto_auth_registry() -> EndpointRegistry:
         return EndpointRegistry(

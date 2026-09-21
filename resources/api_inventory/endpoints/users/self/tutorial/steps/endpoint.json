@@ -2,7 +2,9 @@
   "path": "/users/self/tutorial/steps",
   "url_template": "https://api.worldquantbrain.com/users/self/tutorial/steps",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "platform_frontend"
@@ -291,5 +293,72 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/self/tutorial/steps",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "active": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": false
+      },
+      "expired": {
+        "type": "boolean",
+        "required": false,
+        "readOnly": false
+      },
+      "startDatetime": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": false
+      },
+      "completionDate": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "expireDatetime": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "currentStep": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "maxUnlockedStep": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "totalSteps": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "status": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "notificationSlug": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

@@ -7,10 +7,11 @@ from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
 from ..core.io import read_json_file, write_json
 from ..core.registry import EndpointRegistry
+from ..core.simulation import is_region_agnostic, region_agnostic_child_ids
 
 
 def add_sim_parser(subparsers: argparse._SubParsersAction) -> None:
-    sim = subparsers.add_parser("sim", help="Simulation API commands")
+    sim = subparsers.add_parser("sim", aliases=["simu"], help="Simulation API commands")
     sim_sub = sim.add_subparsers(dest="sim_command", required=True)
 
     options_parser = sim_sub.add_parser("options", help="OPTIONS /simulations")
@@ -26,6 +27,7 @@ def add_sim_parser(subparsers: argparse._SubParsersAction) -> None:
 
     create_parser = sim_sub.add_parser("create", help="POST /simulations")
     create_parser.add_argument("--input", required=True, help="JSON file containing simulation request body")
+    create_parser.add_argument("--dry-run", action="store_true", help="Validate and preview the request without simulating")
     create_parser.add_argument("--max-wait-seconds", type=float, default=900.0, help="Maximum total wait time after creation")
     create_parser.add_argument("--output", help="Write JSON result to file")
 
@@ -64,6 +66,9 @@ def handle_sim(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         payload = read_json_file(args.input)
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "POST", json_body=payload)
+        if args.dry_run:
+            write_json({"ok": True, "dry_run": True, "request": prepared.__dict__}, args.output)
+            return 0
         result = _create_and_wait_simulation(client, registry, prepared, args.max_wait_seconds)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
@@ -105,7 +110,10 @@ def _create_and_wait_simulation(
     wait_prepared = client.prepare(wait_endpoint, "GET", path_vars={"simulation_id": simulation_id})
     wait_result = client.call(wait_prepared, wait_retry_after=True, max_wait_seconds=max_wait_seconds)
     classification = _classify_simulation_result(wait_result)
-    child_results = _wait_child_simulations(client, registry, wait_result, max_wait_seconds=max_wait_seconds)
+    region_agnostic = is_region_agnostic(prepared.json_body)
+    child_results = [] if region_agnostic else _wait_child_simulations(
+        client, registry, wait_result, max_wait_seconds=max_wait_seconds
+    )
     children_ok = all(child["classification"]["ok"] for child in child_results)
     result.update(
         {
@@ -116,7 +124,52 @@ def _create_and_wait_simulation(
     )
     if child_results:
         result["children"] = child_results
+    if region_agnostic and result["ok"]:
+        parent_id = (wait_result.get("response", {}).get("body") or {}).get("alpha")
+        try:
+            collected = _collect_region_agnostic(client, registry, parent_id, max_wait_seconds)
+            result["region_agnostic"] = collected
+            result["ok"] = collected["ok"]
+        except (TypeError, ValueError) as error:
+            result["ok"] = False
+            result["collection_error"] = str(error)
     return result
+
+
+def _collect_region_agnostic(
+    client: WqbClient, registry: EndpointRegistry, parent_id: str, max_wait_seconds: float
+) -> dict[str, Any]:
+    parent = client.call(
+        client.prepare(registry.get("/alphas/{alpha_id}"), "GET", path_vars={"alpha_id": parent_id}),
+        wait_retry_after=True, max_wait_seconds=max_wait_seconds,
+    )
+    collected: dict[str, Any] = {"ok": False, "parent": parent, "children": [], "parent_pnl": "NOT_APPLICABLE"}
+    if not parent.get("ok") or parent.get("response", {}).get("wait_timed_out"):
+        return collected
+    children = region_agnostic_child_ids(parent.get("response", {}).get("body") or {}, parent_id)
+    regions = set()
+    for child_id in children:
+        child = {"alpha_id": child_id}
+        for key, path in (("detail", "/alphas/{alpha_id}"), ("pnl", "/alphas/{alpha_id}/recordsets/pnl")):
+            result = client.call(
+                client.prepare(registry.get(path), "GET", path_vars={"alpha_id": child_id}),
+                wait_retry_after=True, max_wait_seconds=max_wait_seconds,
+            )
+            child[key] = result
+            if not result.get("ok") or result.get("response", {}).get("wait_timed_out"):
+                collected["children"].append(child)
+                return collected
+        detail = child["detail"]["response"]["body"]
+        region = (detail.get("settings") or {}).get("region")
+        if detail.get("id") != child_id or detail.get("type") != "RA_CHILD" or region not in {"USA", "EUR", "ASI", "GLB"}:
+            raise ValueError("Invalid region-agnostic child identity, type or region")
+        if region in regions or not (child["pnl"]["response"]["body"] or {}).get("records"):
+            raise ValueError("Region-agnostic child has duplicate region or empty PnL")
+        regions.add(region)
+        child["region"] = region
+        collected["children"].append(child)
+    collected["ok"] = True
+    return collected
 
 
 def _wait_child_simulations(

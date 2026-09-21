@@ -1,0 +1,1273 @@
+{
+  "observed_at": "2026-09-21T16:08:26.074426+00:00",
+  "previous_endpoint_count": 109,
+  "endpoint_count": 127,
+  "added_paths": [
+    "/agreements/privacy-policy",
+    "/agreements/referral-agreement",
+    "/alphas/{alpha_id}/recordsets/turnover",
+    "/data-fields/{field_id}/visualize",
+    "/messages/announcements",
+    "/messages/notifications",
+    "/users/self/activities/submissions",
+    "/users/self/alphas/{alpha_id}/before-and-after-performance",
+    "/users/self/streak",
+    "/users/self/tags",
+    "/users/{user_id}/activities/{activity_name}",
+    "/users/{user_id}/consultant",
+    "/users/{user_id}/consultant/summary",
+    "/users/{user_id}/osmosis/scale-points",
+    "/users/{user_id}/osmosis/scale-points/ALL",
+    "/users/{user_id}/osmosis/summary",
+    "/users/{user_id}/profile",
+    "/users/{user_id}/researcher"
+  ],
+  "options_path_count": 131,
+  "status_counts": {
+    "405": 33,
+    "SKIPPED_NO_OBSERVED_ID": 8,
+    "200": 63,
+    "404": 21,
+    "400": 3,
+    "500": 3
+  },
+  "observations": [
+    {
+      "path": "/achievements",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/achievements/{achievement_id}/icon",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/agreements",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/agreements/privacy-policy",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/agreements/referral-agreement",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "PUT",
+        "PATCH",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/distribution",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/lists",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/sample-alpha-id-walkthrough",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/super-selection",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/unsubmitted",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/alphas",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/check",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/power-pool",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/prod",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/correlations/self",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/performance-comparison",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/pnl",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/sharpe",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/yearly-stats",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/{record_set_name}",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/submit",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/authentication",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/authentication/brainlabs",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/authentication/persona",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/authentication/support",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/authentication/workday",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/captcha",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/competition-levels",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/competition-levels/{competition_level_id}/icon",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/competitions",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/competitions/spc/submissions",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/competitions/spc/submissions/{submission_id}",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/competitions/{competition_id}",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/competitions/{competition_id}/agreement",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/competitions/{competition_id}/boards/{board_type}",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/configuration",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/consultant",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-datasets",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-information/consultant-dos-and-donts",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-information/consultant-faqs",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-information/osmosis-allocation-guide-consultants",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-information/visualization-tool",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-program",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-program/",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant-program/{language}",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant/boards",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/consultant/boards/leader",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/consultant/boards/spc",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/consultant/boards/{board_type}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/consultant/summary",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/data-categories",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-fields",
+      "method": "OPTIONS",
+      "status_code": 400,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-fields/summary",
+      "method": "OPTIONS",
+      "status_code": 500,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-fields/{field_id}",
+      "method": "OPTIONS",
+      "status_code": 400,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-sets",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-sets/search",
+      "method": "OPTIONS",
+      "status_code": 500,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-sets/{dataset_id}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/errors/api/2/envelope",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/events",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/events/",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/events/{event_id}",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/messages",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/messages/announcements",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/messages/announcements/all",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/messages/notifications",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/messages/notifications/all",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/operators",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/search",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/simulations",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/simulations/super-selection",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/simulations/{simulation_id}",
+      "method": "OPTIONS",
+      "status_code": "SKIPPED_NO_OBSERVED_ID",
+      "advertised_methods": []
+    },
+    {
+      "path": "/suggest/examples",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/suggest/expression",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/suggest/fastexpr",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/suggest/fields",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/tags",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/teams",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/tutorial-pages",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/tutorial-pages/{page_id}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/tutorial/{tutorial_slug}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/tutorials",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/email/change",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/email/reverify",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/email/verify",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/password/change",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/password/forgot",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/password/reset",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/user/token",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/achievements",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/activities/pyramid-alphas",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/activities/pyramid-multipliers",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/activities/simulations",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/agreements",
+      "method": "OPTIONS",
+      "status_code": 500,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/alphas",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/alphas/summary",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/consultant/summary",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/consultant/tutorial/summary",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/messages",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/messages/summary",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/pyramid/alphas",
+      "method": "OPTIONS",
+      "status_code": 404,
+      "advertised_methods": []
+    },
+    {
+      "path": "/users/self/teams",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/tutorial/steps",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/tutorial/summary",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "PATCH",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/achievements",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/activities",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/activities/diversity",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/alphas",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/competitions",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/settings/simulation",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "POST",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/video-courses",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/osmosis/scale-points",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/osmosis/scale-points/ALL",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/osmosis/summary",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/profile",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/consultant",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/researcher",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/consultant/summary",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/streak",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/tags",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/activities/submissions",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/self/alphas/{alpha_id}/before-and-after-performance",
+      "method": "OPTIONS",
+      "status_code": 200,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/data-fields/{field_id}/visualize",
+      "method": "OPTIONS",
+      "status_code": 400,
+      "advertised_methods": [
+        "POST",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/alphas/{alpha_id}/recordsets/turnover",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    },
+    {
+      "path": "/users/{user_id}/activities/{activity_name}",
+      "method": "OPTIONS",
+      "status_code": 405,
+      "advertised_methods": [
+        "GET",
+        "HEAD",
+        "OPTIONS"
+      ]
+    }
+  ],
+  "frontend_sources": [
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+  ],
+  "method_policy": "Allow methods are advertised capabilities, not proof of account permission or a successful live mutation. An OPTIONS 405 is recorded even if Allow advertises OPTIONS.",
+  "privacy": "New option snapshots contain schema shape only; account-specific choices, cookies, headers and response data are excluded.",
+  "limits": "Current inventory plus current frontend route references were checked. Unresolved resource IDs and routes absent from those sources are not claimed as exhaustively verified."
+}

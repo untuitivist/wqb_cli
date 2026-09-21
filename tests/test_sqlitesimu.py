@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
-from wqb_cli.sqlitesimu.db import RunLeaseError, SqliteStore
+from wqb_cli.sqlitesimu.db import SCHEMA_VERSION, RunLeaseError, SqliteStore
 from wqb_cli.sqlitesimu.gateway import WqbApiGateway
 from wqb_cli.sqlitesimu.manifest import parse_manifest
 from wqb_cli.sqlitesimu.models import RuntimePolicy
@@ -1479,7 +1479,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(queue_row["enqueued_at"], 1000.0)
             self.assertEqual(queue_row["last_attempt_at"], 0.0)
             self.assertEqual(queue_row["attempt_count"], 0)
-            self.assertEqual(schema_version, 6)
+            self.assertEqual(schema_version, SCHEMA_VERSION)
 
     def test_schema_v5_upgrade_preserves_checks_and_adds_ordinal(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1547,7 +1547,7 @@ class SqliteSimuTests(unittest.TestCase):
                 schema_version = conn.execute("PRAGMA user_version").fetchone()[0]
             self.assertIn("ordinal", columns)
             self.assertEqual(dict(check), {"ordinal": 0, "name": "MATCHES_PYRAMID", "result": "WARNING"})
-            self.assertEqual(schema_version, 6)
+            self.assertEqual(schema_version, SCHEMA_VERSION)
 
     def test_schema_v3_migrates_legacy_simulation_request_terms(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1625,7 +1625,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(runtime_keys, {"simulation_request_not_before": "1010"})
             self.assertEqual(event["event_type"], "SIMULATE_RETRY")
             self.assertIn("SIMULATE_UNKNOWN", event["payload_json"])
-            self.assertEqual(schema_version, 6)
+            self.assertEqual(schema_version, SCHEMA_VERSION)
 
     def test_run_lease_rejects_a_second_worker(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

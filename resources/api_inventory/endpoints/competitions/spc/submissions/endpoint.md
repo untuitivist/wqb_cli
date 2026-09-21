@@ -26,3 +26,11 @@ wqb competition spc submissions --limit 20
 wqb competition spc submission-options
 wqb competition spc create-submission --input spc-submission.json
 ```
+
+## API refresh 2026-09-22
+
+List or create Systematic Predictions Challenge prompt submissions.
+
+- Advertised methods: GET, HEAD, OPTIONS, POST.
+- Live OPTIONS status: 200. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

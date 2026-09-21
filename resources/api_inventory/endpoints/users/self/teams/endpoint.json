@@ -2,7 +2,8 @@
   "path": "/users/self/teams",
   "url_template": "https://api.worldquantbrain.com/users/self/teams",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD"
   ],
   "source": [
     "platform_dynamic_capture"
@@ -68,5 +69,18 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/users/self/teams",
+    "method": "OPTIONS",
+    "status_code": 405,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

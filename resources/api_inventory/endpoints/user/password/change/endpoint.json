@@ -3,6 +3,7 @@
   "url_template": "https://api.worldquantbrain.com/user/password/change",
   "methods": [
     "GET",
+    "OPTIONS",
     "POST"
   ],
   "source": [
@@ -55,5 +56,17 @@
       "status": "skipped_mutating",
       "reason": "POST may mutate remote state; not executed by inventory test."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/user/password/change",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  }
 }

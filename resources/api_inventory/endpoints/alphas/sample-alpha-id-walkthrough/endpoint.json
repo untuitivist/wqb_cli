@@ -2,7 +2,11 @@
   "path": "/alphas/sample-alpha-id-walkthrough",
   "url_template": "https://api.worldquantbrain.com/alphas/sample-alpha-id-walkthrough",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "PUT"
   ],
   "source": [
     "platform_frontend"
@@ -64,5 +68,379 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/alphas/sample-alpha-id-walkthrough",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "type": {
+        "type": "choice",
+        "required": false,
+        "readOnly": true
+      },
+      "author": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "settings": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "instrumentType": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "region": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "universe": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "delay": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "decay": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 512
+          },
+          "neutralization": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "truncation": {
+            "type": "float",
+            "required": true,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 1
+          },
+          "lookback": {
+            "type": "integer",
+            "required": false,
+            "readOnly": false,
+            "minValue": 0,
+            "maxValue": 1024
+          },
+          "pasteurization": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "unitHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "nanHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "selectionHandling": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "selectionLimit": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false,
+            "minValue": 10,
+            "maxValue": 1000
+          },
+          "maxTrade": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "maxPosition": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "language": {
+            "type": "choice",
+            "required": true,
+            "readOnly": false
+          },
+          "visualization": {
+            "type": "boolean",
+            "required": true,
+            "readOnly": false
+          },
+          "testPeriod": {
+            "type": "string",
+            "required": false,
+            "readOnly": false,
+            "minValue": "P0Y0M0D",
+            "maxValue": "P6Y0M0D"
+          },
+          "componentActivation": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          },
+          "simulationMode": {
+            "type": "choice",
+            "required": false,
+            "readOnly": false
+          }
+        }
+      },
+      "regular": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "code": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "description": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "operatorCount": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "combo": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "code": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "description": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "operatorCount": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "selection": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "children": {
+          "code": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "description": {
+            "type": "string",
+            "required": true,
+            "readOnly": false
+          },
+          "operatorCount": {
+            "type": "integer",
+            "required": true,
+            "readOnly": false
+          }
+        }
+      },
+      "dateCreated": {
+        "type": "datetime",
+        "required": true,
+        "readOnly": false
+      },
+      "dateSubmitted": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "dateModified": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "favorite": {
+        "type": "boolean",
+        "required": true,
+        "readOnly": false
+      },
+      "hidden": {
+        "type": "boolean",
+        "required": true,
+        "readOnly": false
+      },
+      "color": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "category": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "tags": {
+        "type": "list",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "string",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "classifications": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "grade": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "stage": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "status": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "is": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "os": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "train": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "test": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "prod": {
+        "type": "nested object",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "field",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "competitions": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "themes": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "pyramids": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "pyramidThemes": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "team": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "osmosisPoints": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false,
+        "minValue": 1,
+        "maxValue": 100000
+      },
+      "origin": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

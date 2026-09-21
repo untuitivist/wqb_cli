@@ -2,7 +2,9 @@
   "path": "/data-sets",
   "url_template": "https://api.worldquantbrain.com/data-sets",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "platform_dynamic_capture",
@@ -192,5 +194,202 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/data-sets",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "name": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "description": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "category": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "children": {
+          "id": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          }
+        }
+      },
+      "subcategory": {
+        "type": "nested object",
+        "required": false,
+        "readOnly": true,
+        "children": {
+          "id": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          },
+          "name": {
+            "type": "string",
+            "required": false,
+            "readOnly": true
+          }
+        }
+      },
+      "data": {
+        "type": "field",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "nested object",
+          "required": false,
+          "readOnly": true,
+          "children": {
+            "region": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "delay": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "universe": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "dateCoverage": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "coverage": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "turnover": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "valueScore": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "userCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "alphaCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "fieldCount": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            },
+            "pyramidMultiplier": {
+              "type": "float",
+              "required": false,
+              "readOnly": true
+            },
+            "themes": {
+              "type": "field",
+              "required": true,
+              "readOnly": false,
+              "child": {
+                "type": "nested object",
+                "required": true,
+                "readOnly": false,
+                "children": {
+                  "id": {
+                    "type": "string",
+                    "required": false,
+                    "readOnly": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "required": false,
+                    "readOnly": true
+                  },
+                  "multiplier": {
+                    "type": "float",
+                    "required": false,
+                    "readOnly": true
+                  }
+                }
+              }
+            },
+            "dateUpdated": {
+              "type": "datetime",
+              "required": false,
+              "readOnly": true
+            },
+            "regionCoverage": {
+              "type": "integer",
+              "required": false,
+              "readOnly": true
+            }
+          }
+        }
+      },
+      "researchPapers": {
+        "type": "field",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "nested object",
+          "required": true,
+          "readOnly": false,
+          "children": {
+            "type": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "title": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            },
+            "url": {
+              "type": "string",
+              "required": false,
+              "readOnly": true
+            }
+          }
+        }
+      }
+    }
+  }
 }

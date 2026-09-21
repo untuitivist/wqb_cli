@@ -3,8 +3,8 @@
   "url_template": "https://api.worldquantbrain.com/competitions/spc/submissions/{submission_id}",
   "methods": [
     "GET",
-    "PUT",
-    "PATCH"
+    "PATCH",
+    "PUT"
   ],
   "source": [
     "observed_platform",
@@ -115,5 +115,14 @@
       "status": "skipped_mutating",
       "reason": "PATCH updates a remote SPC submission; not executed during inventory validation."
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/competitions/spc/submissions/{submission_id}",
+    "method": "OPTIONS",
+    "status_code": "SKIPPED_NO_OBSERVED_ID",
+    "advertised_methods": [],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
+  }
 }

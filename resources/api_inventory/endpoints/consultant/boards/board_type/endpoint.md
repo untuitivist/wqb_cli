@@ -15,3 +15,11 @@ wqb competition leaderboard referral --scope consultant --limit 20
 ```
 
 This resource is separate from `/competitions/{competition_id}/boards/{board_type}`. The difference is namespace/scope, not a one-off SPC model.
+
+## API refresh 2026-09-22
+
+Generic consultant leaderboard. The board type selects resources such as leader, spc, power-pool, or referral.
+
+- Advertised methods: GET, HEAD, OPTIONS.
+- Live OPTIONS status: 200. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

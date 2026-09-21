@@ -14,3 +14,11 @@ Use the generic leaderboard command with an explicit consultant scope:
 wqb competition leaderboard spc --scope consultant --method OPTIONS
 wqb competition leaderboard spc --scope consultant --board BOARD_FROM_OPTIONS --limit 20
 ```
+
+## API refresh 2026-09-22
+
+Systematic Predictions Challenge leaderboard. OPTIONS advertises the currently available board periods and aggregation choices.
+
+- Advertised methods: GET, HEAD, OPTIONS.
+- Live OPTIONS status: 200. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

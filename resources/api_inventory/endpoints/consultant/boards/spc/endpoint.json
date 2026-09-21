@@ -2,7 +2,9 @@
   "path": "/consultant/boards/spc",
   "url_template": "https://api.worldquantbrain.com/consultant/boards/spc",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "observed_platform",
@@ -96,5 +98,32 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/consultant/boards/spc",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "board": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "aggregate": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      }
+    }
+  }
 }

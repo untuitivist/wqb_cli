@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from ..core.simulation import validate_region_agnostic_payload
 from .models import CandidateSpec, SimulationManifest
 
 
@@ -69,12 +70,12 @@ def _parse_candidate(raw: Any, index: int) -> CandidateSpec:
     settings.setdefault("language", "FASTEXPR")
 
     normalized: dict[str, Any] = {"type": simulation_type, "settings": settings}
-    if simulation_type == "REGULAR":
+    if simulation_type in {"REGULAR", "REGION_AGNOSTIC"}:
         expression = payload.get("regular", raw.get("expression"))
         if isinstance(expression, dict):
             expression = expression.get("code")
         if not isinstance(expression, str) or not expression.strip():
-            raise ValueError(f"Candidate {index} REGULAR payload must contain regular or expression")
+            raise ValueError(f"Candidate {index} {simulation_type} payload must contain regular or expression")
         normalized["regular"] = expression
     elif simulation_type == "SUPER":
         combo = payload.get("combo")
@@ -86,6 +87,7 @@ def _parse_candidate(raw: Any, index: int) -> CandidateSpec:
     else:
         raise ValueError(f"Candidate {index} has unsupported type: {simulation_type}")
 
+    validate_region_agnostic_payload(normalized)
     if "metadata" in raw and not isinstance(raw["metadata"], dict):
         raise ValueError(f"Candidate {index} metadata must be an object")
     metadata = dict(raw.get("metadata") or {})

@@ -2,7 +2,9 @@
   "path": "/teams",
   "url_template": "https://api.worldquantbrain.com/teams",
   "methods": [
-    "GET"
+    "GET",
+    "OPTIONS",
+    "POST"
   ],
   "source": [
     "platform_frontend"
@@ -61,5 +63,106 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/teams",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "POST",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "POST": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "type": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "name": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 200
+      },
+      "status": {
+        "type": "choice",
+        "required": false,
+        "readOnly": true
+      },
+      "university": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "country": {
+        "type": "choice",
+        "required": true,
+        "readOnly": false
+      },
+      "dateCreated": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "dateTerminated": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "members": {
+        "type": "field",
+        "required": true,
+        "readOnly": false,
+        "child": {
+          "type": "nested object",
+          "required": true,
+          "readOnly": false,
+          "children": {
+            "user": {
+              "type": "field",
+              "required": true,
+              "readOnly": false
+            },
+            "weight": {
+              "type": "float",
+              "required": true,
+              "readOnly": false,
+              "minValue": 0,
+              "maxValue": 1
+            },
+            "status": {
+              "type": "choice",
+              "required": false,
+              "readOnly": true
+            },
+            "statusDate": {
+              "type": "datetime",
+              "required": false,
+              "readOnly": true
+            }
+          }
+        }
+      },
+      "creator": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "terminator": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

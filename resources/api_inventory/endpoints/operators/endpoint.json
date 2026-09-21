@@ -2,7 +2,9 @@
   "path": "/operators",
   "url_template": "https://api.worldquantbrain.com/operators",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "platform_dynamic_capture",
@@ -126,5 +128,58 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/operators",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "name": {
+        "type": "string",
+        "required": true,
+        "readOnly": false,
+        "maxLength": 50
+      },
+      "category": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "scope": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "definition": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "description": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "documentation": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "level": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      }
+    }
+  }
 }

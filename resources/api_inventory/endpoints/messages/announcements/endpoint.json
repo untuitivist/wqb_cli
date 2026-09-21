@@ -1,0 +1,79 @@
+{
+  "path": "/messages/announcements",
+  "url_template": "https://api.worldquantbrain.com/messages/announcements",
+  "methods": [
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "PUT"
+  ],
+  "source": [
+    "https://platform.worldquantbrain.com/static/js/5752.38e60c55.js",
+    "https://platform.worldquantbrain.com/static/js/index.d2b7053a.js"
+  ],
+  "description": "Announcement collection and read-state operations.",
+  "safe_probe": true,
+  "params": {},
+  "request_body": null,
+  "notes": [],
+  "live_probe": {
+    "path": "/messages/announcements",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "PUT",
+      "PATCH",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "type": {
+        "type": "choice",
+        "required": false,
+        "readOnly": true
+      },
+      "title": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "description": {
+        "type": "string",
+        "required": false,
+        "readOnly": true
+      },
+      "dateCreated": {
+        "type": "datetime",
+        "required": false,
+        "readOnly": true
+      },
+      "tags": {
+        "type": "list",
+        "required": false,
+        "readOnly": true,
+        "child": {
+          "type": "string",
+          "required": true,
+          "readOnly": false
+        }
+      },
+      "read": {
+        "type": "boolean",
+        "required": true,
+        "readOnly": false
+      }
+    }
+  }
+}

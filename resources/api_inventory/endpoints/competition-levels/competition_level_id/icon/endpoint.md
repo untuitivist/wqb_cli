@@ -29,3 +29,11 @@
 - Elapsed: `284 ms`
 - Content-Type: `image/svg+xml`
 - Allow: `GET, HEAD, OPTIONS`
+
+## API refresh 2026-09-22
+
+Observed by passive platform network capture.
+
+- Advertised methods: GET.
+- Live OPTIONS status: SKIPPED_NO_OBSERVED_ID. Mutation methods were not executed.
+- Account-specific option values are omitted; use `wqb api call` with OPTIONS for current metadata.

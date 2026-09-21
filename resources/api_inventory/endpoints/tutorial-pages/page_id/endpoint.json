@@ -2,7 +2,9 @@
   "path": "/tutorial-pages/{page_id}",
   "url_template": "https://api.worldquantbrain.com/tutorial-pages/{page_id}",
   "methods": [
-    "GET"
+    "GET",
+    "HEAD",
+    "OPTIONS"
   ],
   "source": [
     "observed_platform"
@@ -45,5 +47,57 @@
       "retry_after": null,
       "location_present": false
     }
-  ]
+  ],
+  "live_probe": {
+    "path": "/tutorial-pages/{page_id}",
+    "method": "OPTIONS",
+    "status_code": 200,
+    "advertised_methods": [
+      "GET",
+      "HEAD",
+      "OPTIONS"
+    ],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "OPTIONS_METADATA",
+    "mutating_methods_executed": false
+  },
+  "options_schema": {
+    "GET": {
+      "id": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "title": {
+        "type": "string",
+        "required": true,
+        "readOnly": false
+      },
+      "lastModified": {
+        "type": "datetime",
+        "required": true,
+        "readOnly": false
+      },
+      "content": {
+        "type": "field",
+        "required": true,
+        "readOnly": false
+      },
+      "sequence": {
+        "type": "integer",
+        "required": true,
+        "readOnly": false
+      },
+      "category": {
+        "type": "field",
+        "required": false,
+        "readOnly": true
+      },
+      "duration": {
+        "type": "string",
+        "required": false,
+        "readOnly": false
+      }
+    }
+  }
 }

@@ -83,5 +83,14 @@
         "complete": "返回 id、parent、children、status、message、location、progress、alpha 等字段。"
       }
     }
+  },
+  "live_probe": {
+    "path": "/simulations/{simulation_id}",
+    "method": "OPTIONS",
+    "status_code": "SKIPPED_NO_OBSERVED_ID",
+    "advertised_methods": [],
+    "observed_at": "2026-09-21T16:08:26.074426+00:00",
+    "verification": "ADVERTISED_ONLY",
+    "mutating_methods_executed": false
   }
 }

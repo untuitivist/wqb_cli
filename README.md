@@ -24,7 +24,7 @@ It is built for coding agents and long-running research agents first, not as a t
 - Two isolated workflow document sets under `workflows/`, with clear inputs, allowed commands, required outputs, and success criteria.
 - Local data commands that read stable files under `local/` instead of scraping browser/plugin caches directly.
 - Raw request and response context preserved in command output, including status codes, parameters, locations, retry events, and result bodies.
-- `sim create` and online `community` requests support explicit `--dry-run` previews without authentication or HTTP calls.
+- `simu create` and online `community` requests support explicit `--dry-run` previews without authentication or HTTP calls.
 
 ## What This Tool Provides
 
@@ -89,7 +89,7 @@ The built-in commands below are arranged by use case while preserving the actual
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ sim (alias: simu)                                                           # Create, inspect, and wait for platform simulations
+├─ simu                                                                        # Create, inspect, and wait for platform simulations
 ├─ sqlitesimu                                                    # Durable batch simulation engine backed by local SQLite
 ├─ alpha                                                         # Inspect, analyze, modify, and formally submit Alphas
 ├─ data                                                          # Explore platform datasets, fields, and operators
@@ -118,7 +118,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 ```text
 wqb  # WorldQuant BRAIN command-line toolkit
-├─ sim (alias: simu)                                                           # Create, inspect, and wait for platform simulations
+├─ simu                                                                        # Create, inspect, and wait for platform simulations
 │  ├─ options                                                    # Inspect available simulation settings
 │  ├─ list                                                       # List simulations
 │  ├─ get <simulation_id>                                        # Read simulation status or results with retry waits
@@ -313,8 +313,8 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 ### Choosing an Entry Point
 
-- `sim` calls the platform simulation API directly; `sqlitesimu` adds a local database, batch queues, concurrent workers, recovery, and result exports.
-- Simulating is not submitting: `sim create` and `sqlitesimu run` launch simulations; `alpha submit` performs formal Alpha submission. The command tree does not imply that research or final eligibility checks have been completed.
+- `simu` calls the platform simulation API directly; `sqlitesimu` adds a local database, batch queues, concurrent workers, recovery, and result exports.
+- Simulating is not submitting: `simu create` and `sqlitesimu run` launch simulations; `alpha submit` performs formal Alpha submission. The command tree does not imply that research or final eligibility checks have been completed.
 - `community` accesses the live forum. `sqlitecom` owns local storage and syncs through the same online client. Migrate old local searches to `sqlitecom search` and plugin imports to `sqlitecom import`.
 - `sqlitesimu cancel` manages a local run and preserves history; it does not cancel every simulation already sent to the platform, and it does not bypass an active worker lease by default.
 - `api call` invokes registered endpoints directly. Mutating operations send real requests and do not automatically perform higher-level research checks.
@@ -323,8 +323,8 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 ```text
 wqb --help
-wqb sim --help
-wqb sim create --help
+wqb simu --help
+wqb simu create --help
 wqb alpha correlation --help
 wqb alpha correlation prod --help
 wqb sqlitesimu run --help
@@ -348,7 +348,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.6.0"
+version = "0.6.1"
 ```
 
 ## Authentication
@@ -443,7 +443,7 @@ wqb api call GET /authentication
 Inspect simulation options:
 
 ```powershell
-wqb sim options
+wqb simu options
 ```
 
 Most high-level query commands expose common filters directly and still allow raw query parameters through `--param KEY=VALUE`.
@@ -463,7 +463,7 @@ wqb alpha list --help
 wqb data datasets --help
 wqb data fields --help
 wqb data operators --help
-wqb sim create --help
+wqb simu create --help
 ```
 
 ## API Refresh and User Resources
@@ -510,15 +510,15 @@ Do not rely on `--param pyramid=pv` for alpha listing. It is accepted by the ser
 Create a simulation from a JSON body:
 
 ```powershell
-wqb sim create --input body.json --output simulation_result.json
+wqb simu create --input body.json --output simulation_result.json
 ```
 
-By default, `sim create` waits for the simulation result or fails on timeout. For multi-simulation requests, child simulations are also waited and reported.
+By default, `simu create` waits for the simulation result or fails on timeout. For multi-simulation requests, child simulations are also waited and reported.
 
 Get an existing simulation:
 
 ```powershell
-wqb sim get <simulation_id> --max-wait-seconds 900 --output simulation.json
+wqb simu get <simulation_id> --max-wait-seconds 900 --output simulation.json
 ```
 
 Simulation examples are documented here:
@@ -544,9 +544,9 @@ For REGULAR FASTEXPR multi-simulation, the shared settings requirement is limite
 
 ### Durable SQLite Batch Simulations
 
-Both `sim` (also `simu`) and `sqlitesimu` support REGION_AGNOSTIC/ALL. ALL uses a single parent object, ALL/D1 and LARGE/MEDIUM/SMALL, then collects every regional child Alpha and PnL. The server does not support ALL in HTTP batch arrays. A SQLite run can interleave individual ALL requests with Regular batches using the same sender and backpressure.
+Both `simu` and `sqlitesimu` support REGION_AGNOSTIC/ALL. ALL uses a single parent object, ALL/D1 and LARGE/MEDIUM/SMALL, then collects every regional child Alpha and PnL. The server does not support ALL in HTTP batch arrays. A SQLite run can interleave individual ALL requests with Regular batches using the same sender and backpressure.
 
-Use `sim create --dry-run` for a request preview. Use `sqlitesimu run ... --no-resend` or `resume ... --no-resend` to keep collecting accepted work without repeatedly posting it. Export includes `region_agnostic_children`; RA parents have no PnL and remain one experiment each. See [the durable simulation guide](resources/docs/commands/sqlitesimu/README.md).
+Use `simu create --dry-run` for a request preview. Use `sqlitesimu run ... --no-resend` or `resume ... --no-resend` to keep collecting accepted work without repeatedly posting it. Export includes `region_agnostic_children`; RA parents have no PnL and remain one experiment each. See [the durable simulation guide](resources/docs/commands/sqlitesimu/README.md).
 
 To let a workflow generate candidates while the CLI independently runs simulations, polls, retries, and persists results:
 
@@ -685,7 +685,7 @@ Two complete, isolated workflows live under `workflows/`:
 
 ```text
 workflows/
-  workflow_simu/          bounded, adaptive A-M research with synchronous wqb sim create
+  workflow_simu/          bounded, adaptive A-M research with synchronous wqb simu create
   workflow_batchsimu/     template-family A-M research with agent-independent sqlitesimu execution
 ```
 
@@ -789,7 +789,7 @@ python -m wqb_cli --help
 
 Package release:
 
-[wqb-cli 0.6.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.0)
+[wqb-cli 0.6.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.1)
 
 Release checklist:
 
@@ -797,13 +797,18 @@ Release checklist:
 2. Run editable install.
 3. Run tests.
 4. Commit changes.
-5. Tag the release, for example `v0.6.0`.
+5. Tag the release, for example `v0.6.1`.
 6. Push the branch and tag.
 7. Publish a GitHub Release.
 
 ## Version History
 
 The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
+
+### 0.6.1 - 2026-09-22
+
+- Standardized the simulation entry point as `wqb simu`, including the source module, parser and documentation. Replace `wqb sim` in existing scripts with `wqb simu`; the old name is no longer accepted.
+- Simulation payloads, Regular/Super/ALL behavior and SQLite schema 7 are unchanged.
 
 ### 0.6.0 - 2026-09-22
 
@@ -813,7 +818,7 @@ The history below follows versions recorded by package metadata and GitHub relea
 
 ### 0.5.0 - 2026-09-22
 
-- Added: native ALL support in sim/simu and sqlitesimu, schema 7 with regional child results, no-resend and dry-run controls, 18 newly registered API paths and user activity/Osmosis commands.
+- Added: native ALL support in simu and sqlitesimu, schema 7 with regional child results, no-resend and dry-run controls, 18 newly registered API paths and user activity/Osmosis commands.
 - Fixed: pending enrichment responses and normal endpoint-specific HTTP 204 responses. Existing Regular and Super request forms remain supported.
 - This source/wheel version is separate from the historical GitHub release link above.
 

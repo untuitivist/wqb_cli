@@ -105,7 +105,7 @@ wqb data field <field_id> --output <node_dir>/field_meta__<field_id>.json
 - `operator_count`
 - `field_count`
 
-`simulation_batch.json` 必须是 `wqb sim create --input` 可直接读取的 payload，并与 expression candidate 一一对应。
+`simulation_batch.json` 必须是 `wqb simu create --input` 可直接读取的 payload，并与 expression candidate 一一对应。
 
 ## 成功条件
 

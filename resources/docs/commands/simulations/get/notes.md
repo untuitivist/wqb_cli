@@ -28,5 +28,5 @@ Real long-wait example:
 
 - simulation id: `25hy8yeL94KI9BQwSfxUVXE`
 - first local wait exceeded the old local command timeout behavior
-- later `sim get` returned platform generic `ERROR`
+- later `simu get` returned platform generic `ERROR`
 - output file: `outputs/simulation_get_latest_output.json`

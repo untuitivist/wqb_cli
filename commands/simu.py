@@ -10,49 +10,49 @@ from ..core.registry import EndpointRegistry
 from ..core.simulation import is_region_agnostic, region_agnostic_child_ids
 
 
-def add_sim_parser(subparsers: argparse._SubParsersAction) -> None:
-    sim = subparsers.add_parser("sim", aliases=["simu"], help="Simulation API commands")
-    sim_sub = sim.add_subparsers(dest="sim_command", required=True)
+def add_simu_parser(subparsers: argparse._SubParsersAction) -> None:
+    simu_parser = subparsers.add_parser("simu", help="Simulation API commands")
+    simu_subparsers = simu_parser.add_subparsers(dest="simu_command", required=True)
 
-    options_parser = sim_sub.add_parser("options", help="OPTIONS /simulations")
+    options_parser = simu_subparsers.add_parser("options", help="OPTIONS /simulations")
     options_parser.add_argument("--output", help="Write JSON result to file")
 
-    list_parser = sim_sub.add_parser("list", help="GET /simulations")
+    list_parser = simu_subparsers.add_parser("list", help="GET /simulations")
     list_parser.add_argument("--output", help="Write JSON result to file")
 
-    get_parser = sim_sub.add_parser("get", help="GET /simulations/{simulation_id}")
+    get_parser = simu_subparsers.add_parser("get", help="GET /simulations/{simulation_id}")
     get_parser.add_argument("simulation_id", help="Simulation id")
     get_parser.add_argument("--max-wait-seconds", type=float, default=900.0, help="Maximum total wait time while following Retry-After")
     get_parser.add_argument("--output", help="Write JSON result to file")
 
-    create_parser = sim_sub.add_parser("create", help="POST /simulations")
+    create_parser = simu_subparsers.add_parser("create", help="POST /simulations")
     create_parser.add_argument("--input", required=True, help="JSON file containing simulation request body")
     create_parser.add_argument("--dry-run", action="store_true", help="Validate and preview the request without simulating")
     create_parser.add_argument("--max-wait-seconds", type=float, default=900.0, help="Maximum total wait time after creation")
     create_parser.add_argument("--output", help="Write JSON result to file")
 
-    super_selection_parser = sim_sub.add_parser("super-selection", help="GET/POST /simulations/super-selection")
+    super_selection_parser = simu_subparsers.add_parser("super-selection", help="GET/POST /simulations/super-selection")
     super_selection_parser.add_argument("--method", choices=["GET", "POST"], default="GET")
     super_selection_parser.add_argument("--input", help="JSON file for POST body")
     super_selection_parser.add_argument("--output", help="Write JSON result to file")
 
 
-def handle_sim(args: argparse.Namespace, registry: EndpointRegistry) -> int:
-    if args.sim_command == "options":
+def handle_simu(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    if args.simu_command == "options":
         endpoint = registry.get("/simulations")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "OPTIONS")
         result = client.call(prepared)
         write_json(result, args.output)
         return 0
-    if args.sim_command == "list":
+    if args.simu_command == "list":
         endpoint = registry.get("/simulations")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET")
         result = client.call(prepared)
         write_json(result, args.output)
         return 0
-    if args.sim_command == "get":
+    if args.simu_command == "get":
         endpoint = registry.get("/simulations/{simulation_id}")
         client = WqbClient(registry, session_from_cookies(args.cookies))
         prepared = client.prepare(endpoint, "GET", path_vars={"simulation_id": args.simulation_id})
@@ -61,7 +61,7 @@ def handle_sim(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         result["ok"] = bool(result.get("ok") and result["classification"]["ok"])
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
-    if args.sim_command == "create":
+    if args.simu_command == "create":
         endpoint = registry.get("/simulations")
         payload = read_json_file(args.input)
         client = WqbClient(registry, session_from_cookies(args.cookies))
@@ -72,7 +72,7 @@ def handle_sim(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         result = _create_and_wait_simulation(client, registry, prepared, args.max_wait_seconds)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
-    if args.sim_command == "super-selection":
+    if args.simu_command == "super-selection":
         endpoint = registry.get("/simulations/super-selection")
         payload = read_json_file(args.input) if args.input else None
         client = WqbClient(registry, session_from_cookies(args.cookies))
@@ -80,7 +80,7 @@ def handle_sim(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         result = client.call(prepared)
         write_json(result, args.output)
         return 0
-    raise AssertionError(args.sim_command)
+    raise AssertionError(args.simu_command)
 
 
 def _create_and_wait_simulation(

@@ -2,7 +2,7 @@
 
 Do not guess platform enum values.
 In the real run, `CHN/TOP1000U` was invalid.
-`sim options` showed CHN only supports `TOP2000U`.
+`simu options` showed CHN only supports `TOP2000U`.
 
 CHN neutralization choices include:
 

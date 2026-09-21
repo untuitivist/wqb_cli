@@ -2,7 +2,7 @@
 
 ## 目标
 
-使用 `wqb sim create` 对 I 的有界候选批次做真实回测。agent 等待本轮返回并保存每个候选的真实 `alpha_id`、执行状态和完整结果。
+使用 `wqb simu create` 对 I 的有界候选批次做真实回测。agent 等待本轮返回并保存每个候选的真实 `alpha_id`、执行状态和完整结果。
 
 本节点不使用后台 worker，不打开 SQLite simulation store，也不承担模板族大批量筛选。
 
@@ -20,17 +20,17 @@
 ## 推荐使用的 CLI
 
 ```powershell
-wqb sim options --output <node_dir>/sim_options.json
-wqb sim create --input <node_dir>/simulation_batch.json --max-wait-seconds 900 --output <node_dir>/simulation_create.json
-wqb sim get <child_simulation_id> --max-wait-seconds 900 --output <node_dir>/child_simulation_get.json
+wqb simu options --output <node_dir>/sim_options.json
+wqb simu create --input <node_dir>/simulation_batch.json --max-wait-seconds 900 --output <node_dir>/simulation_create.json
+wqb simu get <child_simulation_id> --max-wait-seconds 900 --output <node_dir>/child_simulation_get.json
 wqb alpha get <alpha_id> --output <node_dir>/alpha__alpha_id.json
 wqb alpha check <alpha_id> --max-wait-seconds 900 --output <node_dir>/alpha_check__alpha_id.json
 wqb alpha recordsets <alpha_id> --max-wait-seconds 900 --output <node_dir>/recordsets__alpha_id.json
 ```
 
-`wqb sim create` now waits for the parent simulation result by default. `201 Created` is only `201 Created, waiting for results...`; do not treat it as final backtest success.
+`wqb simu create` now waits for the parent simulation result by default. `201 Created` is only `201 Created, waiting for results...`; do not treat it as final backtest success.
 
-For multi-simulation, `wqb sim create` also waits for child simulations and places them under top-level `children`. Use `wqb sim get <child_simulation_id>` only when re-checking a child later.
+For multi-simulation, `wqb simu create` also waits for child simulations and places them under top-level `children`. Use `wqb simu get <child_simulation_id>` only when re-checking a child later.
 
 ## 输出
 

@@ -7,7 +7,7 @@ from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
 from ..core.io import read_json_file, write_json
 from ..core.registry import EndpointRegistry
-from .sim import _create_and_wait_simulation
+from .simu import _create_and_wait_simulation
 
 
 def add_shortcut_parser(subparsers: argparse._SubParsersAction) -> None:

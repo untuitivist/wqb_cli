@@ -24,7 +24,7 @@
 - `workflows/` 下提供两套相互隔离的节点文档，明确输入、允许命令、必要输出和成功条件。
 - 本地数据命令读取 `local/` 下的稳定文件，不直接抓取浏览器或插件缓存。
 - 命令输出保留 request/response 上下文，包括状态码、参数、Location、retry 事件和返回体。
-- `sim create` 和在线 `community` 请求支持显式 `--dry-run` 预览，不登录、不发送 HTTP 请求。
+- `simu create` 和在线 `community` 请求支持显式 `--dry-run` 预览，不登录、不发送 HTTP 请求。
 
 ## 功能概览
 
@@ -89,7 +89,7 @@ python -I -m wqb_cli --help
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ sim (alias: simu)                                                           # 平台回测：创建、查询与等待结果
+├─ simu                                                                        # 平台回测：创建、查询与等待结果
 ├─ sqlitesimu                                                    # 本地 SQLite 持久化批量回测引擎
 ├─ alpha                                                         # Alpha 查询、分析、修改与正式提交
 ├─ data                                                          # 平台数据目录、字段及算子
@@ -118,7 +118,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 ```text
 wqb  # WorldQuant BRAIN 命令行工具
-├─ sim (alias: simu)                                                           # 平台回测：创建、查询与等待结果
+├─ simu                                                                        # 平台回测：创建、查询与等待结果
 │  ├─ options                                                    # 查看回测设置的可用选项
 │  ├─ list                                                       # 查询回测列表
 │  ├─ get <simulation_id>                                        # 读取回测状态或结果，支持等待重试
@@ -313,8 +313,8 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 ### 如何选择入口
 
-- `sim` 直接调用平台回测接口；`sqlitesimu` 增加本地数据库、批量队列、并发执行、断点恢复和结果导出。
-- 回测与正式提交不同：`sim create`、`sqlitesimu run` 发起回测，`alpha submit` 才是正式提交入口。命令树不代表已完成研究流程或提交前终检。
+- `simu` 直接调用平台回测接口；`sqlitesimu` 增加本地数据库、批量队列、并发执行、断点恢复和结果导出。
+- 回测与正式提交不同：`simu create`、`sqlitesimu run` 发起回测，`alpha submit` 才是正式提交入口。命令树不代表已完成研究流程或提交前终检。
 - `community` 读取在线论坛；`sqlitecom` 管理本地社区库，`sync` 通过同一在线客户端增量更新。旧本地查询迁到 `sqlitecom search`，旧导入迁到 `sqlitecom import`。
 - `sqlitesimu cancel` 管理本地 run 并保留历史，不等于撤销平台上所有已发出的回测；默认不会越过仍有效的 worker 租约。
 - `api call` 可直接调用注册表内端点；写操作会发送真实请求，不会自动补齐高层研究检查。
@@ -323,8 +323,8 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 ```text
 wqb --help
-wqb sim --help
-wqb sim create --help
+wqb simu --help
+wqb simu create --help
 wqb alpha correlation --help
 wqb alpha correlation prod --help
 wqb sqlitesimu run --help
@@ -356,7 +356,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.6.0"
+version = "0.6.1"
 ```
 
 ## 认证
@@ -443,7 +443,7 @@ wqb api call GET /authentication
 查看 simulation options：
 
 ```powershell
-wqb sim options
+wqb simu options
 ```
 
 高层查询命令暴露常用 filter，同时保留 `--param KEY=VALUE` 透传原始 query 参数。
@@ -463,7 +463,7 @@ wqb alpha list --help
 wqb data datasets --help
 wqb data fields --help
 wqb data operators --help
-wqb sim create --help
+wqb simu create --help
 ```
 
 ## API 清单与用户资源更新
@@ -510,15 +510,15 @@ wqb alpha list `
 从 JSON body 创建 simulation：
 
 ```powershell
-wqb sim create --input body.json --output simulation_result.json
+wqb simu create --input body.json --output simulation_result.json
 ```
 
-`sim create` 默认等待回测结果或超时失败。multi-simulation 请求会等待并汇总 child simulations。
+`simu create` 默认等待回测结果或超时失败。multi-simulation 请求会等待并汇总 child simulations。
 
 查询已有 simulation：
 
 ```powershell
-wqb sim get <simulation_id> --max-wait-seconds 900 --output simulation.json
+wqb simu get <simulation_id> --max-wait-seconds 900 --output simulation.json
 ```
 
 回测示例文档：
@@ -544,9 +544,9 @@ REGULAR FASTEXPR multi-simulation 必须相同的设置范围限定为：
 
 ### SQLite 批量回测
 
-`sim`（别名 `simu`）和 `sqlitesimu` 均支持 REGION_AGNOSTIC/ALL：ALL/D1，LARGE、MEDIUM 或 SMALL，单个父请求完成后采集每个地区的子 Alpha 详情和 PnL。官方不支持把 ALL 放入 HTTP batch 数组；SQLite 同一队列可以交错发送单条 ALL 和 Regular 批次，共用派发与服务器背压。
+`simu`和 `sqlitesimu` 均支持 REGION_AGNOSTIC/ALL：ALL/D1，LARGE、MEDIUM 或 SMALL，单个父请求完成后采集每个地区的子 Alpha 详情和 PnL。官方不支持把 ALL 放入 HTTP batch 数组；SQLite 同一队列可以交错发送单条 ALL 和 Regular 批次，共用派发与服务器背压。
 
-`sim create --dry-run` 预览请求。`sqlitesimu run ... --no-resend` 或 `resume ... --no-resend` 持续收集已受理任务，避免重复 POST。导出新增 `region_agnostic_children`；父 Alpha 不存在独立 PnL，也不按子地区数增加实验数。详见[持久化回测说明](resources/docs/commands/sqlitesimu/README.md)。
+`simu create --dry-run` 预览请求。`sqlitesimu run ... --no-resend` 或 `resume ... --no-resend` 持续收集已受理任务，避免重复 POST。导出新增 `region_agnostic_children`；父 Alpha 不存在独立 PnL，也不按子地区数增加实验数。详见[持久化回测说明](resources/docs/commands/sqlitesimu/README.md)。
 
 工作流只生成批量表达式、由 CLI 独立发起 simulate、轮询、重试和结果入库时：
 
@@ -687,7 +687,7 @@ wqb sqlitecom import --sqlite community.sqlite3 --source export.json
 
 ```text
 workflows/
-  workflow_simu/          A-M 小规模自适应研究，同步使用 wqb sim create
+  workflow_simu/          A-M 小规模自适应研究，同步使用 wqb simu create
   workflow_batchsimu/     A-M 模板群研究，由 sqlitesimu 独立执行回测
 ```
 
@@ -791,7 +791,7 @@ python -m wqb_cli --help
 
 软件包 release：
 
-[wqb-cli 0.6.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.0)
+[wqb-cli 0.6.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.1)
 
 发布 checklist：
 
@@ -799,13 +799,18 @@ python -m wqb_cli --help
 2. 运行 editable install。
 3. 运行测试。
 4. 提交改动。
-5. 创建 tag，例如 `v0.6.0`。
+5. 创建 tag，例如 `v0.6.1`。
 6. 推送 branch 和 tag。
 7. 发布 GitHub Release。
 
 ## 版本记录
 
 以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
+
+### 0.6.1 - 2026-09-22
+
+- 回测入口统一为 `wqb simu`，源码模块、解析器和文档同步命名；已有脚本中的 `wqb sim` 需改为 `wqb simu`，旧名称不再接受。
+- 回测请求、Regular/Super/ALL 行为与 SQLite schema 7 保持一致。
 
 ### 0.6.0 - 2026-09-22
 
@@ -815,7 +820,7 @@ python -m wqb_cli --help
 
 ### 0.5.0 - 2026-09-22
 
-- 新增：sim/simu 与 sqlitesimu 原生 ALL、schema 7 地区子结果、no-resend 与 dry-run、18 条 API 注册路径及用户活动/Osmosis 命令。
+- 新增：simu 与 sqlitesimu 原生 ALL、schema 7 地区子结果、no-resend 与 dry-run、18 条 API 注册路径及用户活动/Osmosis 命令。
 - 修复：结果尚未就绪时的 enrichment 处理、端点正常 204 的认证误判；保留 Regular 和 Super 请求形式。
 - 此源码/wheel 版本与上方历史 GitHub Release 链接分开记录。
 

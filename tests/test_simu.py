@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from wqb_cli.commands.sim import (
+from wqb_cli.commands.simu import (
     _child_simulation_ids,
     _classify_simulation_create,
     _classify_simulation_result,

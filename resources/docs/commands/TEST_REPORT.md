@@ -64,7 +64,7 @@ This is documented as a platform-error case, not an economic rejection.
 The CLI records `response.wait_events` when it polls through `Retry-After`.
 When progress is near sticky values `0.15` or `0.35`, the CLI multiplies the platform wait time by `10`.
 This avoids noisy frequent polling during known platform stalls.
-The default total wait cap for `sim get` is `900` seconds, i.e. 15 minutes.
+The default total wait cap for `simu get` is `900` seconds, i.e. 15 minutes.
 If the next sleep would exceed this cap, the CLI returns the latest response with `response.wait_timed_out = true`.
 
 ## Backtest Mode Coverage

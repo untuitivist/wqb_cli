@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from wqb_cli.cli import build_parser
-from wqb_cli.commands.sim import _create_and_wait_simulation
+from wqb_cli.commands.simu import _create_and_wait_simulation
 from wqb_cli.core.client import WqbClient
 from wqb_cli.core.registry import EndpointRegistry
 from wqb_cli.core.simulation import validate_region_agnostic_payload
@@ -108,7 +108,7 @@ class RegionAgnosticTests(unittest.TestCase):
         client = WqbClient(registry, None)
         with self.assertRaisesRegex(ValueError, "batch"):
             client.prepare(registry.get("/simulations"), "POST", json_body=[candidate()])
-        self.assertEqual(build_parser().parse_args(["simu", "options"]).sim_command, "options")
+        self.assertEqual(build_parser().parse_args(["simu", "options"]).simu_command, "options")
 
     def test_mixed_queue_keeps_all_single_and_enriches_every_region(self):
         regular = {"type": "REGULAR", "settings": {**SETTINGS, "region": "USA", "universe": "TOP3000"}}
@@ -217,7 +217,7 @@ class RegionAgnosticTests(unittest.TestCase):
             self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], SCHEMA_VERSION)
             self.assertEqual(connection.execute("SELECT batch_limit FROM candidates").fetchone()[0], 1)
 
-    def test_sim_create_collects_ra_children_without_simulation_child_polls(self):
+    def test_simu_create_collects_ra_children_without_simulation_child_polls(self):
         registry = EndpointRegistry.load()
         gateway = self.gateway
 

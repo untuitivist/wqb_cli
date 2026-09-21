@@ -17,7 +17,7 @@ wqb user pyramid-alphas --start-date <quarter_start> --end-date <quarter_end> --
 wqb user pyramid-multipliers --start-date <quarter_start> --end-date <quarter_end> --output <node_dir>\quarter_pyramid_multipliers.json
 wqb alpha list --date-submitted-after <campaign_started_at> --output <node_dir>\submission_activity.json
 wqb data categories --output <node_dir>\data_categories.json
-wqb sim options --output <node_dir>\simulation_options.json
+wqb simu options --output <node_dir>\simulation_options.json
 ```
 
 ## 输出

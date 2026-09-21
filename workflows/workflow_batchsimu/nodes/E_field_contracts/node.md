@@ -14,7 +14,7 @@
 ```cmd
 wqb data field <field_id> --output <node_dir>\field_meta__<field_id>.json
 wqb data operators --output <node_dir>\operators.json
-wqb sim options --output <node_dir>\simulation_options.json
+wqb simu options --output <node_dir>\simulation_options.json
 ```
 
 ## 输出

@@ -5,13 +5,13 @@ Fetch simulation status and final alpha id.
 Command:
 
 ```powershell
-wqb sim get <simulation_id> --output <output.json>
+wqb simu get <simulation_id> --output <output.json>
 ```
 
 Default wait limit is 15 minutes:
 
 ```powershell
-wqb sim get <simulation_id> --max-wait-seconds 900 --output <output.json>
+wqb simu get <simulation_id> --max-wait-seconds 900 --output <output.json>
 ```
 
 Use `--max-wait-seconds` to override the limit for special cases.

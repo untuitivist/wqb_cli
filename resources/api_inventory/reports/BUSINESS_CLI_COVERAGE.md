@@ -80,12 +80,12 @@
 - `GET /messages` -> `wqb platform messages`
 - `GET /operators` -> `wqb data operators`
 - `GET /search` -> `wqb search analyst`
-- `GET /simulations` -> `wqb sim list`
-- `OPTIONS /simulations` -> `wqb sim options`
-- `POST /simulations` -> `wqb sim create --input api_inventory/examples/simulation_regular_close.json`
-- `GET /simulations/super-selection` -> `wqb sim super-selection --method GET`
-- `POST /simulations/super-selection` -> `wqb sim super-selection --method POST`
-- `GET /simulations/{simulation_id}` -> `wqb sim get 2UnwIe7g5jEcCgDvI4GpqO`
+- `GET /simulations` -> `wqb simu list`
+- `OPTIONS /simulations` -> `wqb simu options`
+- `POST /simulations` -> `wqb simu create --input api_inventory/examples/simulation_regular_close.json`
+- `GET /simulations/super-selection` -> `wqb simu super-selection --method GET`
+- `POST /simulations/super-selection` -> `wqb simu super-selection --method POST`
+- `GET /simulations/{simulation_id}` -> `wqb simu get 2UnwIe7g5jEcCgDvI4GpqO`
 - `GET /suggest/examples` -> `wqb suggest examples --method GET`
 - `POST /suggest/examples` -> `wqb suggest examples --method POST`
 - `GET /suggest/expression` -> `wqb suggest expression --method GET`

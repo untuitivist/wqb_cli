@@ -10,4 +10,4 @@ ALL simulation completion identifies an RA_PARENT Alpha. Its `children` are Alph
 
 Schema 7 preserves existing experiments and the earlier extension's `region_agnostic_children` and `region_agnostic_child_pnl` tables. Export retains one experiment/result per parent and adds `region_agnostic_children`, containing child detail, checks, raw PnL response and normalized PnL. The existing regular `pnl_paths` excludes RA parents. Analyze RA quality and correlations by region; do not treat child count as new independent experiments or missing parent Sharpe as a failed regional signal.
 
-`sim`, `simu` and `sqlitesimu` perform backtests. Formal Alpha submission remains a separate command.
+`simu` and `sqlitesimu` perform backtests. Formal Alpha submission remains a separate command.

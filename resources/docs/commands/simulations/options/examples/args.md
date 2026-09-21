@@ -3,7 +3,7 @@
 Real command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim options --output "wqb_cli\\docs\\commands\simulations\options\outputs\options_command_output.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu options --output "wqb_cli\\docs\\commands\simulations\options\outputs\options_command_output.json"
 ```
 
 Real output:

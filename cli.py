@@ -20,7 +20,7 @@ from .commands.errors import add_errors_parser, handle_errors
 from .commands.platform import add_platform_parser, handle_platform
 from .commands.search import add_search_parser, handle_search
 from .commands.shortcut import add_shortcut_parser, handle_shortcut
-from .commands.sim import add_sim_parser, handle_sim
+from .commands.simu import add_simu_parser, handle_simu
 from .commands.scope import add_scope_parser, handle_scope
 from .commands.suggest import add_suggest_parser, handle_suggest
 from .commands.tutorial import add_tutorial_parser, handle_tutorial
@@ -93,7 +93,7 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     add_platform_parser(sub)
     add_search_parser(sub)
     add_shortcut_parser(sub)
-    add_sim_parser(sub)
+    add_simu_parser(sub)
     add_scope_parser(sub)
     add_suggest_parser(sub)
     add_tutorial_parser(sub)
@@ -269,8 +269,8 @@ def main(argv: list[str] | None = None) -> None:
             code = handle_search(args, load_registry(args))
         elif args.command in {"shortcut", "quick"}:
             code = handle_shortcut(args, load_registry(args))
-        elif args.command in {"sim", "simu"}:
-            code = handle_sim(args, load_registry(args))
+        elif args.command == "simu":
+            code = handle_simu(args, load_registry(args))
         elif args.command == "scope":
             code = handle_scope(args)
         elif args.command == "suggest":

@@ -17,7 +17,7 @@ I 只生成和校验，不发送任何 simulation 请求。
 
 ```cmd
 wqb data operators --output <node_dir>\operators_live.json
-wqb sim options --output <node_dir>\simulation_options_live.json
+wqb simu options --output <node_dir>\simulation_options_live.json
 wqb sqlitesimu template-validate <node_dir>\simulation_manifest.json --output <node_dir>\template_validation.json
 ```
 

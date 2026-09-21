@@ -2,6 +2,14 @@
 
 All notable changes are grouped by the package versions evidenced in `pyproject.toml` and the GitHub release history.
 
+## 0.6.1 - 2026-09-22
+
+### Changed
+
+- Standardize the simulation command as `wqb simu`. The former `wqb sim` name is no longer accepted; migrate scripts by replacing that command token with `simu`.
+- Rename the command module, parser, handler, argument destination, tests and generated documentation to match `simu`.
+- Update command examples and workflows. Request payloads, Regular/Super/ALL behavior and the SQLite simulation schema are unchanged.
+
 ## 0.6.0 - 2026-09-22
 
 ### Added

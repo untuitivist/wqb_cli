@@ -1,6 +1,6 @@
 # Backtest Mode Examples
 
-`wqb sim create` uses the same `/simulations` API for the common backtest modes:
+`wqb simu create` uses the same `/simulations` API for the common backtest modes:
 
 - `REGULAR` + `FASTEXPR` single simulation.
 - `REGULAR` + `FASTEXPR` multi-simulation.
@@ -36,7 +36,7 @@ elif language == FASTEXPR:
     batch_size = 10 if region != "GLB" else 5
 ```
 
-`batch_size` only applies to `REGULAR_FASTEXPR_MULTI`. `concurrent_requests` belongs to the external scheduler; it is not a `wqb sim create` argument.
+`batch_size` only applies to `REGULAR_FASTEXPR_MULTI`. `concurrent_requests` belongs to the external scheduler; it is not a `wqb simu create` argument.
 
 ## REGULAR FASTEXPR Single
 
@@ -51,7 +51,7 @@ Input JSON: `examples/input_json.md#regular-fastexpr-single-simulation`.
 Command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_fastexpr_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_fastexpr_single_create.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_fastexpr_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_fastexpr_single_create.json"
 ```
 
 Final observed result:
@@ -80,14 +80,14 @@ Input JSON: `examples/input_json.md#regular-fastexpr-multi-simulation`.
 Command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_fastexpr_multi.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_fastexpr_multi_create.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_fastexpr_multi.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_fastexpr_multi_create.json"
 ```
 
 Multi-simulation constraints:
 
 - The input file is a JSON array.
 - Items in one multi request must share exactly these settings: `delay`, `region`, `instrumentType`, `language`.
-- The parent result contains child ids, and `sim create` waits for those child simulations too.
+- The parent result contains child ids, and `simu create` waits for those child simulations too.
 - Child simulations contain each expression's final alpha/result.
 
 Parent summary:
@@ -103,11 +103,11 @@ Parent summary:
 }
 ```
 
-If you need to re-check a child later, use `sim get` directly:
+If you need to re-check a child later, use `simu get` directly:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 2gwGaU59a5dqcySQM4Ft1gn --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\regular_fastexpr_multi_child_1_get.json"
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 3RTDPvcRM4JtczS18UmrIqML --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\regular_fastexpr_multi_child_2_get.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu get 2gwGaU59a5dqcySQM4Ft1gn --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\regular_fastexpr_multi_child_1_get.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu get 3RTDPvcRM4JtczS18UmrIqML --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\regular_fastexpr_multi_child_2_get.json"
 ```
 
 ## REGULAR PYTHON Single
@@ -123,7 +123,7 @@ Input JSON: `examples/input_json.md#regular-python-single-simulation`.
 Command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_python_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_python_single_create.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\regular_python_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\regular_python_single_create.json"
 ```
 
 Final observed result:
@@ -151,7 +151,7 @@ Input JSON: `examples/input_json.md#super-single-simulation`.
 Command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\super_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\super_single_create.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\super_single.json" --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\create\outputs\super_single_create.json"
 ```
 
 Final observed result:

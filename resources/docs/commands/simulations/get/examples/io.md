@@ -1,10 +1,10 @@
 # File IO Example
 
-`sim get` does not need a body input.
+`simu get` does not need a body input.
 The real example uses the simulation created by `simulations/create`:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim get 25hy8yeL94KI9BQwSfxUVXE --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\simulation_get_latest_output.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu get 25hy8yeL94KI9BQwSfxUVXE --max-wait-seconds 900 --output "wqb_cli\\docs\\commands\simulations\get\outputs\simulation_get_latest_output.json"
 ```
 
 Real output:

@@ -2,23 +2,23 @@
 
 Create a simulation and wait for the final platform result.
 
-`simu` is an alias of `sim`. `--dry-run` validates and previews the payload without a simulation request.
+`simu` is the sole simulation command name. `--dry-run` validates and previews the payload without a simulation request.
 
 REGION_AGNOSTIC uses one JSON object with `type: REGION_AGNOSTIC`, a `regular` expression and ALL/D1 settings with LARGE, MEDIUM or SMALL universe. Arrays containing ALL are rejected before HTTP. Completion resolves the RA_PARENT Alpha, then each regional RA_CHILD detail and PnL under `region_agnostic`; the parent has no PnL. Child Alpha IDs must not be polled as child simulation IDs. The simulation receipt remains in the output if child collection fails.
 
 Command:
 
 ```powershell
-wqb sim create --input <input.json> --output <output.json>
+wqb simu create --input <input.json> --output <output.json>
 ```
 
 Default wait cap:
 
 ```powershell
-wqb sim create --input <input.json> --max-wait-seconds 900 --output <output.json>
+wqb simu create --input <input.json> --max-wait-seconds 900 --output <output.json>
 ```
 
-`sim create` now returns only after the simulation has a final result or the wait fails/times out. The initial `201 Created` is preserved under `create` and classified as:
+`simu create` now returns only after the simulation has a final result or the wait fails/times out. The initial `201 Created` is preserved under `create` and classified as:
 
 ```text
 201 Created, waiting for results...
@@ -32,7 +32,7 @@ Final success is determined by the waited result:
 - `classification.status = WARNING` means the simulation finished with platform warnings; if `alpha` is present, the alpha was generated.
 - `classification.status = ERROR`, `FAIL`, or `FAILED` means platform execution failed.
 - `classification.reason = simulation_wait_timed_out` means the CLI reached `--max-wait-seconds` before a final result.
-- For multi-simulation, the parent can finish with `children`; `sim create` also waits for those child simulations and includes them under top-level `children`.
+- For multi-simulation, the parent can finish with `children`; `simu create` also waits for those child simulations and includes them under top-level `children`.
 
 Parallel and batch constraints:
 

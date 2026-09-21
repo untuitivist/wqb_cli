@@ -73,10 +73,15 @@ class CliSmokeTests(unittest.TestCase):
         self.assertNotIn("--execute", result.stdout)
         self.assertNotIn("--wait", result.stdout)
 
-    def test_sim_create_help_waits_by_default(self) -> None:
-        result = run_wqb("sim", "create", "--help")
+    def test_simu_create_help_waits_by_default(self) -> None:
+        result = run_wqb("simu", "create", "--help")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("--max-wait-seconds", result.stdout)
+
+    def test_legacy_sim_command_is_rejected(self) -> None:
+        result = run_wqb("sim", "options")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("invalid choice: 'sim'", result.stderr)
 
     def test_scope_files_smoke(self) -> None:
         result = run_wqb("scope", "files")

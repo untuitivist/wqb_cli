@@ -5,7 +5,7 @@ Fetch valid simulation fields, choices, and ranges.
 Command:
 
 ```powershell
-wqb sim options --output <output.json>
+wqb simu options --output <output.json>
 ```
 
 Generic API equivalent:

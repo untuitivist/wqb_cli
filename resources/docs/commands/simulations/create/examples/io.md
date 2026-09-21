@@ -3,7 +3,7 @@
 Real command:
 
 ```powershell
-D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe sim create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\simulation_create_input.json" --output "wqb_cli\\docs\\commands\simulations\create\outputs\simulation_create_output.json"
+D:\_soft\Anaconda\envs\WQBRAIN\Scripts\wqb.exe simu create --input "wqb_cli\\docs\\commands\simulations\create\fixtures\simulation_create_input.json" --output "wqb_cli\\docs\\commands\simulations\create\outputs\simulation_create_output.json"
 ```
 
 Real input:

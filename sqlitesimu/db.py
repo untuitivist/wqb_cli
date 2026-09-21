@@ -980,7 +980,8 @@ class SqliteStore:
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
-                ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END,
+                         q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT 1
                 """,
                 (run_id, now, resend_cutoff, resend_cutoff),
@@ -998,7 +999,8 @@ class SqliteStore:
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
                   AND c.compatibility_key = ?
-                ORDER BY q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END,
+                         q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
                 LIMIT ?
                 """,
                 (

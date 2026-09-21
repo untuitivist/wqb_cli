@@ -12,6 +12,8 @@ Compatible FASTEXPR Regular candidates, including GLB, are sent in groups of up 
 
 The run finishes as COMPLETED_WITH_ERRORS (exit code 3) if permanent failures remain. A multi-stage caller should archive those failures and continue its next stage when that outcome is acceptable. `--max-attempts` separately limits enrichment failures.
 
+Due retries of confirmed failures take priority over never-sent candidates, so a large backlog cannot postpone that one retry until the end of the campaign.
+
 HTTP 429 with `DAILY_SIMULATION_LIMIT_EXCEEDED` (or the explicit daily-limit message) pauses the sender until the next midnight in `America/New_York`, including daylight-saving changes. That deadline persists in SQLite, applies to all runs in the database, and appears in `status` as `daily_limit_not_before` (Unix seconds). Restarting the worker or receiving an ordinary short rate limit cannot shorten it. Accepted result and PnL collection continues while new simulations wait. The API response determines exhaustion; local experiment counts cannot account for other clients or platform counting rules. An ordinary concurrent-simulation limit does not trigger an overnight pause.
 
 ALL simulation completion identifies an RA_PARENT Alpha. Its `children` are Alpha IDs, not child simulation IDs. The worker fetches every regional RA_CHILD detail and PnL before marking that parent experiment READY. A parent has no independent PnL. HTTP 200 with Retry-After means enrichment is still pending and does not consume the failure budget.

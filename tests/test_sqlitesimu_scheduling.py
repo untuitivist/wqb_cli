@@ -39,6 +39,23 @@ class FailingCandidateGateway(SuccessfulGateway):
 
 
 class SchedulingTests(unittest.TestCase):
+    def test_due_failure_retry_is_not_starved_by_a_large_unsent_queue(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = initialized_store(directory)
+            run = store.enqueue(parse_manifest([
+                {"expression": "bad", "settings": SETTINGS, "priority": 10},
+                *[{"expression": f"close + {index}", "settings": {**SETTINGS, "region": "GLB"}}
+                  for index in range(40)],
+            ]), now=1000)
+            original = store.create_next_batch(run.run_id, now=1000)
+            assert original is not None
+            self.assertEqual(original.payload["regular"], "bad")
+            store.retry_completed_batch(original.id, error="failed", response=envelope(200),
+                                        not_before=1010, now=1001)
+            retry = store.create_next_batch(run.run_id, now=1010, resend_interval_seconds=None)
+            assert retry is not None
+            self.assertEqual(retry.payload["regular"], "bad")
+
     def test_daily_quota_waits_until_eastern_midnight_across_restart_without_blocking_results(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = initialized_store(directory)

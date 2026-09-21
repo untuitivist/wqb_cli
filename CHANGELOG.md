@@ -7,7 +7,7 @@ All notable changes are grouped by the package versions evidenced in `pyproject.
 ### Added
 
 - Native REGION_AGNOSTIC/ALL support in `sim` (alias `simu`), raw simulation requests and `sqlitesimu`, with single-parent requests, regional child details/PnL and resumable schema-v7 storage.
-- `sim create --dry-run` and `sqlitesimu --no-resend` runtime options. Regular and ALL can share one durable run while ALL is always sent as an individual HTTP object.
+- `api call --dry-run`, `sim create --dry-run` and `sqlitesimu --no-resend` runtime options. Regular and ALL can share one durable run while ALL is always sent as an individual HTTP object.
 - Refreshed 131 API paths against current platform references and read-only probes, growing the catalog from 109 to 127 paths. Added schema shapes, explicit advertised-method evidence, per-endpoint docs and a refresh report without private option choices.
 - User commands for named activity history, Osmosis summary and scaling status, activity streaks, tags and submission activity.
 - `wqb --version` reports the installed runtime version for deployment verification.

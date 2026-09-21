@@ -1,3 +1,3 @@
 # Request preview
 
-Use `wqb api call /messages/notifications --method GET --dry-run` with the path variables in input.json. This is a request-shape example; mutating methods have not been executed and unresolved payload or query requirements are documented in endpoint.json.
+Use `wqb api call GET /messages/notifications --input input.json --dry-run` with the path variables in input.json. This is a request-shape example; mutating methods have not been executed and unresolved payload or query requirements are documented in endpoint.json.

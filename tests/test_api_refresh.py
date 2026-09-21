@@ -3,12 +3,26 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from wqb_cli.cli import build_parser
+from wqb_cli.cli import build_parser, handle_api
 from wqb_cli.commands.user import handle_user
 from wqb_cli.core.registry import EndpointRegistry
 
 
 class ApiRefreshTests(unittest.TestCase):
+    def test_raw_mutating_preview_never_sends_http(self):
+        arguments = build_parser().parse_args([
+            "api", "call", "POST", "/users/{user_id}/osmosis/scale-points", "--var", "user_id=self", "--dry-run",
+        ])
+        with patch("wqb_cli.cli.session_from_cookies"), \
+             patch("wqb_cli.cli.WqbClient.call") as send, \
+             patch("wqb_cli.cli.write_json") as output:
+            self.assertEqual(handle_api(arguments), 0)
+        send.assert_not_called()
+        preview = output.call_args.args[0]
+        self.assertTrue(preview["dry_run"])
+        self.assertTrue(preview["request"]["mutating"])
+        self.assertTrue(preview["request"]["url"].endswith("/users/self/osmosis/scale-points"))
+
     def test_registry_copies_and_new_contracts_agree(self):
         directory = Path(__file__).resolve().parents[1] / "resources/api_inventory"
         base = json.loads((directory / "api_inventory.json").read_text(encoding="utf-8"))

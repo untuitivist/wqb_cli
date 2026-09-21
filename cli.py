@@ -61,6 +61,7 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     call_parser.add_argument("--param", action="append", help="Query parameter KEY=VALUE")
     call_parser.add_argument("--input", help="JSON file containing path_vars, params, json")
     call_parser.add_argument("--json", help="Inline JSON request body")
+    call_parser.add_argument("--dry-run", action="store_true", help="Validate and preview the request without sending HTTP")
     call_parser.add_argument("--env-auth", action="store_true", help="For POST /authentication, read EMAIL/PASSWORD from wqb_cli/local/.env")
     call_parser.add_argument("--output", help="Write JSON result to file")
 
@@ -163,6 +164,9 @@ def handle_api(args: argparse.Namespace) -> int:
             params=params,
             json_body=json_body,
         )
+        if args.dry_run:
+            write_json({"ok": prepared.executable, "dry_run": True, "request": prepared.__dict__}, args.output)
+            return 0 if prepared.executable else 1
         result = client.call(prepared)
         if (
             endpoint.path == "/authentication"

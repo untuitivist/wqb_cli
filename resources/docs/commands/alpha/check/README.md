@@ -1,4 +1,4 @@
-﻿# alpha check
+# alpha check
 
 Run or fetch platform checks for an alpha.
 

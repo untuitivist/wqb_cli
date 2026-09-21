@@ -1,4 +1,4 @@
-﻿# search query
+# search query
 
 Search BRAIN documentation, FAQ, tutorials, videos, and readings.
 
@@ -13,4 +13,3 @@ Generic API equivalent:
 ```powershell
 wqb api call GET /search --input <input.json> --output <output.json>
 ```
-

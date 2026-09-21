@@ -1,4 +1,4 @@
-﻿# File IO Example
+# File IO Example
 
 Real command:
 
@@ -24,4 +24,3 @@ Real outputs:
 wqb_cli/docs/commands/alpha/check/outputs/alpha_check_retry_after_output.json
 wqb_cli/docs/commands/alpha/check/outputs/alpha_check_output.json
 ```
-

@@ -12,6 +12,7 @@ from .commands.competition import add_competition_parser, handle_competition
 from .commands.config import add_config_parser, handle_config
 from .commands.consultant import add_consultant_parser, handle_consultant
 from .commands.community import add_community_parser, handle_community
+from .commands.sqlitecom import add_sqlitecom_parser, handle_sqlitecom
 from .commands.data import add_data_parser, handle_data
 from .commands.docs import add_docs_parser, handle_docs
 from .commands.event import add_event_parser, handle_event
@@ -84,6 +85,7 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     add_config_parser(sub)
     add_consultant_parser(sub)
     add_community_parser(sub)
+    add_sqlitecom_parser(sub)
     add_data_parser(sub)
     add_docs_parser(sub)
     add_event_parser(sub)
@@ -251,6 +253,8 @@ def main(argv: list[str] | None = None) -> None:
             code = handle_consultant(args, load_registry(args))
         elif args.command == "community":
             code = handle_community(args)
+        elif args.command == "sqlitecom":
+            code = handle_sqlitecom(args)
         elif args.command == "data":
             code = handle_data(args, load_registry(args))
         elif args.command == "docs":

@@ -1,4 +1,4 @@
-﻿# Notes
+# Notes
 
 Use recordsets when `visualization=true`.
 
@@ -13,4 +13,3 @@ Useful recordsets:
 - `coverage`
 
 Aggregate metrics alone are not enough for diagnosis.
-

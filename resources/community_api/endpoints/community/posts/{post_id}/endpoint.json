@@ -1,0 +1,33 @@
+{
+  "path": "/api/v2/community/posts/{post_id}.json",
+  "methods": [
+    "GET",
+    "PUT",
+    "DELETE"
+  ],
+  "description": "Read, explicitly update or delete a post; writes require appropriate ownership or permissions.",
+  "params": {
+    "query": [
+      "include"
+    ]
+  },
+  "request_body": {
+    "PUT": {
+      "post": {
+        "title": "optional string",
+        "details": "optional HTML",
+        "topic_id": "optional section ID"
+      }
+    }
+  },
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+  ],
+  "notes": [
+    "PUT and DELETE are not live-tested."
+  ],
+  "url_template": "https://support.worldquantbrain.com/api/v2/community/posts/{post_id}.json",
+  "probe": {
+    "GET": "documented; see reports for live coverage"
+  }
+}

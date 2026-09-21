@@ -1,4 +1,4 @@
-﻿{
+{
   "ok": true,
   "endpoint": "/alphas/{alpha_id}/recordsets/{record_set_name}",
   "request": {

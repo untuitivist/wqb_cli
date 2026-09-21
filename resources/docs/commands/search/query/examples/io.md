@@ -1,4 +1,4 @@
-﻿# File IO Example
+# File IO Example
 
 Real command:
 
@@ -17,4 +17,3 @@ Real output:
 ```text
 wqb_cli/docs/commands/search/query/outputs/search_api_output.json
 ```
-

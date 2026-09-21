@@ -1,4 +1,4 @@
-﻿# Notes
+# Notes
 
 Waiting can take much longer than 60 seconds, but the default CLI cap is 15 minutes.
 The real IO example took `169697 ms` and `32` retries.

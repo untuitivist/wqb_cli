@@ -2,6 +2,20 @@
 
 All notable changes are grouped by the package versions evidenced in `pyproject.toml` and the GitHub release history.
 
+## 0.6.0 - 2026-09-22
+
+### Added
+
+- Online `community` commands for forum sections, posts, comments, search, author activity and an independent API inventory/raw layer.
+- `sqlitecom sync` with cursor pagination, resumable pending work, update-time overlap, comment retrieval, writer coordination and transactional SQLite/FTS updates.
+- Offline author/date search, full post reading, schema inspection and parameterized read-only SQL with row limits and execution deadlines.
+- Forum SSO renewal and CSRF for explicit writes, reusing existing BRAIN authentication. Transient reads retry within a budget; writes are never automatically replayed.
+
+### Changed
+
+- Local `community search/stats/export` moved to `sqlitecom search/stats/import`. `community search` now queries the live forum.
+- Plugin imports merge records, retain omitted documentation and preserve newer synchronized posts. Existing Regular/ALL/Super simulation interfaces remain unchanged.
+
 ## 0.5.0 - 2026-09-22
 
 ### Added

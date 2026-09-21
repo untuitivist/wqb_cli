@@ -24,23 +24,23 @@
 - `workflows/` 下提供两套相互隔离的节点文档，明确输入、允许命令、必要输出和成功条件。
 - 本地数据命令读取 `local/` 下的稳定文件，不直接抓取浏览器或插件缓存。
 - 命令输出保留 request/response 上下文，包括状态码、参数、Location、retry 事件和返回体。
-- 不保留 dry-run 分支，避免自动化流程歧义：命令要么真实调用 API 并等待结果，要么明确失败。
+- `sim create` 和在线 `community` 请求支持显式 `--dry-run` 预览，不登录、不发送 HTTP 请求。
 
 ## 功能概览
 
 - 调用 `https://api.worldquantbrain.com` 的 API 命令。
 - 登录与 cookie 本地保存。
-- REGULAR FASTEXPR、REGULAR PYTHON、SUPER 回测命令。
+- REGULAR FASTEXPR、REGULAR PYTHON、SUPER 和 REGION_AGNOSTIC/ALL 回测命令。
 - alpha 列表、详情、检查、recordsets、相关性、提交等命令。
 - 基于 `data_all` / `all_data.pickle` 的本地字段筛选。
-- WebDataScope 社区数据导入与本地检索。
+- 在线社区访问、SQLite 增量同步、WebDataScope 数据导入与本地检索。
 - 随包发布的 API endpoint inventory 与命令文档。
 - `workflows/` 下的小规模自适应流程与模板群批量流程文档。
 
 ## 重要说明
 
 - 本项目不隶属于 WorldQuant 或 WorldQuant BRAIN。
-- 会修改平台状态的命令会直接发送真实 API 请求；当前没有 dry-run 模式。
+- 会修改平台状态的命令默认发送真实 API 请求；支持 `--dry-run` 的命令只有显式传入该选项才进行预览，运行前可查阅对应帮助。
 - 需要等待平台异步结果的命令会等待最终结果、失败或超时后再返回；simulation 类等待默认超时通常为 900 秒。
 - 本地数据不提交到 Git。凭证、cookie、社区导出、`data_all` 文件都应放在 `local/` 下。
 - 由于使用 Commons Clause，本项目是 source-available，但不是 OSI 标准开源许可证项目。
@@ -103,7 +103,8 @@ wqb  # WorldQuant BRAIN 命令行工具
 ├─ tutorial                                                      # 平台教程内容
 ├─ suggest                                                       # 平台建议接口，各项支持 GET/POST
 ├─ search <query>                                                # 平台全局搜索，没有下一级子命令
-├─ community                                                     # 本地社区资料 SQLite，不是在线论坛爬虫
+├─ community                 # 在线论坛：分区、帖子、评论、搜索和原始 API
+├─ sqlitecom                 # 本地社区库：增量同步、查询、导入和只读 SQL
 ├─ scope                                                         # 按 REGION_DELAY 查看本地历史研究数据
 ├─ shortcut (alias: quick)                                       # 常用组合操作
 ├─ config                                                        # 本地配置与平台配置查询
@@ -264,10 +265,15 @@ wqb  # WorldQuant BRAIN 命令行工具
 │  ├─ fastexpr                                                   # 请求 FASTEXPR 建议
 │  └─ fields                                                     # 请求字段建议
 ├─ search <query>                                                # 平台全局搜索，没有下一级子命令
-├─ community                                                     # 本地社区资料 SQLite，不是在线论坛爬虫
-│  ├─ search <query>                                             # 搜索本地帖子、评论、文档等资料
-│  ├─ export                                                     # 将 WebDataScope 导出文件导入本地 SQLite
-│  └─ stats                                                      # 查询本地社区数据库各表数量
+├─ community                 # 在线论坛：分区、帖子、评论、搜索和原始 API
+│  ├─ list / topics / topic / get / comments / search
+│  ├─ user-posts / user-comments
+│  ├─ create / update / delete / comment-create / comment-update / comment-delete
+│  └─ api stats / list / show / params / call
+├─ sqlitecom                 # 本地社区库：增量同步、查询、导入和只读 SQL
+│  ├─ sync / search / get / import
+│  ├─ stats / status / schema
+│  └─ sql (alias: query)
 ├─ scope                                                         # 按 REGION_DELAY 查看本地历史研究数据
 │  ├─ files                                                      # 查看本地 scope 数据文件位置
 │  ├─ list                                                       # 列出可用范围，例如 USA_1
@@ -309,7 +315,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 
 - `sim` 直接调用平台回测接口；`sqlitesimu` 增加本地数据库、批量队列、并发执行、断点恢复和结果导出。
 - 回测与正式提交不同：`sim create`、`sqlitesimu run` 发起回测，`alpha submit` 才是正式提交入口。命令树不代表已完成研究流程或提交前终检。
-- `community` 查询本地社区资料，`scope` 查询本地历史研究数据，均不代表在线实时数据。`community export` 是将已有社区导出文件导入 SQLite，不是在线爬取论坛。
+- `community` 读取在线论坛；`sqlitecom` 管理本地社区库，`sync` 通过同一在线客户端增量更新。旧本地查询迁到 `sqlitecom search`，旧导入迁到 `sqlitecom import`。
 - `sqlitesimu cancel` 管理本地 run 并保留历史，不等于撤销平台上所有已发出的回测；默认不会越过仍有效的 worker 租约。
 - `api call` 可直接调用注册表内端点；写操作会发送真实请求，不会自动补齐高层研究检查。
 
@@ -350,7 +356,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.5.0"
+version = "0.6.0"
 ```
 
 ## 认证
@@ -655,28 +661,25 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 
 ### Community 数据
 
-社区数据来自 WebDataScope 导出。
+`community` 面向在线论坛，`sqlitecom` 面向本地数据库。首次同步可以从空库开始，也能接续插件导入的数据；只合并变化，不覆盖整库或清空官方文档。
 
-1. 在 WebDataScope 中导出社区数据，格式为 `WQPCommunityState_*.json` 或 `WQPCommunityState_*.wqcs`。
-2. 放到 `local/community/`。
-3. 构建本地 SQLite 数据库。
-4. 查询生成后的数据库。
-
-构建 SQLite：
-
-```powershell
-wqb community export --source (Join-Path $WqbLocal "community/WQPCommunityState_20260918_001150.json")
+```text
+wqb community topics
+wqb community list --sort updated_at --limit 10
+wqb community search wqb_cli --limit 5
+wqb community get 41706827651991
+wqb community api list
+wqb sqlitecom sync --sqlite community.sqlite3 --since 2026-09-17 --log sync.log
+wqb sqlitecom search --sqlite community.sqlite3 --author JL40454 --scope topics
+wqb sqlitecom get 41706827651991 --sqlite community.sqlite3
+wqb sqlitecom schema --sqlite community.sqlite3
+wqb sqlitecom sql --sqlite community.sqlite3 --file report.sql --param author=JL40454
+wqb sqlitecom import --sqlite community.sqlite3 --source export.json
 ```
 
-如果省略 `--source`，CLI 会在本地 community 目录中寻找最新的 `WQPCommunityState_*.json` 或 `*.wqcs`。
+同步使用游标分页、更新时间边界和默认48小时重叠，断点持久化；`--max-pages` 暂停后再次执行相同命令即可恢复。新库默认建立完整基线，可用 `--since` 限定首次范围。旧评论编辑未必推动父帖更新时间，定期运行 `--reconcile` 复查完整索引；默认7天内检查过且内容未变的帖子会跳过评论下载。
 
-查询示例：
-
-```powershell
-wqb community stats
-wqb community search alpha --limit 3
-wqb community search neutralization --scope docs --limit 2
-```
+`sql` 支持单条只读 SQL、CTE 和参数绑定，默认最多200行、10秒执行期限；`--file` 从 UTF-8 文件读取，避免命令行转义。数据库使用只读连接并拒绝写入、ATTACH、扩展加载和多语句。其他本地命令不访问网络，只有 `sync` 联网。
 
 ## 研究流程文档
 
@@ -788,7 +791,7 @@ python -m wqb_cli --help
 
 软件包 release：
 
-[wqb-cli 0.4.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.4.0)
+[wqb-cli 0.6.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.0)
 
 发布 checklist：
 
@@ -796,13 +799,19 @@ python -m wqb_cli --help
 2. 运行 editable install。
 3. 运行测试。
 4. 提交改动。
-5. 创建 tag，例如 `v0.4.0`。
+5. 创建 tag，例如 `v0.6.0`。
 6. 推送 branch 和 tag。
 7. 发布 GitHub Release。
 
 ## 版本记录
 
 以下记录以软件包元数据和 GitHub Release 中出现过的版本为准。原先代码中的 `__version__ = "0.1.0"` 只是未同步的遗留值，从未作为正式软件包版本发布。
+
+### 0.6.0 - 2026-09-22
+
+- 新增：在线 community、独立论坛接口清单、sqlitecom 增量同步与本地查询、参数化只读 SQL。
+- 变更：原 community 的本地 search/stats/export 分别迁到 sqlitecom search/stats/import；community search 现在查询在线论坛。
+- 认证：沿用 BRAIN 自动续登，并处理论坛 SSO、HTML 跳转与 CSRF；写请求不自动重发。
 
 ### 0.5.0 - 2026-09-22
 

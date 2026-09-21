@@ -1,18 +1,7 @@
-# community Notes
+# Online forum notes
 
-The command layer uses `wqb_cli.core.community_store`.
-It does not depend on `wqb_core`.
+Online Community API operations are separate from the BRAIN simulation API. The forum has its own SSO session and, for explicit writes, a CSRF token. Do not log signed SSO URLs or cookies.
 
-Current source formats:
+GET reads can retry transient failures and renew an expired session. POST/PUT/DELETE are sent once. A transport failure during a write reports an unknown outcome; inspect the target before manually retrying.
 
-- `WQPCommunityState_*.json`
-- `WQPCommunityState_*.wqcs`
-
-Runtime data lives under `wqb_cli/local/community/` by default.
-That directory is ignored by Git for publish safety.
-
-Search is local and does not call `api.worldquantbrain.com`.
-It is intended for fast lookup of forum and documentation content while designing alphas or explaining platform concepts.
-
-The current search implementation uses SQLite `LIKE` queries over normalized tables.
-The SQLite schema also builds FTS tables, but this CLI command does not yet expose FTS-specific ranking.
+Search is limited by the upstream search API (up to 1000 matches) and must not be used as the synchronization index. sqlitecom sync uses the posts list with cursor pagination and updated_at ordering.

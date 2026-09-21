@@ -40,8 +40,7 @@ def export_community_storage(
     sqlite_path: str | Path | None = None,
     export_json: bool = False,
 ) -> dict[str, Any]:
-    source_file = _resolve_source_file(source_path)
-    payload, source_format = _load_payload(source_file)
+    source_file, payload, source_format = load_community_export(source_path)
     sqlite_target = Path(sqlite_path) if sqlite_path else DEFAULT_COMMUNITY_SQLITE_PATH
     counts = write_sqlite(payload, sqlite_target)
 
@@ -494,6 +493,12 @@ def flatten_docs(
 def row_dicts(cursor: sqlite3.Cursor) -> list[dict[str, Any]]:
     cols = [description[0] for description in cursor.description]
     return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
+
+
+def load_community_export(source_path: str | Path | None = None) -> tuple[Path, dict[str, Any], str]:
+    source_file = _resolve_source_file(source_path)
+    payload, source_format = _load_payload(source_file)
+    return source_file, payload, source_format
 
 
 def _resolve_source_file(source_path: str | Path | None) -> Path:

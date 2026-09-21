@@ -1,0 +1,31 @@
+{
+  "path": "/api/v2/community/posts/{post_id}/comments/{comment_id}.json",
+  "methods": [
+    "GET",
+    "PUT",
+    "DELETE"
+  ],
+  "description": "Read, explicitly update or delete one comment.",
+  "params": {
+    "query": [
+      "include"
+    ]
+  },
+  "request_body": {
+    "PUT": {
+      "comment": {
+        "body": "HTML"
+      }
+    }
+  },
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/post_comments/"
+  ],
+  "notes": [
+    "Write permissions depend on ownership. Writes are not live-tested."
+  ],
+  "url_template": "https://support.worldquantbrain.com/api/v2/community/posts/{post_id}/comments/{comment_id}.json",
+  "probe": {
+    "GET": "documented; see reports for live coverage"
+  }
+}

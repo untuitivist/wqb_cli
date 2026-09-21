@@ -1,4 +1,4 @@
-﻿# simulations get
+# simulations get
 
 Fetch simulation status and final alpha id.
 

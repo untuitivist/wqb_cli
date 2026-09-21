@@ -1,0 +1,28 @@
+{
+  "path": "/api/v2/community/topics/{topic_id}/posts.json",
+  "methods": [
+    "GET"
+  ],
+  "description": "List posts in a forum section.",
+  "params": {
+    "query": [
+      "sort_by",
+      "sort_order",
+      "include",
+      "page[size]",
+      "page[after]",
+      "per_page",
+      "page"
+    ]
+  },
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+  ],
+  "safe_probe": true,
+  "url_template": "https://support.worldquantbrain.com/api/v2/community/topics/{topic_id}/posts.json",
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "GET": "documented; see reports for live coverage"
+  }
+}

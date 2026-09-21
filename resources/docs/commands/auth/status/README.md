@@ -1,4 +1,4 @@
-﻿# auth status
+# auth status
 
 Check whether the current CLI cookie session is valid.
 
@@ -13,4 +13,3 @@ Success criteria:
 - `response.status_code = 200`
 - `response.body.user.id` exists
 - `response.body.token.expiry > 0`
-

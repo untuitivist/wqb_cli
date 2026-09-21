@@ -1,4 +1,4 @@
-﻿# File IO Example
+# File IO Example
 
 `sim get` does not need a body input.
 The real example uses the simulation created by `simulations/create`:

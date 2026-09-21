@@ -1,4 +1,4 @@
-﻿{
+{
   "ok": true,
   "endpoint": "/simulations/{simulation_id}",
   "request": {

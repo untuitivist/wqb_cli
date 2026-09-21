@@ -1,4 +1,4 @@
-﻿# Direct Argument Example
+# Direct Argument Example
 
 Real command:
 
@@ -28,4 +28,3 @@ Observed result:
   }
 }
 ```
-

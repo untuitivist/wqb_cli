@@ -1,0 +1,301 @@
+{
+  "base_url": "https://support.worldquantbrain.com",
+  "homepage": "https://support.worldquantbrain.com/hc/zh-cn/community",
+  "authentication": "BRAIN authentication/support SSO, then a separate Zendesk session; CSRF required for writes.",
+  "verification": "Read-only live probes on 2026-09-22 verified posts, topics, search, comments, SSO and cursor pagination. Writes are documented and untested live.",
+  "endpoints": [
+    {
+      "path": "/api/v2/community/topics.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "List accessible forum sections (Zendesk topics).",
+      "params": {
+        "query": [
+          "page[size]",
+          "page[after]",
+          "page",
+          "per_page"
+        ]
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/topics/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/topics.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "HTTP 200 verified on 2026-09-22"
+      }
+    },
+    {
+      "path": "/api/v2/community/topics/{topic_id}.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "Read one forum section.",
+      "params": {},
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/topics/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/topics/{topic_id}.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    },
+    {
+      "path": "/api/v2/community/topics/{topic_id}/posts.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "List posts in a forum section.",
+      "params": {
+        "query": [
+          "sort_by",
+          "sort_order",
+          "include",
+          "page[size]",
+          "page[after]",
+          "per_page",
+          "page"
+        ]
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/topics/{topic_id}/posts.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    },
+    {
+      "path": "/api/v2/community/posts.json",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "List posts or explicitly create a post.",
+      "params": {
+        "query": [
+          "sort_by",
+          "sort_order",
+          "filter_by",
+          "include",
+          "page[size]",
+          "page[after]",
+          "per_page",
+          "page"
+        ]
+      },
+      "request_body": {
+        "POST": {
+          "post": {
+            "title": "string",
+            "details": "HTML",
+            "topic_id": "section ID"
+          },
+          "notify_subscribers": "optional boolean at root"
+        }
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+      ],
+      "probe": {
+        "GET": "HTTP 200; created_at and updated_at descending; 2026-09-22",
+        "POST": "not executed"
+      },
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/posts.json",
+      "notes": []
+    },
+    {
+      "path": "/api/v2/community/posts/{post_id}.json",
+      "methods": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "description": "Read, explicitly update or delete a post; writes require appropriate ownership or permissions.",
+      "params": {
+        "query": [
+          "include"
+        ]
+      },
+      "request_body": {
+        "PUT": {
+          "post": {
+            "title": "optional string",
+            "details": "optional HTML",
+            "topic_id": "optional section ID"
+          }
+        }
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+      ],
+      "notes": [
+        "PUT and DELETE are not live-tested."
+      ],
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/posts/{post_id}.json",
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    },
+    {
+      "path": "/api/v2/community/posts/{post_id}/comments.json",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "description": "List comments or explicitly create a comment.",
+      "params": {
+        "query": [
+          "include",
+          "page[size]",
+          "page[after]",
+          "per_page",
+          "page"
+        ]
+      },
+      "request_body": {
+        "POST": {
+          "comment": {
+            "body": "HTML"
+          },
+          "notify_subscribers": "optional boolean at root"
+        }
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/post_comments/"
+      ],
+      "probe": {
+        "GET": "HTTP 200 with author sideloads; 2026-09-22",
+        "POST": "not executed"
+      },
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/posts/{post_id}/comments.json",
+      "notes": []
+    },
+    {
+      "path": "/api/v2/community/posts/{post_id}/comments/{comment_id}.json",
+      "methods": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "description": "Read, explicitly update or delete one comment.",
+      "params": {
+        "query": [
+          "include"
+        ]
+      },
+      "request_body": {
+        "PUT": {
+          "comment": {
+            "body": "HTML"
+          }
+        }
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/post_comments/"
+      ],
+      "notes": [
+        "Write permissions depend on ownership. Writes are not live-tested."
+      ],
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/posts/{post_id}/comments/{comment_id}.json",
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    },
+    {
+      "path": "/api/v2/help_center/community_posts/search.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "Search online posts; offset pagination and a maximum of 1000 search results. Do not use search as the sync index.",
+      "params": {
+        "query": [
+          "query",
+          "topic",
+          "sort_by",
+          "sort_order",
+          "created_after",
+          "created_before",
+          "updated_after",
+          "updated_before",
+          "page",
+          "per_page"
+        ]
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/help_center_search/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/help_center/community_posts/search.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "HTTP 200 verified on 2026-09-22"
+      }
+    },
+    {
+      "path": "/api/v2/community/users/{user_id}/posts.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "List posts by a user; me refers to the current user.",
+      "params": {
+        "query": [
+          "include",
+          "sort_by",
+          "sort_order",
+          "page[size]",
+          "page[after]",
+          "per_page",
+          "page"
+        ]
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/users/{user_id}/posts.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    },
+    {
+      "path": "/api/v2/community/users/{user_id}/comments.json",
+      "methods": [
+        "GET"
+      ],
+      "description": "List comments by a user; me refers to the current user.",
+      "params": {
+        "query": [
+          "include",
+          "page[size]",
+          "page[after]",
+          "per_page",
+          "page"
+        ]
+      },
+      "source": [
+        "https://developer.zendesk.com/api-reference/help_center/help-center-api/post_comments/"
+      ],
+      "safe_probe": true,
+      "url_template": "https://support.worldquantbrain.com/api/v2/community/users/{user_id}/comments.json",
+      "request_body": null,
+      "notes": [],
+      "probe": {
+        "GET": "documented; see reports for live coverage"
+      }
+    }
+  ]
+}

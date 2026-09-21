@@ -24,13 +24,13 @@ It is built for coding agents and long-running research agents first, not as a t
 - Two isolated workflow document sets under `workflows/`, with clear inputs, allowed commands, required outputs, and success criteria.
 - Local data commands that read stable files under `local/` instead of scraping browser/plugin caches directly.
 - Raw request and response context preserved in command output, including status codes, parameters, locations, retry events, and result bodies.
-- No dry-run branch to confuse automation: commands either call the API, wait for the requested result, or fail clearly.
+- `sim create` and online `community` requests support explicit `--dry-run` previews without authentication or HTTP calls.
 
 ## What This Tool Provides
 
 - API commands for `https://api.worldquantbrain.com`.
 - Auth helpers that store cookies locally.
-- Simulation commands for REGULAR FASTEXPR, REGULAR PYTHON, and SUPER backtests.
+- Simulation commands for REGULAR FASTEXPR, REGULAR PYTHON, SUPER and REGION_AGNOSTIC/ALL backtests.
 - Alpha commands for listing, checking, recordsets, correlations, and submit workflows.
 - Local data commands for `data_all` / `all_data.pickle` screening.
 - Local community-data import and search commands.
@@ -40,7 +40,7 @@ It is built for coding agents and long-running research agents first, not as a t
 ## Important Notes
 
 - This project is not affiliated with WorldQuant or WorldQuant BRAIN.
-- Mutating commands send real API requests. There is no dry-run mode.
+- Mutating commands send real API requests unless a supported `--dry-run` option is supplied. Check the command's help before running it.
 - Commands that need asynchronous results wait for completion or fail on timeout. Simulation-style waits default to 900 seconds where applicable.
 - Local data files are intentionally not committed. Keep credentials, cookies, community exports, and `data_all` files under `local/`.
 - The license is source-available but not OSI open source because Commons Clause restricts selling the software.
@@ -103,7 +103,8 @@ wqb  # WorldQuant BRAIN command-line toolkit
 ├─ tutorial                                                      # Explore platform tutorial content
 ├─ suggest                                                       # Request platform suggestions using GET or POST
 ├─ search <query>                                                # Search the platform globally; no subcommands
-├─ community                                                     # Search local community SQLite data, not a live forum crawler
+├─ community                 # Online forum topics, posts, comments, search and raw API
+├─ sqlitecom                 # Local community database, incremental sync, imports and read-only SQL
 ├─ scope                                                         # Inspect local historical research data by REGION_DELAY
 ├─ shortcut (alias: quick)                                       # Run common combined operations
 ├─ config                                                        # Manage local configuration and inspect platform settings
@@ -264,10 +265,15 @@ wqb  # WorldQuant BRAIN command-line toolkit
 │  ├─ fastexpr                                                   # Request FASTEXPR suggestions
 │  └─ fields                                                     # Request field suggestions
 ├─ search <query>                                                # Search the platform globally; no subcommands
-├─ community                                                     # Search local community SQLite data, not a live forum crawler
-│  ├─ search <query>                                             # Search local posts, comments, documentation, and articles
-│  ├─ export                                                     # Import a WebDataScope community export into local SQLite
-│  └─ stats                                                      # Inspect local community database table counts
+├─ community                 # Online forum topics, posts, comments, search and raw API
+│  ├─ list / topics / topic / get / comments / search
+│  ├─ user-posts / user-comments
+│  ├─ create / update / delete / comment-create / comment-update / comment-delete
+│  └─ api stats / list / show / params / call
+├─ sqlitecom                 # Local community database, incremental sync, imports and read-only SQL
+│  ├─ sync / search / get / import
+│  ├─ stats / status / schema
+│  └─ sql (alias: query)
 ├─ scope                                                         # Inspect local historical research data by REGION_DELAY
 │  ├─ files                                                      # Locate local scope data files
 │  ├─ list                                                       # List available scopes such as USA_1
@@ -309,7 +315,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 
 - `sim` calls the platform simulation API directly; `sqlitesimu` adds a local database, batch queues, concurrent workers, recovery, and result exports.
 - Simulating is not submitting: `sim create` and `sqlitesimu run` launch simulations; `alpha submit` performs formal Alpha submission. The command tree does not imply that research or final eligibility checks have been completed.
-- `community` reads local community data and `scope` reads local historical research data, not live platform state. Despite its name, `community export` imports an existing community export into SQLite; it does not crawl the forum.
+- `community` accesses the live forum. `sqlitecom` owns local storage and syncs through the same online client. Migrate old local searches to `sqlitecom search` and plugin imports to `sqlitecom import`.
 - `sqlitesimu cancel` manages a local run and preserves history; it does not cancel every simulation already sent to the platform, and it does not bypass an active worker lease by default.
 - `api call` invokes registered endpoints directly. Mutating operations send real requests and do not automatically perform higher-level research checks.
 
@@ -342,7 +348,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.5.0"
+version = "0.6.0"
 ```
 
 ## Authentication
@@ -653,28 +659,25 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 
 ### Community Data
 
-Community data is imported from WebDataScope exports.
+`community` is the online interface; `sqlitecom` owns local storage. Start from an empty database or an existing plugin import. Sync merges changes without replacing the database or erasing documentation.
 
-1. Export community data from WebDataScope as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`.
-2. Put the export under `local/community/`.
-3. Build the local SQLite database.
-4. Query the generated database.
-
-Build SQLite:
-
-```powershell
-wqb community export --source (Join-Path $WqbLocal "community/WQPCommunityState_20260918_001150.json")
+```text
+wqb community topics
+wqb community list --sort updated_at --limit 10
+wqb community search wqb_cli --limit 5
+wqb community get 41706827651991
+wqb community api list
+wqb sqlitecom sync --sqlite community.sqlite3 --since 2026-09-17 --log sync.log
+wqb sqlitecom search --sqlite community.sqlite3 --author JL40454 --scope topics
+wqb sqlitecom get 41706827651991 --sqlite community.sqlite3
+wqb sqlitecom schema --sqlite community.sqlite3
+wqb sqlitecom sql --sqlite community.sqlite3 --file report.sql --param author=JL40454
+wqb sqlitecom import --sqlite community.sqlite3 --source export.json
 ```
 
-If `--source` is omitted, the CLI searches for the latest `WQPCommunityState_*.json` or `*.wqcs` under the local community directory.
+Sync uses cursor pagination, an update-time boundary and a default 48-hour overlap. Saved work resumes automatically; --max-pages pauses after a bounded number of index pages. A new database builds a full baseline unless --since limits it. Old comment edits may not update the parent timestamp: periodically use --reconcile to revisit the full index. Unchanged posts with comments checked in the last seven days skip comment downloads.
 
-Query examples:
-
-```powershell
-wqb community stats
-wqb community search alpha --limit 3
-wqb community search neutralization --scope docs --limit 2
-```
+sql accepts one read-only statement, CTEs and bound parameters, with a default 200-row output limit and 10-second execution deadline. Use --file for UTF-8 SQL without shell-escaping issues. Read-only connections reject writes, ATTACH, extension loading and multiple statements. Only sync uses the network; other sqlitecom commands are local.
 
 ## Research Workflow Documents
 
@@ -786,7 +789,7 @@ python -m wqb_cli --help
 
 Package release:
 
-[wqb-cli 0.4.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.4.0)
+[wqb-cli 0.6.0](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.0)
 
 Release checklist:
 
@@ -794,13 +797,19 @@ Release checklist:
 2. Run editable install.
 3. Run tests.
 4. Commit changes.
-5. Tag the release, for example `v0.4.0`.
+5. Tag the release, for example `v0.6.0`.
 6. Push the branch and tag.
 7. Publish a GitHub Release.
 
 ## Version History
 
 The history below follows versions recorded by package metadata and GitHub releases. The old runtime-only `__version__ = "0.1.0"` value was stale and was never a published package version.
+
+### 0.6.0 - 2026-09-22
+
+- Added: online community resources and API inventory; sqlitecom incremental sync, local search and parameterized read-only SQL.
+- Changed: local community search/stats/export moved to sqlitecom search/stats/import. community search now searches the live forum.
+- Authentication: existing BRAIN renewal plus forum SSO, HTML redirects and CSRF; writes are not automatically replayed.
 
 ### 0.5.0 - 2026-09-22
 

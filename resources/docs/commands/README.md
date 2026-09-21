@@ -1,4 +1,4 @@
-﻿# WQB CLI Command Documentation
+# WQB CLI Command Documentation
 
 This directory documents WQB CLI commands in a command-tree layout inspired by Lark/Feishu CLI documentation:
 
@@ -18,9 +18,8 @@ Current command nodes:
 - `alpha/get`
 - `alpha/check`
 - `alpha/recordsets`
-- `community/export`
-- `community/search`
-- `community/stats`
+- `community` (online topics, posts, comments, search and API calls)
+- `sqlitecom` (incremental sync, local search, imports and read-only SQL)
 - `config`
 - `docs`
 - `local-data`
@@ -31,11 +30,11 @@ Current command nodes:
 - `simulations/options`
 - `search/query`
 
-API command examples are real CLI runs against `api.worldquantbrain.com`.
-Local-data command examples such as `community` and `scope` are real CLI runs against files under `wqb_cli/local/`.
+API examples identify their host and verification scope. Platform commands target `api.worldquantbrain.com`; online community commands target `support.worldquantbrain.com`. Community write examples are request previews, not evidence of live publishing.
+Local commands such as `sqlitecom search` and `scope` operate on files. Only `sqlitecom sync` connects to the forum.
 
 Local-data inputs come from the WebDataScope browser plugin:
 
 - Source plugin: [leetesla/WebDataScope-WorldQuant](https://github.com/leetesla/WebDataScope-WorldQuant)
-- `community`: plugin/browser community cache exported as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`.
+- `sqlitecom import`: plugin/browser community cache exported as `WQPCommunityState_*.json` or `WQPCommunityState_*.wqcs`; `sqlitecom sync` can also build and update a database directly.
 - `scope`: plugin-provided network-disk dataset-analysis files placed under `wqb_cli/local/data_all/`.

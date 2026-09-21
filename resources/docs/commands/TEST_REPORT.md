@@ -1,4 +1,4 @@
-﻿# Real Example Test Report
+# Real Example Test Report
 
 Test environment:
 

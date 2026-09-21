@@ -23,11 +23,11 @@
 ## 推荐命令
 
 ```cmd
-wqb community stats --output <node_dir>\community_stats.json
-wqb community search "模板群" --scope forum --limit 50 --output <node_dir>\community_template_group.json
-wqb community search "模板" --scope forum --limit 50 --output <node_dir>\community_template.json
-wqb community search "alpha_func" --scope forum --limit 50 --output <node_dir>\community_alpha_func.json
-wqb community search "GEM" --scope forum --limit 50 --output <node_dir>\community_gem.json
+wqb sqlitecom stats --output <node_dir>\community_stats.json
+wqb sqlitecom search "模板群" --scope forum --limit 50 --output <node_dir>\community_template_group.json
+wqb sqlitecom search "模板" --scope forum --limit 50 --output <node_dir>\community_template.json
+wqb sqlitecom search "alpha_func" --scope forum --limit 50 --output <node_dir>\community_alpha_func.json
+wqb sqlitecom search "GEM" --scope forum --limit 50 --output <node_dir>\community_gem.json
 wqb docs list --output <node_dir>\docs_list.json
 wqb search template --output <node_dir>\platform_template_search.json
 ```

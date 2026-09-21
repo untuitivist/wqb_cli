@@ -1,0 +1,39 @@
+{
+  "path": "/api/v2/community/posts.json",
+  "methods": [
+    "GET",
+    "POST"
+  ],
+  "description": "List posts or explicitly create a post.",
+  "params": {
+    "query": [
+      "sort_by",
+      "sort_order",
+      "filter_by",
+      "include",
+      "page[size]",
+      "page[after]",
+      "per_page",
+      "page"
+    ]
+  },
+  "request_body": {
+    "POST": {
+      "post": {
+        "title": "string",
+        "details": "HTML",
+        "topic_id": "section ID"
+      },
+      "notify_subscribers": "optional boolean at root"
+    }
+  },
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/posts/"
+  ],
+  "probe": {
+    "GET": "HTTP 200; created_at and updated_at descending; 2026-09-22",
+    "POST": "not executed"
+  },
+  "url_template": "https://support.worldquantbrain.com/api/v2/community/posts.json",
+  "notes": []
+}

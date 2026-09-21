@@ -47,9 +47,9 @@ G 必须同时完成以下四类搜索，缺任何一类都不能算完成：
 
 ```powershell
 # 社区搜索
-wqb community search "volume" --limit 20 --output <node_dir>/community_search__volume.json
-wqb community search "price" --limit 20 --output <node_dir>/community_search__price.json
-wqb community search "technical" --limit 20 --output <node_dir>/community_search__technical.json
+wqb sqlitecom search "volume" --limit 20 --output <node_dir>/community_search__volume.json
+wqb sqlitecom search "price" --limit 20 --output <node_dir>/community_search__price.json
+wqb sqlitecom search "technical" --limit 20 --output <node_dir>/community_search__technical.json
 
 # 官方文档
 wqb docs list --output <node_dir>/docs_list.json

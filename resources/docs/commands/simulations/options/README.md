@@ -1,4 +1,4 @@
-﻿# simulations options
+# simulations options
 
 Fetch valid simulation fields, choices, and ranges.
 
@@ -15,4 +15,3 @@ wqb api call OPTIONS /simulations --input <input.json> --output <output.json>
 ```
 
 Use this before changing universe, delay, neutralization, language, or other settings.
-

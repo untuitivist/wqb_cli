@@ -1,4 +1,4 @@
-﻿# Notes
+# Notes
 
 Do not guess platform enum values.
 In the real run, `CHN/TOP1000U` was invalid.
@@ -16,4 +16,3 @@ CHN neutralization choices include:
 - `INDUSTRY`
 - `SUBINDUSTRY`
 - `SLOW_AND_FAST`
-

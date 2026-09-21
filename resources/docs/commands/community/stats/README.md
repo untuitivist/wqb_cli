@@ -1,12 +1,3 @@
-# community stats
+# Migrated local statistics
 
-Show table counts for the local community SQLite database.
-
-Command:
-
-```powershell
-wqb community stats --output <output.json>
-```
-
-Use `--sqlite <path>` to inspect another database.
-
+Use sqlitecom stats --sqlite community.sqlite3. community now operates online.

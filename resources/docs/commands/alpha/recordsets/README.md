@@ -1,4 +1,4 @@
-﻿# alpha recordsets
+# alpha recordsets
 
 List and fetch alpha recordsets.
 

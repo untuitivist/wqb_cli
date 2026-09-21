@@ -1,4 +1,4 @@
-﻿# Notes
+# Notes
 
 Authentication must persist cookies to `wqb_cli/local/auth/cookies.json`.
 Otherwise `POST /authentication` can succeed while the next `sim create` still fails with `401 Incorrect authentication credentials`.

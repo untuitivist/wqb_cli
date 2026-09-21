@@ -1,4 +1,4 @@
-﻿# Notes
+# Notes
 
 `alpha check` can initially return `Retry-After` with an empty body.
 That is not a failure.

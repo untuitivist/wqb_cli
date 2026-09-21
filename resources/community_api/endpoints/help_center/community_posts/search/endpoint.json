@@ -1,0 +1,31 @@
+{
+  "path": "/api/v2/help_center/community_posts/search.json",
+  "methods": [
+    "GET"
+  ],
+  "description": "Search online posts; offset pagination and a maximum of 1000 search results. Do not use search as the sync index.",
+  "params": {
+    "query": [
+      "query",
+      "topic",
+      "sort_by",
+      "sort_order",
+      "created_after",
+      "created_before",
+      "updated_after",
+      "updated_before",
+      "page",
+      "per_page"
+    ]
+  },
+  "source": [
+    "https://developer.zendesk.com/api-reference/help_center/help-center-api/help_center_search/"
+  ],
+  "safe_probe": true,
+  "url_template": "https://support.worldquantbrain.com/api/v2/help_center/community_posts/search.json",
+  "request_body": null,
+  "notes": [],
+  "probe": {
+    "GET": "HTTP 200 verified on 2026-09-22"
+  }
+}

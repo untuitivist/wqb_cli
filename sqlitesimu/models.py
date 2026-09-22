@@ -56,7 +56,7 @@ class RuntimePolicy:
     max_simulation_retries: int = 1
     default_retry_seconds: float = 10.0
     idle_sleep_seconds: float = 1.0
-    resend_interval_seconds: float | None = 10.0
+    resend_interval_seconds: float | None = None
     lease_seconds: float = 300.0
     concurrent: bool = True
     result_workers: int = 16

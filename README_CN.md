@@ -579,6 +579,8 @@ wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 
 默认数据库位于 `local/sqlitesimu/simulations.sqlite3`。每个 run 持久化 candidate、batch、simulation Location、错误、Alpha 详情和 PnL 历史，并提供兼容旧分析代码的 `simued_alpha_is_pnl` 视图。run export 还包含去重日期网格与逐 Alpha 日度增量组成的结构化 `pnl_paths`，供下游相关性分析按日期对齐且不填补缺失值。
 
+发送器先随机选择有到期待办的 `(region, delay, type)` 组合，再在组内随机凑满兼容批次：Regular FASTEXPR 最多 10 条，Super、ALL 和 Python 各 1 条。数量足够就满批发送，不足上限的尾批也会发送。到期的明确失败重试优先，新任务先于显式开启的重发；priority 和入队顺序不参与抽样。每次受理后立即继续发送，不设本地回测槽位上限，遇到服务器背压或每日限额才按对应期限等待。默认不再抽取已受理任务，只有显式设置 `--resend-seconds SECONDS` 才开启未决项重发，`--no-resend` 可覆盖该选项。
+
 模板集 manifest 可以在入队前严格校验，并在 run 终态后生成固定分析报告：
 
 ```powershell

@@ -235,7 +235,7 @@ def _add_database_argument(parser: argparse.ArgumentParser) -> None:
 def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--no-resend", action="store_true",
-        help="Keep collecting accepted simulations without posting them again; rejected requests can retry",
+        help="Keep the default of not reposting accepted simulations; overrides --resend-seconds",
     )
     parser.add_argument("--max-attempts", type=int, default=5, help="Maximum enrichment failure attempts")
     parser.add_argument(
@@ -247,9 +247,9 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--resend-seconds",
         type=float,
-        default=10.0,
+        default=None,
         help=(
-            "Minimum delay before an accepted pending expression can be sent again; "
+            "Opt in to reposting accepted pending expressions after this delay; disabled by default; "
             "confirmed failures use --retry-seconds instead"
         ),
     )
@@ -280,7 +280,7 @@ def _run(
 ) -> dict[str, Any]:
     if args.max_runtime_seconds is not None and args.max_runtime_seconds <= 0:
         raise ValueError("max-runtime-seconds must be positive")
-    if args.resend_seconds < 0:
+    if args.resend_seconds is not None and args.resend_seconds < 0:
         raise ValueError("resend-seconds must not be negative")
     if args.result_workers < 1 or args.enrichment_workers < 1:
         raise ValueError("result-workers and enrichment-workers must be at least 1")

@@ -740,7 +740,7 @@ class SqliteSimuTests(unittest.TestCase):
             self.assertEqual(queue_row["attempt_count"], 2)
             self.assertEqual(queue_row["last_attempt_at"], 1010.0)
 
-    def test_resend_rotation_serves_unattempted_candidates_before_repeating_priority(self) -> None:
+    def test_random_dispatch_serves_unattempted_groups_before_resending_accepted_work(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             store = initialized_store(temp_dir)
             enqueued = store.enqueue(
@@ -767,7 +767,7 @@ class SqliteSimuTests(unittest.TestCase):
             )
             expressions: list[str] = []
             for index in range(3):
-                batch = store.create_next_batch(enqueued.run_id, now=1000.0)
+                batch = store.create_next_batch(enqueued.run_id, now=1000.0, resend_interval_seconds=0)
                 assert batch is not None
                 expressions.append(str(batch.payload["regular"]))
                 store.mark_simulate_started(batch.id, now=1000.0)
@@ -780,7 +780,7 @@ class SqliteSimuTests(unittest.TestCase):
                     now=1000.0,
                 )
 
-            self.assertEqual(
+            self.assertCountEqual(
                 expressions,
                 ["rank(close)", "rank(volume)", "rank(returns)"],
             )

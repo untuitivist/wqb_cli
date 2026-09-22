@@ -103,7 +103,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 运行队列与历史账本分离：
 
-- `simulation_queue` 是表达式待回测队列。`POST /simulations` 返回 `201` 只新增一个持久化 attempt，不消费源表达式；sender 按 `last_attempt_at` 公平轮转，默认 10 秒后允许未决表达式再次发送。
+- `simulation_queue` 是表达式待回测队列。`POST /simulations` 返回 `201` 只新增一个持久化 attempt，不消费源表达式；sender 先随机选取有到期待办的 `(region, delay, type)` 组合，再在组内随机抽取表达式。到期失败重试优先，其次未发送项，默认不再发送已受理未决项。只有显式设置 `--resend-seconds SECONDS` 才开启未决项重发，且当前所有到期新任务和失败重试都发完后才能抽取；`--no-resend` 可覆盖该选项。
 - 同一表达式可能同时存在多个 progress attempt。第一个有效 COMPLETE/ERROR 终态原子认领 experiment；源表达式离开 `simulation_queue` 后，未被 worker 占用的兄弟 attempt 会在本地批量标为 `SUPERSEDED`，不再等待或请求其远端终态。已经在途的晚到结果同样只能把自身标为 `SUPERSEDED`，不能覆盖结果或重复进入 PnL。
 - 只有拿到 alpha id，或已确认该表达式永久失败后，才在同一事务中删除 `simulation_queue` 行。
 - 拿到 alpha id 时，同一事务会先删除 `simulation_queue` 行，再写入 `enrichment_queue`。
@@ -127,10 +127,11 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 ## 与旧脚本一致的行为
 
 - REGULAR FASTEXPR 仍以 region 和 delay 为主要批次边界，包括 GLB 在内单批最多 10 条；ALL、Super 和 Python 保持单对象请求。
+- 同一调度阶段内等概率抽取已有的 `(region, delay, type)` 组合，不按各组积压数量加权；组内随机抽取，忽略存量 `priority` 和入队先后。组内兼容候选够10条就取满10条，不够则发送尾批。无需预先打乱数据库；不同universe和decay可以同批，language与instrumentType仍隔离。事务内完成抽样与认领，避免重复建批。
 - POST `/simulations` 成功必须是 `201`，并持久化 `Location`。
 - 并发或频率限制不消耗失败预算，按 `Retry-After` 等待，缺省10秒。日限错误 `DAILY_SIMULATION_LIMIT_EXCEEDED` 则持久暂停发送至下一个 `America/New_York` 零点，自动处理夏令时，已受理结果继续收集。`status.daily_limit_not_before` 显示恢复时间戳。
 - 客户端不设置 `8 / 4 / 3` 等并发槽位上限；持续发起 simulate 请求，由 BRAIN 的 `429` 和 `Retry-After` 提供背压。
-- `201` 只登记 Location；源表达式在首个有效终态前仍留在发送队列，按最久未发送顺序循环产生 attempt，以持续填充服务器可用并发。
+- `201` 只登记 Location，发送线程立即继续随机组批，以持续填充服务器可用并发；结果收集独立进行。源表达式在首个有效终态前仍留在发送队列，但 `--no-resend` 不会再次发送已受理项。
 - `204 / 401` 和认证类 `429` 尝试自动续登；明确并发、频率、每日限额类 `429` 不重新认证。两层重登耗尽后延期当前工作。
 - 父任务 `progress=0.35` 时，等待时间按批量大小除以 2 放大。
 - 父 progress URL 和 child simulation ID 会一直按 `Retry-After` 检查；瞬时网络、认证和可重试 HTTP 错误只累计诊断次数，不会因本地次数预算而丢弃。
@@ -146,11 +147,11 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 
 | 位置 | 旧脚本 | sqlitesimu |
 | --- | --- | --- |
-| 源任务 | 结果落库后删除源表行，完成前可能被再次随机抽中 | `201` 后继续按最久未发送顺序抽取；首个终态消费 queue，candidate/experiment 和 attempt 作为历史账本保留 |
+| 源任务 | 结果落库后删除源表行，完成前可能被再次随机抽中 | 随机选region/delay/type组合，再随机取兼容表达式；首个终态消费queue，candidate/experiment和attempt作为历史账本保留 |
 | 尾批 | 少于 2 条会跳过 | 单条也 simulate，避免永久滞留 |
 | 批次安全 | 只按 region、delay 分组，统一最多 10 条 | 额外隔离 type、instrument type、language；包括 GLB 的 Regular 最多 10 条 |
 | 并发 | 槽位检查已注释，依赖服务端 429 | 不做客户端槽位计数，依赖服务端 429/Retry-After |
-| 重复 simulate | 未完成源行会被重复抽中 | 明确 `201` 的未决表达式会公平重发；`POST` 结果不确定时仍阻塞该表达式，等待其他已知 progress attempt 或人工核对 |
+| 重复 simulate | 未完成源行会被重复抽中 | `--no-resend` 排除已受理项；启用重发时仅在到期新任务和失败重试发完后随机重发未决项；不自动重发 `POST` 结果不确定项 |
 | progress 读取 | 非 200 保留 URL，后续继续检查 | 父和 child 的瞬时读取错误同样无限延期；明确终态后退出活跃集合但保留历史账本 |
 | 多进程 | 多线程加 SQLite lock | run 租约阻止两个 worker 重复消费 |
 | 认证 | 脚本直接持有 EMAIL/PASSWORD | 使用 wqb-cli cookie/keyring/env；CoreClient 处理 `204 / 401 / 429`，耗尽后 sqlitesimu 再补 5 次重登 |
@@ -159,7 +160,7 @@ QUEUED -> BATCHED -> SIMULATING -> POLLING
 | 结果表 | 单个宽表 | 规范化表为主，保留同名兼容视图 |
 | 输出 | 持续打印日志 | 日限触发时记录恢复时间，结束时输出一份 JSON；详细请求和失败历史保存在数据库 |
 
-这些变动用于确定性、崩溃恢复和工作流接入，不改变 alpha expression 或 BRAIN simulation payload。
+这些变动用于持久化认领、崩溃恢复和工作流接入，不改变 alpha expression 或 BRAIN simulation payload。
 
 ## 自动续期边界
 

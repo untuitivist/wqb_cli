@@ -579,6 +579,8 @@ wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 
 The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code. Run exports also include structured `pnl_paths` with deduplicated date grids and per-Alpha daily increments so downstream correlation analysis can align observations by date without filling missing values.
 
+The sender randomly selects an eligible `(region, delay, type)` group, then randomly fills a compatible batch: up to 10 Regular FASTEXPR candidates, or one Super, ALL, or Python candidate. Full batches are sent whenever enough candidates are due; smaller final batches are also sent. Due confirmed-failure retries take precedence, and new work is selected before explicitly enabled resends. Queue priority and insertion order do not control sampling. Each accepted request is followed immediately by the next send, with no local simulation-slot cap; server backpressure and daily-limit deadlines govern waiting. Accepted work is excluded by default; `--resend-seconds SECONDS` opts in to reposting pending work, and `--no-resend` overrides that option.
+
 Template-family manifests can be validated before enqueue and rendered into a fixed terminal report:
 
 ```powershell

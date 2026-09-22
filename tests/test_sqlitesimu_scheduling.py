@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import argparse
 import tempfile
 import unittest
 from collections import Counter
+from contextlib import contextmanager
 from datetime import datetime, timezone
+import random
 from typing import Any
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 
 from wqb_cli.core.client import is_wqb_daily_simulation_limit
+from wqb_cli.sqlitesimu.models import RuntimePolicy
+from wqb_cli.sqlitesimu.plugin import _add_runtime_arguments, _run
 from wqb_cli.sqlitesimu.db import SCHEMA_VERSION, SqliteStore
 from wqb_cli.sqlitesimu.manifest import parse_manifest
 from wqb_cli.sqlitesimu.runtime import SqliteSimuRuntime, _next_eastern_midnight
@@ -39,6 +45,102 @@ class FailingCandidateGateway(SuccessfulGateway):
 
 
 class SchedulingTests(unittest.TestCase):
+    def test_cli_does_not_resend_accepted_work_without_an_explicit_opt_in(self) -> None:
+        self.assertIsNone(RuntimePolicy().resend_interval_seconds)
+        for arguments, interval in [([], None), (["--resend-seconds", "10"], 10),
+                                    (["--resend-seconds", "10", "--no-resend"], None)]:
+            with self.subTest(arguments=arguments):
+                parser = argparse.ArgumentParser()
+                _add_runtime_arguments(parser)
+                with patch("wqb_cli.sqlitesimu.plugin.WqbApiGateway"), \
+                     patch("wqb_cli.sqlitesimu.plugin.SqliteSimuRuntime") as runtime:
+                    _run(None, None, "run-test", parser.parse_args(arguments))
+                    self.assertEqual(runtime.call_args.kwargs["policy"].resend_interval_seconds, interval)
+                    runtime.return_value.run.assert_called_once_with("run-test", max_runtime_seconds=None)
+
+    def test_groups_are_sampled_independently_of_queue_size_and_priority(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = initialized_store(directory)
+            run = store.enqueue(parse_manifest([
+                {"expression": f"close + {index}", "settings": SETTINGS, "priority": 1000 - index}
+                for index in range(60)
+            ] + [{"expression": "rare", "settings": {**SETTINGS, "region": "IND"}, "priority": -1000}]), now=1000)
+            generator = random.Random(42)
+            original_connect = store.connect
+
+            @contextmanager
+            def sampled_connection():
+                with original_connect() as connection:
+                    connection.create_function("random", 0, lambda: generator.randrange(-(2 ** 63), 2 ** 63))
+                    try:
+                        yield connection
+                    finally:
+                        connection.rollback()
+
+            regions = Counter()
+            expressions = set()
+            with patch.object(store, "connect", sampled_connection):
+                for _ in range(128):
+                    batch = store.create_next_batch(run.run_id, now=1000, resend_interval_seconds=None)
+                    assert batch is not None
+                    payloads = batch.payload if isinstance(batch.payload, list) else [batch.payload]
+                    region = payloads[0]["settings"]["region"]
+                    regions[region] += 1
+                    self.assertEqual(len(payloads), 10 if region == "USA" else 1)
+                    expressions.update(payload["regular"] for payload in payloads)
+            self.assertGreater(regions["IND"], 40)
+            self.assertLess(regions["IND"], 88)
+            self.assertEqual(len(expressions), 61)
+            self.assertEqual(store.run_summary(run.run_id)["counts"], {"QUEUED": 61})
+
+    def test_random_batches_fill_type_limits_without_mixing_groups_or_repeating_accepted_work(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = initialized_store(directory)
+            candidates = []
+            for region, delay, count in [("USA", 0, 23), ("USA", 1, 13), ("GLB", 1, 21)]:
+                for index in range(count):
+                    candidates.append({"type": "REGULAR", "regular": f"{region}_{delay}_{index}",
+                                       "settings": {**SETTINGS, "region": region, "delay": delay,
+                                                    "universe": "TOP3000" if index % 2 else "TOP1000",
+                                                    "decay": index % 3}})
+            candidates += [
+                {"type": "SUPER", "selection": "(own)", "combo": f"combo_{index}", "settings": SETTINGS}
+                for index in range(3)
+            ]
+            candidates += [
+                {"type": "REGION_AGNOSTIC", "regular": f"all_{index}",
+                 "settings": {**SETTINGS, "region": "ALL", "universe": "LARGE"}}
+                for index in range(3)
+            ]
+            run = store.enqueue(parse_manifest(candidates), now=1000)
+            remaining = Counter((item["type"], item["settings"]["region"], item["settings"]["delay"])
+                                for item in candidates)
+            seen = set()
+            while batch := store.create_next_batch(run.run_id, now=1000):
+                payloads = batch.payload if isinstance(batch.payload, list) else [batch.payload]
+                group = (payloads[0]["type"], payloads[0]["settings"]["region"], payloads[0]["settings"]["delay"])
+                limit = 10 if group[0] == "REGULAR" else 1
+                self.assertEqual(len(payloads), min(limit, remaining[group]))
+                self.assertEqual({(item["type"], item["settings"]["region"], item["settings"]["delay"])
+                                  for item in payloads}, {group})
+                for item in payloads:
+                    expression = item.get("regular", item.get("combo"))
+                    self.assertNotIn(expression, seen)
+                    seen.add(expression)
+                remaining[group] -= len(payloads)
+                store.mark_simulate_started(batch.id, now=1000)
+                store.accept_simulation(batch.id, location=f"https://example.test/simulations/{batch.id}",
+                                        parent_simulation_id=batch.id, response=envelope(201),
+                                        not_before=2000, now=1000)
+            self.assertEqual(len(seen), len(candidates))
+            self.assertFalse(any(remaining.values()))
+            self.assertEqual(store.run_summary(run.run_id)["counts"], {"POLLING": len(candidates)})
+            self.assertIsNone(store.create_next_batch(run.run_id, now=10000))
+            with store.connect() as connection:
+                self.assertEqual(connection.execute(
+                    "SELECT COUNT(*) FROM api_events WHERE event_type='BATCH_CREATED' "
+                    "AND json_extract(payload_json,'$.selection')='random_group'").fetchone()[0], 14)
+
     def test_due_failure_retry_is_not_starved_by_a_large_unsent_queue(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = initialized_store(directory)
@@ -47,6 +149,9 @@ class SchedulingTests(unittest.TestCase):
                 *[{"expression": f"close + {index}", "settings": {**SETTINGS, "region": "GLB"}}
                   for index in range(40)],
             ]), now=1000)
+            with store.connect() as connection:
+                connection.execute("UPDATE experiments SET not_before=1010 WHERE candidate_id IN "
+                                   "(SELECT id FROM candidates WHERE json_extract(settings_json,'$.region')='GLB')")
             original = store.create_next_batch(run.run_id, now=1000)
             assert original is not None
             self.assertEqual(original.payload["regular"], "bad")

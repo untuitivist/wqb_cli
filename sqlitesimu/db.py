@@ -959,7 +959,7 @@ class SqliteStore:
         run_id: str,
         *,
         now: float,
-        resend_interval_seconds: float | None = 0.0,
+        resend_interval_seconds: float | None = None,
     ) -> BatchRecord | None:
         global_not_before = self.simulation_not_before()
         if global_not_before is not None and now < global_not_before:
@@ -970,6 +970,31 @@ class SqliteStore:
         )
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            selected_group = conn.execute(
+                """
+                SELECT c.simulation_type,
+                       json_extract(c.settings_json, '$.region') AS region,
+                       json_extract(c.settings_json, '$.delay') AS delay,
+                       MIN(CASE e.state WHEN 'RETRY_WAIT' THEN 0
+                                        WHEN 'QUEUED' THEN 1 ELSE 2 END) AS dispatch_class
+                FROM simulation_queue q
+                JOIN experiments e ON e.id = q.experiment_id
+                JOIN candidates c ON c.id = e.candidate_id
+                WHERE q.run_id = ?
+                  AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
+                  AND e.not_before <= ?
+                  AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
+                GROUP BY c.simulation_type,
+                         json_extract(c.settings_json, '$.region'),
+                         json_extract(c.settings_json, '$.delay')
+                ORDER BY dispatch_class, RANDOM()
+                LIMIT 1
+                """,
+                (run_id, now, resend_cutoff, resend_cutoff),
+            ).fetchone()
+            if selected_group is None:
+                return None
+            allow_resend = selected_group["dispatch_class"] == 2
             selected_head = conn.execute(
                 """
                 SELECT e.id AS experiment_id, c.*
@@ -980,11 +1005,17 @@ class SqliteStore:
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
-                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END,
-                         q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
+                  AND (e.state <> 'POLLING' OR ?)
+                  AND c.simulation_type = ?
+                  AND json_extract(c.settings_json, '$.region') IS ?
+                  AND json_extract(c.settings_json, '$.delay') IS ?
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
                 LIMIT 1
                 """,
-                (run_id, now, resend_cutoff, resend_cutoff),
+                (
+                    run_id, now, resend_cutoff, resend_cutoff, allow_resend,
+                    selected_group["simulation_type"], selected_group["region"], selected_group["delay"],
+                ),
             ).fetchone()
             if selected_head is None:
                 return None
@@ -998,9 +1029,9 @@ class SqliteStore:
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
+                  AND (e.state <> 'POLLING' OR ?)
                   AND c.compatibility_key = ?
-                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END,
-                         q.last_attempt_at, e.priority DESC, q.enqueued_at, e.id
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
                 LIMIT ?
                 """,
                 (
@@ -1008,6 +1039,7 @@ class SqliteStore:
                     now,
                     resend_cutoff,
                     resend_cutoff,
+                    allow_resend,
                     selected_head["compatibility_key"],
                     int(selected_head["batch_limit"]),
                 ),
@@ -1061,7 +1093,13 @@ class SqliteStore:
                 run_id,
                 "BATCH_CREATED",
                 batch_id=batch_id,
-                payload={"size": len(compatible)},
+                payload={
+                    "size": len(compatible),
+                    "selection": "random_group",
+                    "region": selected_group["region"],
+                    "delay": selected_group["delay"],
+                    "type": selected_group["simulation_type"],
+                },
                 now=now,
             )
             row = conn.execute("SELECT * FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()

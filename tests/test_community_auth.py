@@ -7,6 +7,8 @@ from unittest.mock import Mock, patch
 import requests
 
 from wqb_cli.cli import build_parser
+from wqb_cli import __version__
+from wqb_cli.core.auth import session_from_cookies
 from wqb_cli.commands.community import handle_community
 from wqb_cli.core.community_client import CommunityChallengeError, CommunityClient, CommunityError
 
@@ -22,6 +24,32 @@ def response(status, headers=None, body=None):
 
 
 class CommunityAuthTests(unittest.TestCase):
+    def test_default_sessions_identify_actual_cli_version(self):
+        with patch("wqb_cli.core.auth.load_cookie_payload", return_value={"cookies": {}}):
+            brain_session = session_from_cookies()
+        self.addCleanup(brain_session.close)
+        self.assertEqual(brain_session.headers["User-Agent"], f"wqb-cli/{__version__}")
+        brain = Mock()
+        brain.session = brain_session
+        client = CommunityClient(brain_client=brain)
+        self.addCleanup(client.session.close)
+        self.assertEqual(client.session.headers["User-Agent"], f"wqb-cli/{__version__}")
+        self.assertEqual(client.session.headers["Accept"], "application/json")
+
+    def test_page_and_json_headers_stay_separate_after_auth(self):
+        client, brain, session = self.client()
+        session.get.return_value = response(200)
+        client.authenticate()
+        landing_headers = session.get.call_args.kwargs["headers"]
+        client.post_page("https://support.worldquantbrain.com/hc/en-us/community/posts/100", "100")
+        self.assertEqual(session.get.call_args.kwargs["headers"], landing_headers)
+        self.assertIn("text/html", landing_headers["Accept"])
+        self.assertEqual(landing_headers["Accept-Language"], "en-US,en;q=0.9")
+        session.request.return_value = response(200, body={"posts": []})
+        client.call("GET", "/api/v2/community/posts.json")
+        self.assertEqual(session.request.call_args.kwargs["headers"]["Accept"], "application/json")
+        self.assertEqual(session.request.call_args.kwargs["headers"]["Accept-Language"], landing_headers["Accept-Language"])
+
     def client(self):
         brain = Mock()
         brain.call_once.return_value = {

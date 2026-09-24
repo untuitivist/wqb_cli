@@ -11,6 +11,7 @@ from urllib.parse import urljoin, urlsplit
 
 import requests
 
+from .. import __version__
 from .auth import resolve_login_payload, session_from_cookies
 from .client import MUTATING_METHODS, WqbClient
 from .community_session import CommunitySessionStore, profile_key, restore_cookies, session_cookies
@@ -21,6 +22,8 @@ from .registry import EndpointRegistry
 SUPPORT_ORIGIN = "https://support.worldquantbrain.com"
 SSO_HOSTS = {"api.worldquantbrain.com", "support.worldquantbrain.com", "worldquantbrain.zendesk.com"}
 COMMUNITY_REGISTRY = RESOURCES_ROOT / "community_api" / "api_inventory.json"
+PAGE_HEADERS = {"Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9"}
+API_HEADERS = {"Accept": "application/json", "Accept-Language": "en-US,en;q=0.9"}
 
 
 class CommunityError(RuntimeError):
@@ -146,7 +149,7 @@ class CommunityClient:
         self.session = session or requests.Session()
         if session is None:
             self.session.trust_env = self.brain.session.trust_env
-            self.session.headers.update({"User-Agent": self.brain.session.headers.get("User-Agent", "wqb-cli/community")})
+            self.session.headers.update({"User-Agent": f"wqb-cli/{__version__}", **API_HEADERS})
         self.timeout = timeout
         self.max_retries = max_retries
         self.max_wait_seconds = max_wait_seconds
@@ -211,7 +214,7 @@ class CommunityClient:
                                      code="community_login_required", stage="support_sso")
             while True:
                 try:
-                    reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
+                    reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers=dict(PAGE_HEADERS))
                 except requests.RequestException as error:
                     raise CommunityError(f"Support SSO transport failed: {type(error).__name__}",
                                          stage="support_sso") from None
@@ -351,7 +354,7 @@ class CommunityClient:
         for attempt in range(self.max_retries + 1):
             try:
                 reply = self.session.get(address, timeout=self.timeout, allow_redirects=False,
-                                         headers={"Accept": "text/html"})
+                                         headers=dict(PAGE_HEADERS))
             except requests.RequestException as error:
                 delay = self._delay(None, attempt)
                 if attempt >= self.max_retries or waited + delay > self.max_wait_seconds:
@@ -411,7 +414,7 @@ class CommunityClient:
         mutating = method in MUTATING_METHODS
         if not self.authenticated:
             self.authenticate()
-        headers = {"Accept": "application/json"}
+        headers = dict(API_HEADERS)
         if mutating:
             if self.csrf_token is None:
                 self.write_context()

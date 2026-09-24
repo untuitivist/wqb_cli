@@ -1,5 +1,14 @@
 # Community authentication
 
+## Request headers
+
+Default sessions identify themselves as `wqb-cli/<package version>`. SSO,
+cached-session validation and page reads request HTML/XHTML; API calls request
+JSON. Both specify `Accept-Language: en-US,en;q=0.9`, matching the SSO landing
+locale. These are content-negotiation settings, not a browser identity or a
+solution to Cloudflare challenges. No Chrome fingerprint or browser headers are
+emulated. An injected session retains its own User-Agent.
+
 ## Persistent sessions
 
 Validated community cookies are stored separately from BRAIN cookies in

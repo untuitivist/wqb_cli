@@ -6,6 +6,7 @@ from typing import Any
 
 import requests
 
+from .. import __version__
 from .config_store import load_config
 from .io import read_dotenv
 from .paths import DEFAULT_COOKIE_PATH, LEGACY_COOKIE_PATH
@@ -49,7 +50,7 @@ def clear_worldquantbrain_cookies(session: requests.Session) -> None:
 def session_from_cookies(cookie_path: str | None = None) -> requests.Session:
     session = requests.Session()
     session.trust_env = False
-    session.headers.update({"User-Agent": "wqb-cli/0.1"})
+    session.headers.update({"User-Agent": f"wqb-cli/{__version__}"})
     session._wqb_cookie_path = cookie_path  # type: ignore[attr-defined]
     payload = load_cookie_payload(cookie_path)
     for key, value in (payload.get("cookies") or {}).items():

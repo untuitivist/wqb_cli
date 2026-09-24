@@ -22,9 +22,31 @@ COMMUNITY_REGISTRY = RESOURCES_ROOT / "community_api" / "api_inventory.json"
 
 
 class CommunityError(RuntimeError):
-    def __init__(self, message: str, *, status_code: int | None = None) -> None:
+    def __init__(self, message: str, *, status_code: int | None = None,
+                 code: str = "community_error", stage: str | None = None) -> None:
         super().__init__(message)
         self.status_code = status_code
+        self.code = code
+        self.stage = stage
+
+    def as_dict(self) -> dict[str, Any]:
+        return {"ok": False, "error_type": type(self).__name__, "detail": str(self),
+                "code": self.code, "stage": self.stage, "status_code": self.status_code}
+
+
+class CommunityChallengeError(CommunityError):
+    def __init__(self, status_code: int, stage: str) -> None:
+        super().__init__(
+            "Community browser verification is required; this is not an expired BRAIN password. "
+            "Open https://support.worldquantbrain.com/hc/zh-cn/community in a normal browser. "
+            "If CLI access remains challenged, contact platform support for supported API access.",
+            status_code=status_code, code="browser_verification_required", stage=stage,
+        )
+
+
+def check_browser_challenge(reply: requests.Response, stage: str) -> None:
+    if reply.headers.get("cf-mitigated", "").lower() == "challenge":
+        raise CommunityChallengeError(reply.status_code, stage)
 
 
 def load_community_registry() -> EndpointRegistry:
@@ -117,10 +139,11 @@ class CommunityClient:
         self.brand_id: str | None = None
 
     def authenticate(self) -> None:
+        self.authenticated = False
         self.csrf_token = None
         self.brand_id = None
         endpoint = self.brain.registry.get("/authentication/support")
-        result = self.brain.call_once(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
+        result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
         response = result.get("response") or {}
         location = response.get("location")
         if location and urlsplit(location).hostname == "platform.worldquantbrain.com":
@@ -131,27 +154,43 @@ class CommunityClient:
             if not isinstance(payload, dict) or not payload.get("email") or not payload.get("password"):
                 raise CommunityError("BRAIN login credentials are unavailable; configure auth or supply --config")
             login = self.brain.prepare(self.brain.registry.get("/authentication"), "POST", json_body=payload)
-            renewal = self.brain.call_once(login, auto_auth=False)
+            renewal = self._brain_request(login, auto_auth=False)
             if not renewal.get("ok"):
-                raise CommunityError("BRAIN session renewal failed before forum SSO")
+                raise CommunityError("BRAIN session renewal failed before forum SSO",
+                                     status_code=(renewal.get("response") or {}).get("status_code"),
+                                     code="brain_renewal_failed", stage="brain_login")
             if self.brain.cookie_saver is not None:
                 self.brain.cookie_saver(self.brain.session, self.brain.cookie_path)
-            result = self.brain.call_once(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
+            result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
             response = result.get("response") or {}
             location = response.get("location")
         if not result.get("ok") or not location:
             raise CommunityError(f"BRAIN support SSO failed (HTTP {response.get('status_code')})")
         self.session.cookies.update(self.brain.session.cookies)
+        waited = 0.0
+        retries = 0
         for redirect_index in range(10):
             parsed = urlsplit(location)
             if parsed.scheme != "https" or parsed.hostname not in SSO_HOSTS or parsed.port not in (None, 443) or parsed.username or parsed.password:
                 raise CommunityError(f"BRAIN support SSO returned an unexpected redirect origin: {parsed.scheme}://{parsed.hostname}")
-            try:
-                reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
-                if reply.status_code == 403 and parsed.path.startswith("/hc/"):
+            if parsed.path in {"/hc/restricted", "/access/unauthenticated", "/access/login"}:
+                raise CommunityError("Community SSO returned a restricted or sign-in page",
+                                     code="community_login_required", stage="support_sso")
+            while True:
+                try:
                     reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
-            except requests.RequestException as error:
-                raise CommunityError(f"Support SSO transport failed: {type(error).__name__}") from None
+                except requests.RequestException as error:
+                    raise CommunityError(f"Support SSO transport failed: {type(error).__name__}",
+                                         stage="support_sso") from None
+                self._check_challenge(reply, "support_sso")
+                if reply.status_code not in (429, 500, 502, 503, 504):
+                    break
+                delay = self._delay(reply, retries)
+                if retries >= self.max_retries or waited + delay > self.max_wait_seconds:
+                    break
+                self.sleeper(delay)
+                waited += delay
+                retries += 1
             if reply.status_code in (301, 302, 303, 307, 308):
                 target = reply.headers.get("Location")
                 if not target:
@@ -159,7 +198,8 @@ class CommunityClient:
                 location = urljoin(location, target)
                 continue
             if reply.status_code != 200:
-                raise CommunityError(f"Support SSO failed at {parsed.hostname} (HTTP {reply.status_code}); normal browser login may be required")
+                raise CommunityError(f"Support SSO failed at {parsed.hostname} (HTTP {reply.status_code})",
+                                     status_code=reply.status_code, code="support_sso_failed", stage="support_sso")
             self.authenticated = True
             context = browser_write_context(reply.text)
             self.csrf_token = context.get("csrf_token")
@@ -167,15 +207,56 @@ class CommunityClient:
             return
         raise CommunityError("Support SSO exceeded its redirect limit")
 
+    def _brain_request(self, prepared: Any, *, auto_auth: bool | None = None) -> dict[str, Any]:
+        waited = 0.0
+        for attempt in range(self.max_retries + 1):
+            result = self.brain.call_once(prepared, auto_auth=auto_auth)
+            response = result.get("response") or {}
+            if response.get("status_code") != 429:
+                return result
+            limited = requests.Response()
+            if response.get("retry_after") is not None:
+                limited.headers["Retry-After"] = str(response["retry_after"])
+            delay = self._delay(limited, attempt)
+            if attempt >= self.max_retries or waited + delay > self.max_wait_seconds:
+                return result
+            self.sleeper(delay)
+            waited += delay
+        return result
+
+    def _check_challenge(self, reply: requests.Response, stage: str) -> None:
+        try:
+            check_browser_challenge(reply, stage)
+        except CommunityChallengeError:
+            self.authenticated = False
+            self.csrf_token = None
+            self.brand_id = None
+            raise
+
+    def _read_page(self, address: str, *, stage: str) -> requests.Response:
+        if not self.authenticated:
+            self.authenticate()
+        for attempt in range(2):
+            try:
+                reply = self.session.get(address, timeout=self.timeout, allow_redirects=False,
+                                         headers={"Accept": "text/html"})
+            except requests.RequestException as error:
+                raise CommunityError(f"Community page read failed: {type(error).__name__}", stage=stage) from None
+            self._check_challenge(reply, stage)
+            if reply.status_code not in (401, 403, 302):
+                return reply
+            self.authenticated = False
+            self.csrf_token = None
+            self.brand_id = None
+            if attempt == 0:
+                self.authenticate()
+        return reply
+
     def write_context(self) -> dict[str, str]:
         if not self.authenticated:
             self.authenticate()
         if not self.csrf_token or not self.brand_id:
-            try:
-                reply = self.session.get(SUPPORT_ORIGIN + "/hc/zh-cn/community/posts/new", timeout=self.timeout,
-                                         allow_redirects=False, headers={"Accept": "text/html,application/xhtml+xml"})
-            except requests.RequestException as error:
-                raise CommunityError("Forum write context read failed: " + type(error).__name__) from None
+            reply = self._read_page(SUPPORT_ORIGIN + "/hc/zh-cn/community/posts/new", stage="write_context")
             if reply.status_code != 200:
                 raise CommunityError(f"Forum write context failed (HTTP {reply.status_code})", status_code=reply.status_code)
             context = browser_write_context(reply.text)
@@ -192,12 +273,7 @@ class CommunityClient:
                 or parsed.port not in (None, 443) or parsed.username or parsed.password or parsed.query or parsed.fragment
                 or re.fullmatch(expected, parsed.path) is None):
             raise ValueError("Post verification must read the saved post on the forum origin")
-        if not self.authenticated:
-            self.authenticate()
-        try:
-            return self.session.get(address, timeout=self.timeout, allow_redirects=False, headers={"Accept": "text/html"})
-        except requests.RequestException as error:
-            raise CommunityError("Post page verification failed: " + type(error).__name__) from None
+        return self._read_page(address, stage="post_page")
 
     def _delay(self, reply: requests.Response | None, attempt: int) -> float:
         header = reply.headers.get("Retry-After") if reply is not None else None
@@ -241,10 +317,15 @@ class CommunityClient:
                 waited += delay
                 retries += 1
                 continue
-            if not mutating and reply.status_code in (401, 403, 302) and not refreshed:
-                self.authenticate()
-                refreshed = True
-                continue
+            self._check_challenge(reply, "community_api")
+            if reply.status_code in (401, 403, 302):
+                self.authenticated = False
+                self.csrf_token = None
+                self.brand_id = None
+                if not mutating and not refreshed:
+                    self.authenticate()
+                    refreshed = True
+                    continue
             if not mutating and reply.status_code in (429, 500, 502, 503, 504):
                 delay = self._delay(reply, retries)
                 if retries < self.max_retries and waited + delay <= self.max_wait_seconds:

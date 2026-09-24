@@ -1,5 +1,11 @@
 # wqb-cli
 
+社区认证诊断：`wqb community auth` 执行正常的 BRAIN→Zendesk SSO 续登。
+读取会话过期时重登一次；限流按 Retry-After 有界等待。
+`browser_verification_required` 表示 Cloudflare 浏览器验证，不是密码失效。
+CLI 不自动完成浏览器验证，也不重复发送社区写操作。正常浏览器登录后，
+若 CLI 仍被验证拦截，需要向平台确认受支持的 API 访问方式，不能保证再次登录即可恢复。
+
 <p align="center">
   <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
 </p>

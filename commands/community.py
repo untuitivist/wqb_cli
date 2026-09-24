@@ -13,6 +13,8 @@ from ..core.registry import EndpointRegistry
 def add_community_parser(subparsers: argparse._SubParsersAction) -> None:
     community = subparsers.add_parser("community", help="Online BRAIN forum API; local data uses sqlitecom")
     community_sub = community.add_subparsers(dest="community_command", required=True)
+    auth = community_sub.add_parser("auth", help="Renew BRAIN/community SSO and diagnose authentication failures")
+    _request_options(auth)
     routes = {
         "list": ("GET", "/api/v2/community/posts.json", (), "List online posts, newest first"),
         "topics": ("GET", "/api/v2/community/topics.json", (), "List accessible forum sections"),
@@ -86,6 +88,15 @@ def _request_options(parser: argparse.ArgumentParser) -> None:
 def handle_community(args: argparse.Namespace) -> int:
     import json
 
+    if args.community_command == "auth":
+        if args.dry_run:
+            write_json({"ok": True, "dry_run": True, "action": "community_sso"}, args.output)
+            return 0
+        client = _client(args)
+        client.authenticate()
+        write_json({"ok": True, "authenticated": client.authenticated,
+                    "write_context_available": bool(client.csrf_token and client.brand_id)}, args.output)
+        return 0
     if args.community_command == "image-upload":
         path = Path(args.file).resolve()
         metadata, content = image_file(path)

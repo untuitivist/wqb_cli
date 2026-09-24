@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 authentication maintenance (2026-09-24)
+
+- Add `community auth` diagnostics with structured error code, stage and HTTP status.
+- Separate browser challenges from expired sessions; stop redundant SSO requests on challenges.
+- Bound BRAIN login/support 429 retries and SSO 429/5xx waits using Retry-After.
+- Clear stale authentication and CSRF state; renew expired post-page and write-context reads once.
+- Keep ambiguous/rejected writes non-replayable. Browser verification remains an external prerequisite,
+  not an automatically solved authentication problem.
+
 All notable changes are grouped by the package versions evidenced in `pyproject.toml` and the GitHub release history.
 
 ## 0.6.1 - 2026-09-22

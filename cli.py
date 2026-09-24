@@ -283,7 +283,10 @@ def main(argv: list[str] | None = None) -> None:
             parser.error(f"Unknown command: {args.command}")
             code = 2
     except Exception as exc:
+        from .core.community_client import CommunityError
+
         write_json(
+            exc.as_dict() if isinstance(exc, CommunityError) else
             {"ok": False, "error_type": type(exc).__name__, "detail": str(exc)},
             getattr(args, "output", None),
         )

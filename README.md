@@ -1,5 +1,12 @@
 # wqb-cli
 
+Community authentication diagnostics: `wqb community auth` renews the normal
+BRAIN-to-Zendesk SSO session. Expired read sessions are refreshed once; rate limits
+honor a bounded Retry-After wait. A `browser_verification_required` error identifies
+a Cloudflare challenge, not bad credentials. The CLI does not solve browser
+challenges or replay forum writes. Browser login alone may not restore CLI access;
+contact platform support if the API client remains challenged.
+
 <p align="center">
   <img src="docs/assets/wqb_cli_logo.png" alt="wqb-cli logo" width="360">
 </p>

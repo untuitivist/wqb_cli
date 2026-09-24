@@ -10,7 +10,7 @@ from wqb_cli.cli import build_parser
 from wqb_cli import __version__
 from wqb_cli.core.auth import session_from_cookies
 from wqb_cli.commands.community import handle_community
-from wqb_cli.core.community_client import CommunityChallengeError, CommunityClient, CommunityError
+from wqb_cli.core.community_client import IDENTITY_URL, CommunityChallengeError, CommunityClient, CommunityError
 
 
 def response(status, headers=None, body=None):
@@ -19,7 +19,7 @@ def response(status, headers=None, body=None):
     reply.headers.update(headers or {})
     reply._content = json.dumps(body or {}).encode("utf-8")
     if status == 200 and body is None:
-        reply._content = b'HelpCenter.user = {"id": 20, "role": "end_user"};'
+        reply._content = b'{"user":{"id":20,"role":"end-user"}}'
     return reply
 
 
@@ -40,15 +40,53 @@ class CommunityAuthTests(unittest.TestCase):
         client, brain, session = self.client()
         session.get.return_value = response(200)
         client.authenticate()
-        landing_headers = session.get.call_args.kwargs["headers"]
+        identity_headers = session.get.call_args.kwargs["headers"]
+        self.assertEqual(identity_headers["Accept"], "application/json")
         client.post_page("https://support.worldquantbrain.com/hc/en-us/community/posts/100", "100")
-        self.assertEqual(session.get.call_args.kwargs["headers"], landing_headers)
+        landing_headers = session.get.call_args.kwargs["headers"]
         self.assertIn("text/html", landing_headers["Accept"])
         self.assertEqual(landing_headers["Accept-Language"], "en-US,en;q=0.9")
         session.request.return_value = response(200, body={"posts": []})
         client.call("GET", "/api/v2/community/posts.json")
         self.assertEqual(session.request.call_args.kwargs["headers"]["Accept"], "application/json")
         self.assertEqual(session.request.call_args.kwargs["headers"]["Accept-Language"], landing_headers["Accept-Language"])
+
+    def test_successful_sso_uses_identity_api_without_html_landing(self):
+        client, brain, session = self.client()
+        session.get.side_effect = [
+            response(302, {"Location": "https://support.worldquantbrain.com/access/return_to"}),
+            response(302, {"Location": "https://support.worldquantbrain.com/hc/en-us"}),
+            response(200),
+        ]
+        client.authenticate()
+        addresses = [call.args[0] for call in session.get.call_args_list]
+        self.assertEqual(addresses[-1], IDENTITY_URL)
+        self.assertFalse(any("/hc/" in address for address in addresses))
+        self.assertEqual(brain.prepare.call_args.kwargs["params"]["return_to"], IDENTITY_URL)
+        self.assertTrue(client.authenticated)
+        self.assertEqual(client.user_id, "20")
+        self.assertIsNone(client.csrf_token)
+
+    def test_http_200_without_authenticated_api_identity_is_rejected(self):
+        for body in ({"user": {"id": None, "role": "end-user"}},
+                     {"user": {"id": 20, "role": "anonymous"}},
+                     {"current_session": {"csrf_token": "not-identity"}}, ["not-an-object"]):
+            with self.subTest(body=body):
+                client, brain, session = self.client()
+                brain.call_once.return_value["response"]["location"] = IDENTITY_URL
+                session.get.return_value = response(200, body=body)
+                with self.assertRaises(CommunityError):
+                    client.authenticate()
+                self.assertFalse(client.authenticated)
+
+    def test_html_user_marker_cannot_replace_api_identity(self):
+        client, brain, session = self.client()
+        brain.call_once.return_value["response"]["location"] = IDENTITY_URL
+        reply = response(200)
+        reply._content = b'HelpCenter.user = {"id":20,"role":"end_user"};'
+        session.get.return_value = reply
+        with self.assertRaises(CommunityError):
+            client.authenticate()
 
     def client(self):
         brain = Mock()
@@ -59,7 +97,7 @@ class CommunityAuthTests(unittest.TestCase):
         client = CommunityClient(brain_client=brain, session=session, sleeper=Mock(), max_wait_seconds=5)
         return client, brain, session
 
-    def test_challenged_landing_is_not_retried_or_called_bad_credentials(self):
+    def test_challenged_identity_api_is_not_retried_or_called_bad_credentials(self):
         client, brain, session = self.client()
         client.authenticated = True
         client.csrf_token = "old-secret"
@@ -89,9 +127,22 @@ class CommunityAuthTests(unittest.TestCase):
         self.assertEqual(session.request.call_count, 1)
         self.assertFalse(client.authenticated)
 
+    def test_html_challenge_does_not_discard_valid_api_session(self):
+        client, brain, session = self.client()
+        client.authenticated = True
+        client.csrf_token = "old-context"
+        session.get.return_value = response(403, {"cf-mitigated": "challenge"})
+        with self.assertRaises(CommunityChallengeError):
+            client.post_page("https://support.worldquantbrain.com/hc/en-us/community/posts/100", "100")
+        self.assertTrue(client.authenticated)
+        self.assertIsNone(client.csrf_token)
+        session.request.return_value = response(200, body={"post": {"id": 100}})
+        self.assertTrue(client.call("GET", "/api/v2/community/posts/100.json")["ok"])
+        brain.call_once.assert_not_called()
+
     def test_sso_rate_limit_honors_retry_after(self):
         client, brain, session = self.client()
-        session.get.side_effect = [response(429, {"Retry-After": "2"}), response(200)]
+        session.get.side_effect = [response(429, {"Retry-After": "2"}), response(302, {"Location": IDENTITY_URL}), response(200)]
         client.authenticate()
         client.sleeper.assert_called_once_with(2)
         self.assertTrue(client.authenticated)
@@ -133,11 +184,11 @@ class CommunityAuthTests(unittest.TestCase):
     def test_page_read_refreshes_expired_session_once(self):
         client, brain, session = self.client()
         client.authenticated = True
-        session.get.side_effect = [response(401), response(200), response(200)]
+        session.get.side_effect = [response(401), response(302, {"Location": IDENTITY_URL}), response(200), response(200)]
         reply = client.post_page("https://support.worldquantbrain.com/hc/en-us/community/posts/100", "100")
         self.assertEqual(reply.status_code, 200)
         self.assertEqual(brain.call_once.call_count, 1)
-        self.assertEqual(session.get.call_count, 3)
+        self.assertEqual(session.get.call_count, 4)
 
     def test_api_expiry_is_refreshed_once(self):
         client, brain, session = self.client()

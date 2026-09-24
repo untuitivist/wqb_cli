@@ -1,5 +1,10 @@
 # wqb-cli
 
+Community login and cached-session validation now use the Zendesk current-user
+JSON API. `sqlitecom sync` does not load an HTML landing page: a help-center page
+challenge must not reject an otherwise authenticated API session. Write-specific
+HTML/CSRF context is fetched only when needed and is verified independently.
+
 Community sessions now persist across CLI invocations in the private local auth
 directory. Cookies retain their original domain/path/expiry, are isolated by
 account/configuration, and are checked against the saved forum user before reuse.

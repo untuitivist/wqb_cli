@@ -58,7 +58,7 @@ def response(status, body=None, headers=None):
     reply.status_code = status
     reply._content = json.dumps(body).encode("utf-8") if body is not None else b""
     if status == 200 and body is None:
-        reply._content = b'HelpCenter.user = {"id": 20, "role": "end_user"};'
+        reply._content = b'{"user":{"id":20,"role":"end-user"}}'
     reply.headers.update({"Content-Type": "application/json", **(headers or {})})
     return reply
 
@@ -102,7 +102,7 @@ class CommunityTransportTests(unittest.TestCase):
 
     def test_unexpected_origins_are_rejected_before_auth(self):
         client, session = self.make_client([])
-        for address in ("https://example.com/api/v2/community/posts.json", "https://support.worldquantbrain.com@evil.test/api/v2/community/posts.json", "/api/v2/users/me.json"):
+        for address in ("https://example.com/api/v2/community/posts.json", "https://support.worldquantbrain.com@evil.test/api/v2/community/posts.json", "/api/v2/users/123.json"):
             with self.assertRaises(ValueError):
                 client.call("GET", address)
         session.request.assert_not_called()
@@ -140,7 +140,7 @@ class CommunityTransportTests(unittest.TestCase):
         self.assertTrue(client.authenticated)
         self.assertEqual(brain.login_payload_provider.call_count, 1)
         self.assertEqual(brain.call_once.call_count, 3)
-        self.assertIn("text/html", session.get.call_args.kwargs["headers"]["Accept"])
+        self.assertEqual("application/json", session.get.call_args.kwargs["headers"]["Accept"])
 
     def test_comments_pagination_merges_authors(self):
         following = "https://support.worldquantbrain.com/api/v2/community/posts/100/comments.json?page=2"

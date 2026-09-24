@@ -18,7 +18,7 @@ from wqb_cli.core.community_session import CommunitySessionStore, profile_key, r
 def page(identifier=20, status=200):
     reply = requests.Response()
     reply.status_code = status
-    reply._content = ('HelpCenter.user = ' + json.dumps({'id': identifier, 'role': 'end_user'}) + ';').encode('utf-8')
+    reply._content = json.dumps({'user': {'id': identifier, 'role': 'end-user'}}).encode('utf-8')
     return reply
 
 

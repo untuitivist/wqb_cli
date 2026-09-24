@@ -2,9 +2,9 @@
 
 ## Request headers
 
-Default sessions identify themselves as `wqb-cli/<package version>`. SSO,
-cached-session validation and page reads request HTML/XHTML; API calls request
-JSON. Both specify `Accept-Language: en-US,en;q=0.9`, matching the SSO landing
+Default sessions identify themselves as `wqb-cli/<package version>`. SSO redirect
+pages request HTML/XHTML; identity validation and API calls request JSON.
+Both specify `Accept-Language: en-US,en;q=0.9`, matching the SSO landing
 locale. These are content-negotiation settings, not a browser identity or a
 solution to Cloudflare challenges. No Chrome fingerprint or browser headers are
 emulated. An injected session retains its own User-Agent.
@@ -21,9 +21,12 @@ Only known Zendesk session cookies from their original allowed domains are retai
 including path, expiry, secure and host/domain flags. Browser-challenge cookies and
 BRAIN API credentials are not copied to the cache. Session cookies without an expiry
 have a local maximum idle age of six hours. Every new client validates the saved
-forum user on the ordinary help-center page before reuse and refreshes write context.
+forum user with `GET /api/v2/users/me.json` before reuse. Identity requires a positive
+user ID and the end-user, agent or admin role. SSO requests this API as its return
+target; a help-center HTML redirect is normalized to the identity API. Write
+context is obtained only when a write needs it.
 No JavaScript is evaluated. A missing or different user identity causes fresh SSO.
-An anonymous HTTP 200 page never establishes an authenticated session.
+An anonymous HTTP 200 response never establishes an authenticated session.
 
 Successful requests save rotated cookies. Expiry invalidates the cache and renews
 once for reads. Revision-checked transactions prevent older clients from overwriting
@@ -46,16 +49,21 @@ it is not a wall-clock deadline for all network requests.
 
 Errors contain `code`, `stage`, and `status_code` without cookies, JWTs or CSRF tokens.
 `browser_verification_required` identifies a response carrying
-`cf-mitigated: challenge`. It stops immediately without password refresh, proxy
+`cf-mitigated: challenge`. A challenged HTML post or write-context page does not
+invalidate a separately validated API session. The challenged operation stops
+immediately without password refresh, proxy
 switching or challenge solving. Use a normal browser to verify the account. If the
 CLI remains challenged, ask platform support about supported API authentication;
 browser verification is not guaranteed to carry over to an HTTP client.
 `community_login_required` identifies a restricted/login redirect.
 `support_sso_failed` identifies other SSO HTTP failures.
 
-Live observation on 2026-09-24: BRAIN login 201; Zendesk /access/jwt 302;
-support /access/return_to 302; /hc/en-us 403 with cf-mitigated: challenge.
-No authenticated read or write success is claimed for that session.
+Live diagnosis on 2026-09-25: after Zendesk /access/jwt 302 and support
+/access/return_to 302, the current-user API and a restricted forum post returned
+200 with the authenticated account. Independently, /hc/en-us returned 403 with
+cf-mitigated: challenge. The previous HTML-based identity check rejected a valid
+API session and discarded its cookies. JSON identity verification removes that
+unnecessary dependency; it does not solve HTML-page challenges or assert write access.
 
 Official Help Center sessions documentation:
 https://developer.zendesk.com/api-reference/help_center/help-center-api/help_center_sessions/

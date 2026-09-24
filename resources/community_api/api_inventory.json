@@ -1,9 +1,21 @@
 {
   "base_url": "https://support.worldquantbrain.com",
   "homepage": "https://support.worldquantbrain.com/hc/zh-cn/community",
-  "authentication": "BRAIN authentication/support SSO, then a separate Zendesk session. Cookie-authenticated API writes use HelpCenter.internal.current_session.shared_csrf_token from the authenticated page, not the Help Center session API csrf_token.",
+  "authentication": "BRAIN authentication/support SSO, then verify the Zendesk session using GET /api/v2/users/me.json. HTML landing pages are not required for API reads. Cookie-authenticated API writes use HelpCenter.internal.current_session.shared_csrf_token from the authenticated page, not the Help Center session API csrf_token.",
   "verification": "2026-09-22: authenticated reads and cursor pagination verified. Authorized image upload and post creation succeeded through the installed CLI (POST 201). Published HTML and image GET returned 200; the post JSON GET returned 404, which is preserved separately from successful page verification.",
   "endpoints": [
+    {
+      "path": "/api/v2/users/me.json",
+      "url_template": "https://support.worldquantbrain.com/api/v2/users/me.json",
+      "methods": ["GET"],
+      "description": "Verify the current Zendesk identity without loading help-center HTML.",
+      "params": {},
+      "request_body": null,
+      "safe_probe": true,
+      "source": ["https://developer.zendesk.com/api-reference/ticketing/users/users/#show-the-currently-authenticated-user"],
+      "notes": ["Require a positive user ID and an authenticated role; HTTP 200 alone is insufficient.", "Do not log the full identity response during authentication."],
+      "probe": {"GET": "2026-09-25: HTTP 200 with the authenticated account ID after SSO; the HTML landing page independently returned a challenge."}
+    },
     {
       "path": "/api/v2/guide/user_images/uploads",
       "url_template": "https://support.worldquantbrain.com/api/v2/guide/user_images/uploads",

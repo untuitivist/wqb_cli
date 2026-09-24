@@ -20,6 +20,8 @@ from .registry import EndpointRegistry
 
 
 SUPPORT_ORIGIN = "https://support.worldquantbrain.com"
+IDENTITY_PATH = "/api/v2/users/me.json"
+IDENTITY_URL = SUPPORT_ORIGIN + IDENTITY_PATH
 SSO_HOSTS = {"api.worldquantbrain.com", "support.worldquantbrain.com", "worldquantbrain.zendesk.com"}
 COMMUNITY_REGISTRY = RESOURCES_ROOT / "community_api" / "api_inventory.json"
 PAGE_HEADERS = {"Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9"}
@@ -74,6 +76,7 @@ def community_url(path: str) -> str:
             or parsed.path.startswith("/api/v2/help_center/community/")
             or parsed.path == "/api/v2/help_center/community_posts/search.json"
             or parsed.path == "/api/v2/help_center/sessions.json"
+            or parsed.path == IDENTITY_PATH
             or parsed.path in {"/api/v2/guide/user_images/uploads", "/api/v2/guide/user_images"}
         )
     ):
@@ -113,6 +116,20 @@ def browser_user_id(html: str) -> str | None:
         if identifier.isdecimal() and int(identifier) > 0:
             return identifier
     return None
+
+
+def session_user_id(reply: requests.Response) -> str | None:
+    if reply.status_code != 200:
+        return None
+    try:
+        payload = reply.json()
+    except ValueError:
+        return None
+    user = payload.get("user") if isinstance(payload, dict) else None
+    if not isinstance(user, dict) or user.get("role") not in {"end-user", "agent", "admin"}:
+        return None
+    identifier = str(user.get("id") or "")
+    return identifier if identifier.isdecimal() and int(identifier) > 0 else None
 
 
 def next_page_url(body: dict[str, Any]) -> str | None:
@@ -179,7 +196,7 @@ class CommunityClient:
         if self._restore_session():
             return
         endpoint = self.brain.registry.get("/authentication/support")
-        result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
+        result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": IDENTITY_URL}))
         response = result.get("response") or {}
         location = response.get("location")
         if location and urlsplit(location).hostname == "platform.worldquantbrain.com":
@@ -197,7 +214,7 @@ class CommunityClient:
                                      code="brain_renewal_failed", stage="brain_login")
             if self.brain.cookie_saver is not None:
                 self.brain.cookie_saver(self.brain.session, self.brain.cookie_path)
-            result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
+            result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": IDENTITY_URL}))
             response = result.get("response") or {}
             location = response.get("location")
         if not result.get("ok") or not location:
@@ -212,9 +229,13 @@ class CommunityClient:
             if parsed.path in {"/hc/restricted", "/access/unauthenticated", "/access/login"}:
                 raise CommunityError("Community SSO returned a restricted or sign-in page",
                                      code="community_login_required", stage="support_sso")
+            if parsed.hostname == "support.worldquantbrain.com" and parsed.path.startswith("/hc/"):
+                location = IDENTITY_URL
+                parsed = urlsplit(location)
+            headers = API_HEADERS if location == IDENTITY_URL else PAGE_HEADERS
             while True:
                 try:
-                    reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers=dict(PAGE_HEADERS))
+                    reply = self.session.get(location, timeout=self.timeout, allow_redirects=False, headers=dict(headers))
                 except requests.RequestException as error:
                     raise CommunityError(f"Support SSO transport failed: {type(error).__name__}",
                                          stage="support_sso") from None
@@ -236,14 +257,14 @@ class CommunityClient:
             if reply.status_code != 200:
                 raise CommunityError(f"Support SSO failed at {parsed.hostname} (HTTP {reply.status_code})",
                                      status_code=reply.status_code, code="support_sso_failed", stage="support_sso")
-            self.user_id = browser_user_id(reply.text)
+            if location != IDENTITY_URL:
+                reply = self._get_response(IDENTITY_URL, stage="support_sso", headers=API_HEADERS)
+            self.user_id = session_user_id(reply)
             if not self.user_id:
-                raise CommunityError("Community SSO returned no authenticated user identity",
+                raise CommunityError("Community identity API returned no authenticated user",
+                                     status_code=reply.status_code,
                                      code="community_session_unverified", stage="support_sso")
             self.authenticated = True
-            context = browser_write_context(reply.text)
-            self.csrf_token = context.get("csrf_token")
-            self.brand_id = context.get("brand_id")
             self._save_session()
             return
         raise CommunityError("Support SSO exceeded its redirect limit")
@@ -262,14 +283,11 @@ class CommunityClient:
             self.cache_status = "read_failed"
             self.session_store = None
             return False
-        reply = self._get_page_response(SUPPORT_ORIGIN + "/hc/en-us", stage="session_cache")
-        identity = browser_user_id(reply.text) if reply.status_code == 200 else None
+        reply = self._get_response(IDENTITY_URL, stage="session_cache", headers=API_HEADERS)
+        identity = session_user_id(reply)
         if identity and identity == str(payload["user_id"]):
             self.user_id = identity
             self.authenticated = True
-            context = browser_write_context(reply.text)
-            self.csrf_token = context.get("csrf_token")
-            self.brand_id = context.get("brand_id")
             self.cache_status = "reused"
             self._save_session()
             return True
@@ -332,14 +350,18 @@ class CommunityClient:
         try:
             check_browser_challenge(reply, stage)
         except CommunityChallengeError:
-            self._invalidate_session()
+            if stage in {"post_page", "write_context"}:
+                self.csrf_token = None
+                self.brand_id = None
+            else:
+                self._invalidate_session()
             raise
 
     def _read_page(self, address: str, *, stage: str) -> requests.Response:
         if not self.authenticated:
             self.authenticate()
         for attempt in range(2):
-            reply = self._get_page_response(address, stage=stage)
+            reply = self._get_response(address, stage=stage)
             if reply.status_code not in (401, 403, 302):
                 if reply.status_code == 200:
                     self._save_session()
@@ -349,12 +371,12 @@ class CommunityClient:
                 self.authenticate()
         return reply
 
-    def _get_page_response(self, address: str, *, stage: str) -> requests.Response:
+    def _get_response(self, address: str, *, stage: str, headers: dict[str, str] | None = None) -> requests.Response:
         waited = 0.0
         for attempt in range(self.max_retries + 1):
             try:
                 reply = self.session.get(address, timeout=self.timeout, allow_redirects=False,
-                                         headers=dict(PAGE_HEADERS))
+                                         headers=dict(PAGE_HEADERS if headers is None else headers))
             except requests.RequestException as error:
                 delay = self._delay(None, attempt)
                 if attempt >= self.max_retries or waited + delay > self.max_wait_seconds:

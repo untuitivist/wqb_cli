@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.1 community API authentication fix (2026-09-25)
+
+- Verify fresh and cached Zendesk sessions using the current-user JSON API instead of HTML landing pages.
+- Require a positive account ID and authenticated role; preserve normal expiry renewal and cache isolation.
+- Keep HTML write-context challenges separate from validated API sessions.
+- Fix sqlitecom sync rejecting an established API session because the help-center HTML page was challenged.
+
 ## 0.6.1 persistent community sessions (2026-09-25)
 
 - Persist validated Zendesk authentication cookies in local/auth/community_sessions.sqlite3.

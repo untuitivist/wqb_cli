@@ -5,6 +5,7 @@ import re
 import time
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urljoin, urlsplit
 
@@ -12,7 +13,8 @@ import requests
 
 from .auth import resolve_login_payload, session_from_cookies
 from .client import MUTATING_METHODS, WqbClient
-from .paths import RESOURCES_ROOT
+from .community_session import CommunitySessionStore, profile_key, restore_cookies, session_cookies
+from .paths import DEFAULT_AUTH_DIR, DEFAULT_CONFIG_PATH, DEFAULT_COOKIE_PATH, RESOURCES_ROOT
 from .registry import EndpointRegistry
 
 
@@ -96,6 +98,20 @@ def browser_write_context(html: str) -> dict[str, str]:
     return {}
 
 
+def browser_user_id(html: str) -> str | None:
+    for match in re.finditer(r"HelpCenter\.user\s*=\s*", html):
+        try:
+            user = json.JSONDecoder().raw_decode(html[match.end():])[0]
+        except ValueError:
+            continue
+        if not isinstance(user, dict) or user.get("role") == "anonymous":
+            continue
+        identifier = str(user.get("id") or "")
+        if identifier.isdecimal() and int(identifier) > 0:
+            return identifier
+    return None
+
+
 def next_page_url(body: dict[str, Any]) -> str | None:
     meta = body.get("meta") or {}
     if meta.get("has_more") is False:
@@ -119,6 +135,7 @@ class CommunityClient:
         max_retries: int = 4,
         max_wait_seconds: float = 300,
         sleeper: Callable[[float], None] = time.sleep,
+        session_store: CommunitySessionStore | None = None,
     ) -> None:
         if timeout <= 0 or max_retries < 0 or max_wait_seconds < 0:
             raise ValueError("Invalid community timeout, retry count or wait budget")
@@ -137,11 +154,27 @@ class CommunityClient:
         self.authenticated = False
         self.csrf_token: str | None = None
         self.brand_id: str | None = None
+        self.user_id: str | None = None
+        self.session_store = session_store
+        self.cache_status = "disabled"
+        self._cache_attempted = False
+        if session_store is None and brain_client is None and session is None:
+            try:
+                identity = resolve_login_payload(config_path=config_path).get("email")
+                if identity:
+                    profile = profile_key(str(identity), Path(config_path or DEFAULT_CONFIG_PATH),
+                                          Path(cookies_path or DEFAULT_COOKIE_PATH))
+                    self.session_store = CommunitySessionStore(DEFAULT_AUTH_DIR / "community_sessions.sqlite3", profile)
+            except Exception:
+                self.cache_status = "identity_unavailable"
 
     def authenticate(self) -> None:
         self.authenticated = False
         self.csrf_token = None
         self.brand_id = None
+        self.user_id = None
+        if self._restore_session():
+            return
         endpoint = self.brain.registry.get("/authentication/support")
         result = self._brain_request(self.brain.prepare(endpoint, "GET", params={"return_to": SUPPORT_ORIGIN + "/hc/en-us"}))
         response = result.get("response") or {}
@@ -200,12 +233,80 @@ class CommunityClient:
             if reply.status_code != 200:
                 raise CommunityError(f"Support SSO failed at {parsed.hostname} (HTTP {reply.status_code})",
                                      status_code=reply.status_code, code="support_sso_failed", stage="support_sso")
+            self.user_id = browser_user_id(reply.text)
+            if not self.user_id:
+                raise CommunityError("Community SSO returned no authenticated user identity",
+                                     code="community_session_unverified", stage="support_sso")
             self.authenticated = True
             context = browser_write_context(reply.text)
             self.csrf_token = context.get("csrf_token")
             self.brand_id = context.get("brand_id")
+            self._save_session()
             return
         raise CommunityError("Support SSO exceeded its redirect limit")
+
+    def _restore_session(self) -> bool:
+        if self.session_store is None or self._cache_attempted:
+            return False
+        self._cache_attempted = True
+        try:
+            payload = self.session_store.load()
+            if not payload:
+                self.cache_status = "miss"
+                return False
+            self.session.cookies.update(restore_cookies(payload["cookies"]))
+        except Exception:
+            self.cache_status = "read_failed"
+            self.session_store = None
+            return False
+        reply = self._get_page_response(SUPPORT_ORIGIN + "/hc/en-us", stage="session_cache")
+        identity = browser_user_id(reply.text) if reply.status_code == 200 else None
+        if identity and identity == str(payload["user_id"]):
+            self.user_id = identity
+            self.authenticated = True
+            context = browser_write_context(reply.text)
+            self.csrf_token = context.get("csrf_token")
+            self.brand_id = context.get("brand_id")
+            self.cache_status = "reused"
+            self._save_session()
+            return True
+        if reply.status_code in (429, 500, 502, 503, 504):
+            raise CommunityError("Community session validation temporarily unavailable",
+                                 status_code=reply.status_code, code="community_session_validation_failed",
+                                 stage="session_cache")
+        self._invalidate_session()
+        return False
+
+    def _save_session(self) -> None:
+        if self.session_store is None or not self.authenticated or not self.user_id:
+            return
+        try:
+            cookies = session_cookies(self.session.cookies)
+            if not cookies:
+                self.cache_status = "no_session_cookies"
+                return
+            saved = self.session_store.save({"version": 1, "saved_at": time.time(),
+                                             "user_id": self.user_id, "cookies": cookies})
+            if not saved:
+                self.cache_status = "concurrent_update"
+            elif self.cache_status != "reused":
+                self.cache_status = "saved"
+        except Exception:
+            self.cache_status = "write_failed"
+
+    def _invalidate_session(self) -> None:
+        self.authenticated = False
+        self.csrf_token = None
+        self.brand_id = None
+        self.user_id = None
+        self._cache_attempted = True
+        if isinstance(self.session.cookies, requests.cookies.RequestsCookieJar):
+            self.session.cookies.clear()
+        if self.session_store is not None:
+            try:
+                self.cache_status = "invalidated" if self.session_store.save(None) else "concurrent_update"
+            except Exception:
+                self.cache_status = "write_failed"
 
     def _brain_request(self, prepared: Any, *, auto_auth: bool | None = None) -> dict[str, Any]:
         waited = 0.0
@@ -228,28 +329,42 @@ class CommunityClient:
         try:
             check_browser_challenge(reply, stage)
         except CommunityChallengeError:
-            self.authenticated = False
-            self.csrf_token = None
-            self.brand_id = None
+            self._invalidate_session()
             raise
 
     def _read_page(self, address: str, *, stage: str) -> requests.Response:
         if not self.authenticated:
             self.authenticate()
         for attempt in range(2):
+            reply = self._get_page_response(address, stage=stage)
+            if reply.status_code not in (401, 403, 302):
+                if reply.status_code == 200:
+                    self._save_session()
+                return reply
+            self._invalidate_session()
+            if attempt == 0:
+                self.authenticate()
+        return reply
+
+    def _get_page_response(self, address: str, *, stage: str) -> requests.Response:
+        waited = 0.0
+        for attempt in range(self.max_retries + 1):
             try:
                 reply = self.session.get(address, timeout=self.timeout, allow_redirects=False,
                                          headers={"Accept": "text/html"})
             except requests.RequestException as error:
-                raise CommunityError(f"Community page read failed: {type(error).__name__}", stage=stage) from None
-            self._check_challenge(reply, stage)
-            if reply.status_code not in (401, 403, 302):
-                return reply
-            self.authenticated = False
-            self.csrf_token = None
-            self.brand_id = None
-            if attempt == 0:
-                self.authenticate()
+                delay = self._delay(None, attempt)
+                if attempt >= self.max_retries or waited + delay > self.max_wait_seconds:
+                    raise CommunityError(f"Community page read failed: {type(error).__name__}", stage=stage) from None
+            else:
+                self._check_challenge(reply, stage)
+                if reply.status_code not in (429, 500, 502, 503, 504):
+                    return reply
+                delay = self._delay(reply, attempt)
+                if attempt >= self.max_retries or waited + delay > self.max_wait_seconds:
+                    return reply
+            self.sleeper(delay)
+            waited += delay
         return reply
 
     def write_context(self) -> dict[str, str]:
@@ -319,9 +434,7 @@ class CommunityClient:
                 continue
             self._check_challenge(reply, "community_api")
             if reply.status_code in (401, 403, 302):
-                self.authenticated = False
-                self.csrf_token = None
-                self.brand_id = None
+                self._invalidate_session()
                 if not mutating and not refreshed:
                     self.authenticate()
                     refreshed = True
@@ -339,6 +452,8 @@ class CommunityClient:
         except ValueError:
             body = {"error": "non_json_response", "content_type": reply.headers.get("Content-Type", "").split(";")[0]}
         ok = 200 <= reply.status_code < 300 and (body is None or not isinstance(body, dict) or body.get("error") != "non_json_response")
+        if ok:
+            self._save_session()
         return {
             "ok": ok,
             "request": {"method": method, "url": address, "params": params or {}, "mutating": mutating},

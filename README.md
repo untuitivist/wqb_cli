@@ -1,6 +1,12 @@
 # wqb-cli
 
-Community authentication diagnostics: `wqb community auth` renews the normal
+Community sessions now persist across CLI invocations in the private local auth
+directory. Cookies retain their original domain/path/expiry, are isolated by
+account/configuration, and are checked against the saved forum user before reuse.
+Expired sessions renew automatically; stale processes cannot overwrite newer
+sessions. `wqb community auth` reports the session cache outcome without secrets.
+
+Community authentication diagnostics: `wqb community auth` validates or renews the normal
 BRAIN-to-Zendesk SSO session. Expired read sessions are refreshed once; rate limits
 honor a bounded Retry-After wait. A `browser_verification_required` error identifies
 a Cloudflare challenge, not bad credentials. The CLI does not solve browser

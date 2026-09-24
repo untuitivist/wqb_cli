@@ -1,6 +1,10 @@
 # wqb-cli
 
-社区认证诊断：`wqb community auth` 执行正常的 BRAIN→Zendesk SSO 续登。
+社区会话现在会保存到本地 auth 目录，并按账号、配置和 BRAIN cookie 路径隔离。
+cookie 的域、路径和过期时间保持原样；下次调用先核验原论坛用户身份，再复用。
+失效自动续登，旧进程不能覆盖新会话；`wqb community auth` 会报告缓存使用状态。
+
+社区认证诊断：`wqb community auth` 核验缓存或执行正常的 BRAIN→Zendesk SSO 续登。
 读取会话过期时重登一次；限流按 Retry-After 有界等待。
 `browser_verification_required` 表示 Cloudflare 浏览器验证，不是密码失效。
 CLI 不自动完成浏览器验证，也不重复发送社区写操作。正常浏览器登录后，

@@ -95,7 +95,8 @@ def handle_community(args: argparse.Namespace) -> int:
         client = _client(args)
         client.authenticate()
         write_json({"ok": True, "authenticated": client.authenticated,
-                    "write_context_available": bool(client.csrf_token and client.brand_id)}, args.output)
+                    "write_context_available": bool(client.csrf_token and client.brand_id),
+                    "session_cache": client.cache_status}, args.output)
         return 0
     if args.community_command == "image-upload":
         path = Path(args.file).resolve()

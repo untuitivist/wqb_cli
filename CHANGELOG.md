@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 persistent community sessions (2026-09-25)
+
+- Persist validated Zendesk authentication cookies in local/auth/community_sessions.sqlite3.
+- Isolate caches by account and configuration; retain cookie scope, expiry and secure flags.
+- Verify cached forum identity before reuse, reject anonymous HTTP 200 pages, and renew expired sessions.
+- Save rotated cookies after successful requests; use revision checks to prevent stale-process overwrites.
+- Bound cache/page validation retries, preserve cached sessions during transient outages, and tolerate cache failures.
+- Never cache browser-challenge tokens; browser verification remains an external requirement.
+
 ## 0.6.1 authentication maintenance (2026-09-24)
 
 - Add `community auth` diagnostics with structured error code, stage and HTTP status.

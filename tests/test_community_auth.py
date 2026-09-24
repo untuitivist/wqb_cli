@@ -16,6 +16,8 @@ def response(status, headers=None, body=None):
     reply.status_code = status
     reply.headers.update(headers or {})
     reply._content = json.dumps(body or {}).encode("utf-8")
+    if status == 200 and body is None:
+        reply._content = b'HelpCenter.user = {"id": 20, "role": "end_user"};'
     return reply
 
 

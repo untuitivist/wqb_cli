@@ -53,6 +53,9 @@ def _start_run(store: CommunityStore, *, topic_id: str | None, since: str | None
 
 
 def _unchanged(store: CommunityStore, post: dict[str, Any], refresh_days: float) -> bool:
+    copies = store.connection.execute("SELECT COUNT(*) FROM forum_topics WHERE topic_id=?", (str(post["id"]),)).fetchone()[0]
+    if copies > 1:
+        return False
     metadata = store.connection.execute("SELECT * FROM community_sync_posts WHERE post_id=?", (str(post["id"]),)).fetchone()
     if metadata is not None:
         return metadata["content_hash"] == fingerprint(post) and timestamp(metadata["comments_checked_at"]) >= datetime.now(timezone.utc) - timedelta(days=refresh_days)

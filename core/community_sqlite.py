@@ -99,6 +99,12 @@ class CommunityStore:
                 post_id TEXT PRIMARY KEY, source_updated_at TEXT NOT NULL,
                 content_hash TEXT NOT NULL, comments_checked_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS community_row_history (
+                table_name TEXT NOT NULL, snapshot_hash TEXT NOT NULL,
+                post_id TEXT NOT NULL, canonical_community_id TEXT NOT NULL,
+                archived_at TEXT NOT NULL, snapshot_json TEXT NOT NULL,
+                PRIMARY KEY(table_name, snapshot_hash)
+            );
             CREATE INDEX IF NOT EXISTS community_sync_items_pending ON community_sync_items(run_id, status);
             CREATE INDEX IF NOT EXISTS forum_topics_post_id ON forum_topics(topic_id);
             """
@@ -147,29 +153,67 @@ class CommunityStore:
             (record["rowid"], *(record[column] or "" for column in columns)),
         )
 
-    def find_post(self, post_id: str) -> sqlite3.Row | None:
-        matches = self.connection.execute("SELECT rowid,* FROM forum_topics WHERE topic_id=?", (post_id,)).fetchall()
-        if len(matches) > 1:
-            raise ValueError(f"Multiple local rows share post ID {post_id}; reconcile the imported IDs before syncing")
-        return matches[0] if matches else None
+    def find_post(self, post_id: str, community_id: str | None = None) -> sqlite3.Row | None:
+        return self.connection.execute(
+            "SELECT rowid,* FROM forum_topics WHERE topic_id=? "
+            "ORDER BY (community_id=?) DESC, "
+            "julianday(COALESCE(json_extract(raw_json,'$.api.updated_at'),"
+            "json_extract(raw_json,'$.updatedAt'),last_crawled_at)) DESC,community_id LIMIT 1",
+            (post_id, community_id),
+        ).fetchone()
 
     def move_post(self, post_id: str, community_id: str) -> None:
-        existing = self.find_post(post_id)
-        if existing is None or existing["community_id"] == community_id:
+        existing = self.find_post(post_id, community_id)
+        if existing is None:
+            return
+        rows_by_table = {
+            table: self.connection.execute(f"SELECT rowid,* FROM {table} WHERE topic_id=?", (post_id,)).fetchall()
+            for table in ("forum_topics", "forum_comments")
+        }
+        if all(record["community_id"] == community_id for rows in rows_by_table.values() for record in rows):
             return
         for table in ("forum_topics", "forum_comments"):
-            rows = self.connection.execute(f"SELECT rowid,* FROM {table} WHERE topic_id=?", (post_id,)).fetchall()
+            rows = rows_by_table[table]
+            for record in rows:
+                snapshot = {key: record[key] for key in record.keys() if key != "rowid"}
+                self.connection.execute(
+                    "INSERT OR IGNORE INTO community_row_history VALUES (?,?,?,?,?,?)",
+                    (table, fingerprint(snapshot), post_id, community_id, now_iso(), encode(snapshot)),
+                )
+            if table == "forum_topics":
+                selected = [existing]
+            else:
+                grouped: dict[str, sqlite3.Row] = {}
+                for record in rows:
+                    previous = grouped.get(record["comment_id"])
+                    if previous is None or self._comment_priority(record, community_id) > self._comment_priority(previous, community_id):
+                        grouped[record["comment_id"]] = record
+                selected = list(grouped.values())
             for record in rows:
                 self._fts_delete(table, record)
-                self.connection.execute(f"UPDATE {table} SET community_id=? WHERE rowid=?", (community_id, record["rowid"]))
-                current = self.connection.execute(f"SELECT rowid,* FROM {table} WHERE rowid=?", (record["rowid"],)).fetchone()
-                self._fts_insert(table, current)
+                self.connection.execute(f"DELETE FROM {table} WHERE rowid=?", (record["rowid"],))
+            for record in selected:
+                values = {key: record[key] for key in record.keys() if key != "rowid"}
+                values["community_id"] = community_id
+                self.upsert(table, values)
+
+    @staticmethod
+    def _comment_priority(record: sqlite3.Row, community_id: str) -> tuple[float, bool, str]:
+        raw = json.loads(record["raw_json"])
+        modified = (raw.get("api") or {}).get("updated_at") or raw.get("updatedAt") or record["comment_time"]
+        try:
+            parsed = datetime.fromisoformat(modified.replace("Z", "+00:00"))
+            value = parsed.replace(tzinfo=timezone.utc).timestamp() if parsed.tzinfo is None else parsed.timestamp()
+        except (AttributeError, ValueError, TypeError, OverflowError):
+            value = float("-inf")
+        return value, record["community_id"] == community_id, record["community_id"]
 
     def save_post(self, post: dict[str, Any], users: dict[str, dict[str, Any]], topic: dict[str, Any] | None, comments: list[dict[str, Any]], *, checked_at: str) -> None:
         post_id = str(post["id"])
         community_id = str(post["topic_id"])
         author = users.get(str(post.get("author_id")), {}).get("name")
-        existing = self.find_post(post_id)
+        self.move_post(post_id, community_id)
+        existing = self.find_post(post_id, community_id)
         previous_raw = json.loads(existing["raw_json"]) if existing else {}
         author = author or previous_raw.get("author") or str(post.get("author_id") or "")
         raw = {**previous_raw, "author": author, "datetime": post.get("created_at"), "updatedAt": post["updated_at"], "voteNum": post.get("vote_sum", 0),
@@ -178,7 +222,6 @@ class CommunityStore:
         raw["commentsSource"] = "forum_comments"
         if topic:
             self.upsert("forum_communities", {"community_id": community_id, "title": topic.get("name"), "url": topic.get("html_url"), "posts": topic.get("post_count", 0), "followers": topic.get("follower_count", 0), "raw_json": encode(topic)})
-        self.move_post(post_id, community_id)
         self.upsert("forum_topics", {"community_id": community_id, "topic_id": post_id, "title": post["title"], "url": post.get("html_url"), "comment_num": post.get("comment_count", 0), "post_content": post["details"], "last_crawled_at": checked_at, "raw_json": encode(raw)})
         for comment in comments:
             comment_id = str(comment["id"])

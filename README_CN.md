@@ -688,6 +688,12 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 
 `community` 面向在线论坛，`sqlitecom` 面向本地数据库。首次同步可以从空库开始，也能接续插件导入的数据；只合并变化，不覆盖整库或清空官方文档。
 
+旧插件可能在多个版块下保存同一帖子 ID。同步按 API 返回的版块归并，
+评论按 ID 合并，归并前每一行原始数据保存在 `community_row_history`。
+冲突评论优先保留来源更新时间较新的版本，其次采用 API 版块中的版本，
+本次 API 返回的评论再覆盖当前版本。归并和全文索引更新在同一事务中；
+评论读取失败时保留原记录与同步断点，不再要求手工删除重复帖子。
+
 ```text
 wqb community topics
 wqb community list --sort updated_at --limit 10

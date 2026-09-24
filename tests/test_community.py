@@ -255,6 +255,79 @@ class CommunityStorageTests(unittest.TestCase):
         self.assertEqual(counts["docs_articles"], 1)
         self.assertEqual(counts["forum_topics"], 1)
 
+    def seed_duplicate_posts(self):
+        store = CommunityStore(self.path)
+        with store.connection:
+            store.save_post(post(count=1), {}, None, [comment(body="oldcopy")], checked_at=NOW.isoformat())
+            original = dict(store.find_post("100"))
+            original.pop("rowid")
+            original.update(community_id="11", post_content="legacycopy")
+            store.upsert("forum_topics", original)
+            shared = dict(store.connection.execute("SELECT * FROM forum_comments").fetchone())
+            shared.update(community_id="11", comment_content="alternatecopy")
+            store.upsert("forum_comments", shared)
+            shared.update(comment_id="401", comment_content="uniquecopy")
+            store.upsert("forum_comments", shared)
+        snapshots = {
+            table: [dict(row) for row in store.connection.execute(f"SELECT * FROM {table}")]
+            for table in ("forum_topics", "forum_comments")
+        }
+        store.close()
+        return snapshots
+
+    def test_duplicate_imports_merge_with_history_and_comment_union(self):
+        snapshots = self.seed_duplicate_posts()
+        fixture = ForumFixture({INDEX: page([post(count=1)])}, {"100": [comment(body="freshcopy")]})
+        result = sync_storage(self.path, fixture)
+        self.assertEqual(result["status"], "COMPLETE")
+        self.assertEqual(fixture.comment_calls, ["100"])
+        local = get_local_post(self.path, "100")
+        self.assertEqual(local["post"]["community_id"], "10")
+        self.assertEqual({row["comment_id"]: row["comment_content"] for row in local["comments"]},
+                         {"400": "freshcopy", "401": "uniquecopy"})
+        archived = query_storage(self.path, "SELECT table_name,snapshot_json FROM community_row_history")["rows"]
+        for table, records in snapshots.items():
+            for record in records:
+                self.assertIn(record, [json.loads(raw) for name, raw in archived if name == table])
+        self.assertEqual(stats_storage(self.path)["counts"]["forum_topics"], 1)
+        for table, absent, present in (("forum_topics", "legacycopy", "cashflow"),
+                                       ("forum_comments", "alternatecopy", "uniquecopy")):
+            self.assertEqual(query_storage(self.path, f"SELECT rowid FROM {table}_fts WHERE {table}_fts MATCH :term", parameters={"term": absent})["row_count"], 0)
+            self.assertEqual(query_storage(self.path, f"SELECT rowid FROM {table}_fts WHERE {table}_fts MATCH :term", parameters={"term": present})["row_count"], 1)
+        sync_storage(self.path, fixture)
+        self.assertEqual(query_storage(self.path, "SELECT * FROM community_row_history")["row_count"], 5)
+
+    def test_duplicate_merge_rolls_back_on_save_failure(self):
+        snapshots = self.seed_duplicate_posts()
+        store = CommunityStore(self.path)
+        self.addCleanup(store.close)
+        with self.assertRaises(KeyError), store.connection:
+            store.save_post(post(count=1, section="12"), {}, None, [{"id": 400}], checked_at=NOW.isoformat())
+        for table, records in snapshots.items():
+            self.assertEqual([dict(row) for row in store.connection.execute(f"SELECT * FROM {table}")], records)
+        self.assertEqual(store.connection.execute("SELECT COUNT(*) FROM community_row_history").fetchone()[0], 0)
+
+    def test_duplicate_comment_fetch_failure_keeps_imported_rows(self):
+        self.seed_duplicate_posts()
+        fixture = ForumFixture({INDEX: page([post(count=1)])})
+        fixture.fail_comments = True
+        with self.assertRaises(CommunityError):
+            sync_storage(self.path, fixture)
+        self.assertEqual(stats_storage(self.path)["counts"]["forum_topics"], 2)
+        self.assertEqual(query_storage(self.path, "SELECT * FROM community_row_history")["row_count"], 0)
+        fixture.fail_comments = False
+        fixture.comment_map["100"] = [comment()]
+        self.assertEqual(sync_storage(self.path, fixture)["status"], "COMPLETE")
+
+    def test_duplicate_posts_move_to_new_section_without_losing_comments(self):
+        self.seed_duplicate_posts()
+        fixture = ForumFixture({INDEX: page([post(section="12")])})
+        sync_storage(self.path, fixture)
+        local = get_local_post(self.path, "100")
+        self.assertEqual(local["post"]["community_id"], "12")
+        self.assertEqual({row["community_id"] for row in local["comments"]}, {"12"})
+        self.assertEqual(len(local["comments"]), 2)
+
     def test_old_plugin_import_does_not_replace_synced_content(self):
         sync_storage(self.path, ForumFixture({INDEX: page([post(title="Current")])}))
         source = Path(self.temporary.name) / "older.json"

@@ -689,6 +689,13 @@ wqb scope alpha-rows USA_1 --table os --datafield volume --limit 3 --columns id,
 
 `community` is the online interface; `sqlitecom` owns local storage. Start from an empty database or an existing plugin import. Sync merges changes without replacing the database or erasing documentation.
 
+Legacy imports may contain the same post ID under several forum sections. Sync
+reconciles these copies using the section returned by the API, unions comments by
+ID, and saves every pre-merge row in `community_row_history`. Conflicting comment
+copies prefer their source update timestamp, then the API section; fresh API
+comments take precedence. Reconciliation and FTS updates are transactional. Failed
+comment retrieval leaves the imported copies intact and the sync resumable.
+
 ```text
 wqb community topics
 wqb community list --sort updated_at --limit 10

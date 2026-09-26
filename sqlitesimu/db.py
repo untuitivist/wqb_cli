@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import sqlite3
 import time
 import uuid
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from functools import wraps
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +31,30 @@ LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
 class RunLeaseError(RuntimeError):
     pass
+
+
+def retry_database_lock(operation):
+    @wraps(operation)
+    def execute(*args, **kwargs):
+        for attempt in range(4):
+            try:
+                return operation(*args, **kwargs)
+            except sqlite3.OperationalError as exc:
+                code = getattr(exc, "sqlite_errorcode", None)
+                locked = (
+                    code & 255 in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}
+                    if code is not None else
+                    str(exc).lower() in {"database is locked", "database table is locked"}
+                )
+                if not locked or attempt == 3:
+                    raise
+                delay = min(0.25 * 2 ** attempt, 1.0)
+                logging.getLogger(__name__).warning(
+                    "Database contention in %s; retrying local transaction %d/3 in %.2fs",
+                    operation.__name__, attempt + 1, delay,
+                )
+                time.sleep(delay)
+    return execute
 
 
 SCHEMA_SQL = """
@@ -126,6 +152,8 @@ CREATE TABLE IF NOT EXISTS simulation_items (
     claim_owner TEXT,
     PRIMARY KEY(batch_id, ordinal)
 );
+
+CREATE INDEX IF NOT EXISTS idx_items_experiment_id ON simulation_items(experiment_id);
 
 CREATE TABLE IF NOT EXISTS simulation_failures (
     batch_id TEXT NOT NULL REFERENCES simulation_batches(id),
@@ -367,6 +395,7 @@ class SqliteStore:
         finally:
             conn.close()
 
+    @retry_database_lock
     def initialize(self) -> None:
         with self.connect() as conn:
             current = int(conn.execute("PRAGMA user_version").fetchone()[0])
@@ -551,6 +580,7 @@ class SqliteStore:
             )
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
+    @retry_database_lock
     def enqueue(self, manifest: SimulationManifest, *, now: float | None = None) -> EnqueueResult:
         timestamp = time.time() if now is None else now
         run_id = manifest.requested_run_id or _new_id("run")
@@ -642,6 +672,7 @@ class SqliteStore:
             )
         return EnqueueResult(run_id, accepted, reused, duplicates)
 
+    @retry_database_lock
     def mark_run_running(self, run_id: str, *, now: float) -> None:
         with self.connect() as conn:
             cursor = conn.execute(
@@ -655,6 +686,7 @@ class SqliteStore:
             if not cursor.rowcount and not self._run_exists(conn, run_id):
                 raise KeyError(f"Unknown run id: {run_id}")
 
+    @retry_database_lock
     def acquire_run_lease(
         self,
         run_id: str,
@@ -684,6 +716,7 @@ class SqliteStore:
                     f"Run {run_id} is already leased by {lease['owner']} until {lease['lease_until']}"
                 )
 
+    @retry_database_lock
     def renew_run_lease(
         self,
         run_id: str,
@@ -703,10 +736,12 @@ class SqliteStore:
             if not cursor.rowcount:
                 raise RunLeaseError(f"Run lease was lost for {run_id}")
 
+    @retry_database_lock
     def release_run_lease(self, run_id: str, *, owner: str) -> None:
         with self.connect() as conn:
             conn.execute("DELETE FROM run_leases WHERE run_id = ? AND owner = ?", (run_id, owner))
 
+    @retry_database_lock
     def recover_interrupted(self, run_id: str, *, now: float) -> None:
         with self.connect() as conn:
             conn.execute(
@@ -796,6 +831,7 @@ class SqliteStore:
                     now=now,
                 )
 
+    @retry_database_lock
     def cancel_run(
         self,
         run_id: str,
@@ -939,6 +975,7 @@ class SqliteStore:
             )
         return self.run_summary(run_id)
 
+    @retry_database_lock
     def next_simulate_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
         global_not_before = self.simulation_not_before()
         if global_not_before is not None and now < global_not_before:
@@ -955,6 +992,7 @@ class SqliteStore:
             ).fetchone()
         return _batch_from_row(row) if row else None
 
+    @retry_database_lock
     def create_next_batch(
         self,
         run_id: str,
@@ -1117,6 +1155,7 @@ class SqliteStore:
             row = conn.execute("SELECT * FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()
         return _batch_from_row(row)
 
+    @retry_database_lock
     def mark_simulate_started(self, batch_id: str, *, now: float) -> None:
         with self.connect() as conn:
             cursor = conn.execute(
@@ -1134,6 +1173,7 @@ class SqliteStore:
                 (now, batch_id),
             )
 
+    @retry_database_lock
     def accept_simulation(
         self,
         batch_id: str,
@@ -1169,6 +1209,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def retry_simulate(
         self,
         batch_id: str,
@@ -1202,6 +1243,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def fail_batch(
         self,
         batch_id: str,
@@ -1289,6 +1331,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def retry_completed_batch(
         self,
         batch_id: str,
@@ -1345,6 +1388,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def next_poll_batch(self, run_id: str, *, now: float) -> BatchRecord | None:
         with self.connect() as conn:
             row = conn.execute(
@@ -1359,6 +1403,7 @@ class SqliteStore:
             ).fetchone()
         return _batch_from_row(row) if row else None
 
+    @retry_database_lock
     def claim_poll_batch(
         self,
         run_id: str,
@@ -1385,6 +1430,7 @@ class SqliteStore:
                 )
         return _batch_from_row(row) if row else None
 
+    @retry_database_lock
     def defer_parent_poll(
         self,
         batch_id: str,
@@ -1406,6 +1452,7 @@ class SqliteStore:
                 (not_before, status, _json(response), 1 if increment_attempt else 0, now, batch_id),
             )
 
+    @retry_database_lock
     def complete_parent(
         self,
         batch_id: str,
@@ -1529,6 +1576,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def next_child_item(self, run_id: str, *, now: float) -> BatchItemRecord | None:
         with self.connect() as conn:
             row = conn.execute(
@@ -1545,6 +1593,7 @@ class SqliteStore:
             ).fetchone()
         return _item_from_row(row) if row else None
 
+    @retry_database_lock
     def claim_child_item(
         self,
         run_id: str,
@@ -1577,6 +1626,7 @@ class SqliteStore:
                 )
         return _item_from_row(row) if row else None
 
+    @retry_database_lock
     def defer_child_poll(
         self,
         item: BatchItemRecord,
@@ -1602,6 +1652,7 @@ class SqliteStore:
                 ),
             )
 
+    @retry_database_lock
     def complete_child(
         self,
         item: BatchItemRecord,
@@ -1663,6 +1714,7 @@ class SqliteStore:
             )
             self._refresh_batch_from_items(conn, item.batch_id, now=now)
 
+    @retry_database_lock
     def fail_child(
         self,
         item: BatchItemRecord,
@@ -1727,6 +1779,7 @@ class SqliteStore:
             )
             self._refresh_batch_from_items(conn, item.batch_id, now=now)
 
+    @retry_database_lock
     def retry_child(
         self,
         item: BatchItemRecord,
@@ -1851,6 +1904,7 @@ class SqliteStore:
         )
         return outcome
 
+    @retry_database_lock
     def exhaust_simulation_retries(self, run_id: str, *, max_retries: int, now: float) -> None:
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
@@ -1876,6 +1930,7 @@ class SqliteStore:
                              "max_retries": max_retries}, now=now,
                 )
 
+    @retry_database_lock
     def next_enrichment(self, run_id: str, *, now: float) -> ExperimentRecord | None:
         with self.connect() as conn:
             row = conn.execute(
@@ -1894,6 +1949,7 @@ class SqliteStore:
             ).fetchone()
         return _experiment_from_row(row) if row else None
 
+    @retry_database_lock
     def claim_enrichment(
         self,
         run_id: str,
@@ -1924,6 +1980,7 @@ class SqliteStore:
                 )
         return _experiment_from_row(row) if row else None
 
+    @retry_database_lock
     def save_alpha_detail(
         self,
         experiment: ExperimentRecord,
@@ -2013,6 +2070,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def region_agnostic_children(
         self, experiment: ExperimentRecord, *, now: float
     ) -> list[dict[str, Any]]:
@@ -2037,6 +2095,7 @@ class SqliteStore:
                 raise ValueError("Region-agnostic parent child identities changed")
         return [dict(row) for row in rows]
 
+    @retry_database_lock
     def save_region_agnostic_child_detail(
         self, experiment: ExperimentRecord, child_id: str, detail: dict[str, Any], *, now: float
     ) -> None:
@@ -2062,6 +2121,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def save_region_agnostic_child_pnl(
         self, experiment: ExperimentRecord, child_id: str,
         points: Iterable[tuple[str | None, float | None, float | None]],
@@ -2104,6 +2164,7 @@ class SqliteStore:
         )
         conn.execute("UPDATE enrichment_queue SET claim_owner = NULL WHERE experiment_id = ?", (experiment.id,))
 
+    @retry_database_lock
     def finish_region_agnostic_parent(self, experiment: ExperimentRecord, *, now: float) -> None:
         children = self.region_agnostic_children(experiment, now=now)
         if any(child["state"] != "READY" or child["pnl_records"] <= 0 for child in children):
@@ -2123,6 +2184,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def region_agnostic_results(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2145,6 +2207,7 @@ class SqliteStore:
                 results.append(result)
         return results
 
+    @retry_database_lock
     def save_pnl(
         self,
         experiment: ExperimentRecord,
@@ -2191,6 +2254,7 @@ class SqliteStore:
                 now=now,
             )
 
+    @retry_database_lock
     def defer_enrichment(
         self,
         experiment: ExperimentRecord,
@@ -2223,6 +2287,7 @@ class SqliteStore:
                     (experiment.id,),
                 )
 
+    @retry_database_lock
     def set_runtime_float(self, key: str, value: float, *, now: float) -> None:
         with self.connect() as conn:
             conn.execute(
@@ -2233,11 +2298,13 @@ class SqliteStore:
                 (key, str(value), now),
             )
 
+    @retry_database_lock
     def runtime_float(self, key: str) -> float | None:
         with self.connect() as conn:
             row = conn.execute("SELECT value FROM runtime_state WHERE key = ?", (key,)).fetchone()
         return float(row["value"]) if row else None
 
+    @retry_database_lock
     def simulation_not_before(self) -> float | None:
         with self.connect() as conn:
             row = conn.execute(
@@ -2246,6 +2313,7 @@ class SqliteStore:
             ).fetchone()
         return float(row[0]) if row[0] is not None else None
 
+    @retry_database_lock
     def refresh_run_state(self, run_id: str, *, now: float) -> dict[str, Any]:
         with self.connect() as conn:
             run = conn.execute("SELECT state FROM runs WHERE id = ?", (run_id,)).fetchone()
@@ -2312,6 +2380,7 @@ class SqliteStore:
                 )
         return self.run_summary(run_id)
 
+    @retry_database_lock
     def run_summary(self, run_id: str) -> dict[str, Any]:
         with self.connect() as conn:
             run = conn.execute("SELECT * FROM runs WHERE id = ?", (run_id,)).fetchone()
@@ -2342,6 +2411,7 @@ class SqliteStore:
             "daily_limit_not_before": self.runtime_float("simulation_daily_not_before"),
         }
 
+    @retry_database_lock
     def list_runs(self, *, limit: int = 20) -> list[dict[str, Any]]:
         with self.connect() as conn:
             ids = [
@@ -2352,6 +2422,7 @@ class SqliteStore:
             ]
         return [self.run_summary(run_id) for run_id in ids]
 
+    @retry_database_lock
     def analysis_results(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2367,6 +2438,7 @@ class SqliteStore:
             result["metadata"] = json.loads(result.pop("metadata_json"))
         return results
 
+    @retry_database_lock
     def check_results(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2400,6 +2472,7 @@ class SqliteStore:
             results.append(result)
         return results
 
+    @retry_database_lock
     def experiment_results(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2431,6 +2504,7 @@ class SqliteStore:
             result["payload"] = json.loads(result.pop("payload_json"))
         return results
 
+    @retry_database_lock
     def compatibility_results(self, run_id: str) -> list[dict[str, Any]]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2445,6 +2519,7 @@ class SqliteStore:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    @retry_database_lock
     def pnl_paths(self, run_id: str) -> dict[str, Any]:
         with self.connect() as conn:
             rows = conn.execute(
@@ -2513,6 +2588,7 @@ class SqliteStore:
             "paths": paths,
         }
 
+    @retry_database_lock
     def next_due_time(self, run_id: str) -> float | None:
         with self.connect() as conn:
             values = [

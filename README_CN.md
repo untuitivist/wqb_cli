@@ -1,5 +1,9 @@
 # wqb-cli
 
+可选的 [D1 按塔均衡调度](docs/tower_balance.md) 按 Region×Category 的表达式数量
+分配兼容批次，包含 AMR 和 ALL；未启用该策略的运行继续使用原有随机调度。
+缺口须通过适配的模板与字段补充，不为凑塔数量强行替换字段。
+
 社区登录与缓存复用现通过 Zendesk 当前用户 JSON API 验证。`sqlitecom sync`
 不依赖网页落地：网页出现验证页，不再误判已经成功的 API 登录。
 发帖需要的网页及 CSRF 上下文仅在写操作时按需获取，并独立检查。

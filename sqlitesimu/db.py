@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.simulation import region_agnostic_child_ids
+from .tower_balance import CATEGORY_SQL, record_dispatch, select_tower
 from .models import (
     EXPERIMENT_TERMINAL_STATES,
     BatchItemRecord,
@@ -970,6 +971,7 @@ class SqliteStore:
         )
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
+            balance_metadata, balanced_group = select_tower(conn, run_id, now, resend_cutoff)
             selected_group = conn.execute(
                 """
                 SELECT c.simulation_type,
@@ -992,11 +994,14 @@ class SqliteStore:
                 """,
                 (run_id, now, resend_cutoff, resend_cutoff),
             ).fetchone()
+            if balance_metadata is not None:
+                selected_group = balanced_group
             if selected_group is None:
                 return None
+            category = selected_group['category'] if balance_metadata is not None else None
             allow_resend = selected_group["dispatch_class"] == 2
             selected_head = conn.execute(
-                """
+                f"""
                 SELECT e.id AS experiment_id, c.*
                 FROM simulation_queue q
                 JOIN experiments e ON e.id = q.experiment_id
@@ -1009,18 +1014,20 @@ class SqliteStore:
                   AND c.simulation_type = ?
                   AND json_extract(c.settings_json, '$.region') IS ?
                   AND json_extract(c.settings_json, '$.delay') IS ?
+                  AND (? IS NULL OR {CATEGORY_SQL} = ?)
                 ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
                 LIMIT 1
                 """,
                 (
                     run_id, now, resend_cutoff, resend_cutoff, allow_resend,
                     selected_group["simulation_type"], selected_group["region"], selected_group["delay"],
+                    category, category,
                 ),
             ).fetchone()
             if selected_head is None:
                 return None
             compatible = conn.execute(
-                """
+                f"""
                 SELECT e.id AS experiment_id, c.payload_json
                 FROM simulation_queue q
                 JOIN experiments e ON e.id = q.experiment_id
@@ -1031,6 +1038,7 @@ class SqliteStore:
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
                   AND (e.state <> 'POLLING' OR ?)
                   AND c.compatibility_key = ?
+                  AND (? IS NULL OR {CATEGORY_SQL} = ?)
                 ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
                 LIMIT ?
                 """,
@@ -1041,6 +1049,7 @@ class SqliteStore:
                     resend_cutoff,
                     allow_resend,
                     selected_head["compatibility_key"],
+                    category, category,
                     int(selected_head["batch_limit"]),
                 ),
             ).fetchall()
@@ -1088,6 +1097,8 @@ class SqliteStore:
                     """,
                     (now, experiment_id),
                 )
+            if balance_metadata is not None:
+                record_dispatch(conn, run_id, balance_metadata, selected_group, len(compatible))
             self._event(
                 conn,
                 run_id,
@@ -1095,7 +1106,8 @@ class SqliteStore:
                 batch_id=batch_id,
                 payload={
                     "size": len(compatible),
-                    "selection": "random_group",
+                    "selection": "balanced_tower" if balance_metadata is not None else "random_group",
+                    "category": category,
                     "region": selected_group["region"],
                     "delay": selected_group["delay"],
                     "type": selected_group["simulation_type"],

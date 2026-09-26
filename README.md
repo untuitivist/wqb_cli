@@ -1,5 +1,9 @@
 # wqb-cli
 
+Optional [Delay 1 tower balancing](docs/tower_balance.md) allocates compatible
+batches by Region × Category expression counts, including AMR and ALL, while
+preserving the default random scheduler for runs that do not opt in.
+
 Community login and cached-session validation now use the Zendesk current-user
 JSON API. `sqlitecom sync` does not load an HTML landing page: a help-center page
 challenge must not reject an otherwise authenticated API session. Write-specific

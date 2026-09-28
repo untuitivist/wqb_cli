@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from ..core.simulation import region_agnostic_child_ids
-from .tower_balance import CATEGORY_SQL, record_dispatch, select_tower
+from .tower_balance import CATEGORY_SQL, dispatch_filter, record_dispatch, select_tower
 from .models import (
     EXPERIMENT_TERMINAL_STATES,
     BatchItemRecord,
@@ -1061,8 +1061,9 @@ class SqliteStore:
         with self.connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             balance_metadata, balanced_group = select_tower(conn, run_id, now, resend_cutoff)
+            dispatch_clause = dispatch_filter(conn)
             selected_group = conn.execute(
-                """
+                f"""
                 SELECT c.simulation_type,
                        json_extract(c.settings_json, '$.region') AS region,
                        json_extract(c.settings_json, '$.delay') AS delay,
@@ -1072,6 +1073,7 @@ class SqliteStore:
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
+                  {dispatch_clause}
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
@@ -1096,6 +1098,7 @@ class SqliteStore:
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
+                  {dispatch_clause}
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))
@@ -1122,6 +1125,7 @@ class SqliteStore:
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
                 WHERE q.run_id = ?
+                  {dispatch_clause}
                   AND e.state IN ('QUEUED', 'RETRY_WAIT', 'POLLING')
                   AND e.not_before <= ?
                   AND (e.state <> 'POLLING' OR (? IS NOT NULL AND q.last_attempt_at <= ?))

@@ -12,6 +12,15 @@ CATEGORY_SQL = """CASE
  ELSE json_extract(e.metadata_json, '$.category') END"""
 
 
+def dispatch_filter(conn):
+    exists = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='library_dispatch_policy'"
+    ).fetchone()
+    if not exists:
+        return ""
+    return "AND NOT EXISTS (SELECT 1 FROM library_dispatch_policy p WHERE p.experiment_id=e.id AND p.state!='enabled')"
+
+
 def select_tower(conn, run_id, now, resend_cutoff):
     row = conn.execute('SELECT metadata_json FROM runs WHERE id=?', (run_id,)).fetchone()
     metadata = json.loads(row['metadata_json']) if row else {}
@@ -29,6 +38,7 @@ def select_tower(conn, run_id, now, resend_cutoff):
         FROM simulation_queue q JOIN experiments e ON e.id=q.experiment_id
         JOIN candidates c ON c.id=e.candidate_id
         WHERE q.run_id=? AND e.state IN ('QUEUED','RETRY_WAIT','POLLING')
+          {dispatch_filter(conn)}
           AND e.not_before<=?
           AND (e.state<>'POLLING' OR (? IS NOT NULL AND q.last_attempt_at<=?))
           AND json_extract(c.settings_json, '$.delay')=1

@@ -1,12 +1,24 @@
 import json
 import tempfile
 import unittest
+import sqlite3
+from unittest.mock import patch
 
 from test_sqlitesimu import SETTINGS, initialized_store
 from wqb_cli.sqlitesimu.manifest import parse_manifest
+from wqb_cli.sqlitesimu.runtime import SqliteSimuRuntime
 
 
 class DispatchPolicyTests(unittest.TestCase):
+    def test_concurrent_database_error_keeps_retryable_type(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = initialized_store(directory)
+            run = store.enqueue(parse_manifest([{'expression': 'rank(close)', 'settings': SETTINGS}]), now=1000)
+            runtime = SqliteSimuRuntime(store, None)
+            with patch.object(runtime, '_simulation_lane', side_effect=sqlite3.OperationalError('database is locked')):
+                with self.assertRaises(sqlite3.OperationalError):
+                    runtime.run(run.run_id, max_runtime_seconds=5)
+
     def test_disabled_retries_cannot_bypass_dispatch_policy(self):
         for balanced in (False, True):
             with self.subTest(balanced=balanced), tempfile.TemporaryDirectory() as directory:

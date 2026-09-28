@@ -8,6 +8,7 @@ from ..core.client import is_wqb_daily_simulation_limit
 
 import math
 import queue
+import sqlite3
 import threading
 import time
 import uuid
@@ -192,6 +193,8 @@ class SqliteSimuRuntime:
         if worker_error is None and not errors.empty():
             worker_error = errors.get_nowait()
         if worker_error is not None:
+            if isinstance(worker_error, sqlite3.OperationalError):
+                raise worker_error
             raise RuntimeError(
                 "sqlitesimu concurrent worker failed: "
                 f"{type(worker_error).__name__}: {worker_error}"

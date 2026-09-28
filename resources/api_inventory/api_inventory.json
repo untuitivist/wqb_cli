@@ -14905,12 +14905,14 @@
       "path": "/simulations/{simulation_id}",
       "url_template": "https://api.worldquantbrain.com/simulations/{simulation_id}",
       "methods": [
-        "GET"
+        "GET",
+        "DELETE"
       ],
       "source": [
         "observed_platform"
       ],
-      "description": "Simulation status/details.",
+      "description": "Simulation status/details and cancellation (DELETE advertised in Allow response header).",
+      "success_statuses_by_method": {"DELETE": [200, 202, 204]},
       "safe_probe": false,
       "params": {},
       "request_body": null,

@@ -25,6 +25,10 @@ def add_simu_parser(subparsers: argparse._SubParsersAction) -> None:
     get_parser.add_argument("--max-wait-seconds", type=float, default=900.0, help="Maximum total wait time while following Retry-After")
     get_parser.add_argument("--output", help="Write JSON result to file")
 
+    cancel_parser = simu_subparsers.add_parser("cancel", help="DELETE /simulations/{simulation_id}")
+    cancel_parser.add_argument("simulation_id", help="Simulation id to cancel")
+    cancel_parser.add_argument("--output", help="Write JSON result to file")
+
     create_parser = simu_subparsers.add_parser("create", help="POST /simulations")
     create_parser.add_argument("--input", required=True, help="JSON file containing simulation request body")
     create_parser.add_argument("--dry-run", action="store_true", help="Validate and preview the request without simulating")
@@ -38,6 +42,13 @@ def add_simu_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def handle_simu(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    if args.simu_command == "cancel":
+        endpoint = registry.get("/simulations/{simulation_id}")
+        client = WqbClient(registry, session_from_cookies(args.cookies))
+        prepared = client.prepare(endpoint, "DELETE", path_vars={"simulation_id": args.simulation_id})
+        result = client.call(prepared)
+        write_json(result, args.output)
+        return 0 if result.get("ok") else 1
     if args.simu_command == "options":
         endpoint = registry.get("/simulations")
         client = WqbClient(registry, session_from_cookies(args.cookies))

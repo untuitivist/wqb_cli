@@ -24,7 +24,7 @@ from .models import (
 )
 
 
-SCHEMA_VERSION = 8
+SCHEMA_VERSION = 9
 # Kept only for non-destructive compatibility with schema v1 columns; never used for scheduling.
 LEGACY_SLOT_CLASS = "SERVER_MANAGED"
 
@@ -578,7 +578,58 @@ class SqliteStore:
                 "CREATE INDEX IF NOT EXISTS idx_simulation_queue_attempt "
                 "ON simulation_queue(run_id, last_attempt_at, enqueued_at, experiment_id)"
             )
+            if current < 9:
+                _add_column_if_missing(conn, "simulation_batches", "accepted_at REAL")
+                accepted = conn.execute("""
+                    SELECT e.batch_id, MAX(e.created_at) AS accepted_at
+                    FROM api_events e JOIN simulation_batches b ON b.id = e.batch_id
+                    WHERE e.event_type = 'SIMULATION_ACCEPTED'
+                      AND b.state IN ('POLLING', 'CHILD_POLLING') GROUP BY e.batch_id
+                """).fetchall()
+                conn.executemany("UPDATE simulation_batches SET accepted_at = ? WHERE id = ?",
+                                 [(row["accepted_at"], row["batch_id"]) for row in accepted])
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS simulation_poll_health (
+                    batch_id TEXT NOT NULL,
+                    simulation_id TEXT NOT NULL,
+                    missing_count INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(batch_id, simulation_id)
+                )
+            """)
             conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+    @retry_database_lock
+    def observe_simulation_poll(
+        self, batch_id: str, simulation_id: str, *, status_code: int | None, now: float,
+    ) -> tuple[float, int]:
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute(
+                "UPDATE simulation_batches SET accepted_at = COALESCE(accepted_at, ?) WHERE id = ?",
+                (now, batch_id),
+            )
+            conn.execute("""
+                INSERT INTO simulation_poll_health(batch_id, simulation_id, missing_count)
+                VALUES (?, ?, ?)
+                ON CONFLICT(batch_id, simulation_id) DO UPDATE SET
+                    missing_count = CASE WHEN excluded.missing_count = 1
+                        THEN missing_count + 1 ELSE 0 END
+                """, (batch_id, simulation_id, int(status_code == 404)))
+            row = conn.execute("""
+                SELECT b.accepted_at, h.missing_count
+                FROM simulation_batches b JOIN simulation_poll_health h ON h.batch_id = b.id
+                WHERE b.id = ? AND h.simulation_id = ?
+                """, (batch_id, simulation_id)).fetchone()
+            return float(row["accepted_at"]), int(row["missing_count"])
+
+    @retry_database_lock
+    def record_simulation_cancellation(
+        self, batch_id: str, response: dict[str, Any], *, now: float,
+    ) -> None:
+        with self.connect() as conn:
+            row = conn.execute("SELECT run_id FROM simulation_batches WHERE id = ?", (batch_id,)).fetchone()
+            self._event(conn, str(row["run_id"]), "SIMULATION_TIMEOUT_CANCEL",
+                        batch_id=batch_id, status_code=_status_code(response), payload=response, now=now)
 
     @retry_database_lock
     def enqueue(self, manifest: SimulationManifest, *, now: float | None = None) -> EnqueueResult:
@@ -1190,10 +1241,10 @@ class SqliteStore:
                 """
                 UPDATE simulation_batches
                 SET state = 'POLLING', location = ?, parent_simulation_id = ?, not_before = ?,
-                    last_status = 'CREATED', last_response_json = ?, updated_at = ?
+                    last_status = 'CREATED', last_response_json = ?, updated_at = ?, accepted_at = ?
                 WHERE id = ?
                 """,
-                (location, parent_simulation_id, not_before, _json(response), now, batch_id),
+                (location, parent_simulation_id, not_before, _json(response), now, now, batch_id),
             )
             conn.execute(
                 "UPDATE experiments SET state = 'POLLING', updated_at = ? WHERE batch_id = ?",

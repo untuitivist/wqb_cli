@@ -47,6 +47,10 @@ class SqliteSimuRuntime:
             raise ValueError("max_attempts must be at least 1")
         if self.policy.max_simulation_retries < 0:
             raise ValueError("max_simulation_retries must not be negative")
+        if self.policy.simulation_timeout_seconds <= 0 or not math.isfinite(self.policy.simulation_timeout_seconds):
+            raise ValueError("simulation_timeout_seconds must be finite and positive")
+        if self.policy.max_not_found_retries < 0:
+            raise ValueError("max_not_found_retries must not be negative")
         if self.policy.default_retry_seconds <= 0 or self.policy.idle_sleep_seconds <= 0:
             raise ValueError("retry and idle sleep durations must be positive")
         if self.policy.resend_interval_seconds is not None and self.policy.resend_interval_seconds < 0:
@@ -411,6 +415,8 @@ class SqliteSimuRuntime:
         status_code = _status_code(result)
         body = _body(result)
         status = _simulation_status(body)
+        if self._recover_stalled_simulation(batch, result, now=observed_at):
+            return
         if status_code == 200 and status in _SIMULATION_SUCCESS_STATUSES:
             self._complete_parent(batch, body, result, now=observed_at)
             return
@@ -516,8 +522,6 @@ class SqliteSimuRuntime:
         *,
         now: float,
     ) -> None:
-        # A progress URL is durable remote work. Transient GET failures must not
-        # discard it; only an explicit remote terminal status consumes the attempt.
         self.store.defer_parent_poll(
             batch.id,
             response=result,
@@ -556,6 +560,8 @@ class SqliteSimuRuntime:
         body = _body(result)
         status = _simulation_status(body)
         alpha_id = _alpha_id(body)
+        if self._recover_stalled_simulation(item, result, now=observed_at):
+            return
         if status_code == 200 and status in _SIMULATION_SUCCESS_STATUSES:
             if alpha_id:
                 self.store.complete_child(item, alpha_id=alpha_id, response=result, now=observed_at)
@@ -611,14 +617,71 @@ class SqliteSimuRuntime:
         *,
         now: float,
     ) -> None:
-        # Child simulation IDs follow the same durable polling contract as parent
-        # progress URLs. Keep retry counts for diagnostics, not as a loss budget.
         self.store.defer_child_poll(
             item,
             response=result,
             not_before=now + _retry_seconds(result, self.policy.default_retry_seconds),
             increment_attempt=True,
         )
+
+    def _recover_stalled_simulation(
+        self, target: BatchRecord | BatchItemRecord, result: dict[str, Any], *, now: float,
+    ) -> bool:
+        parent = isinstance(target, BatchRecord)
+        batch_id = target.id if parent else target.batch_id
+        simulation_id = target.parent_simulation_id if parent else target.child_simulation_id
+        accepted_at, missing_count = self.store.observe_simulation_poll(
+            batch_id, simulation_id, status_code=_status_code(result), now=now,
+        )
+        error = None
+        if missing_count > self.policy.max_not_found_retries:
+            error = "simulation_not_found_retries_exhausted"
+        elif (
+            _status_code(result) == 200
+            and _simulation_status(_body(result)) not in (
+                _SIMULATION_SUCCESS_STATUSES | _SIMULATION_FAILURE_STATUSES | _SIMULATION_RETRY_STATUSES
+            )
+            and now - accepted_at >= self.policy.simulation_timeout_seconds
+        ):
+            try:
+                cancellation = self.gateway.call(
+                    "DELETE", "/simulations/{simulation_id}",
+                    path_vars={"simulation_id": simulation_id},
+                )
+            except ApiTransportError as exc:
+                cancellation = _transport_result(exc)
+            self.store.record_simulation_cancellation(batch_id, cancellation, now=self.clock())
+            cancel_status = _status_code(cancellation)
+            if cancel_status == 204 or (
+                cancel_status == 200
+                and _simulation_status(_body(cancellation)) in _SIMULATION_RETRY_STATUSES
+            ):
+                error = "simulation_timeout_cancelled"
+                result = cancellation
+            else:
+                not_before = self.clock() + max(
+                    self.policy.default_retry_seconds,
+                    _retry_seconds(cancellation, self.policy.default_retry_seconds),
+                )
+                if parent:
+                    self.store.defer_parent_poll(
+                        batch_id, response=cancellation, not_before=not_before,
+                        status="CANCELLATION_UNCONFIRMED", increment_attempt=False, now=self.clock(),
+                    )
+                else:
+                    self.store.defer_child_poll(
+                        target, response=cancellation, not_before=not_before, increment_attempt=False,
+                    )
+                return True
+        if error is None:
+            return False
+        retry = self.store.retry_completed_batch if parent else self.store.retry_child
+        retry(
+            batch_id if parent else target, error=error, response=result,
+            not_before=self.clock() + self.policy.default_retry_seconds, now=self.clock(),
+            max_retries=self.policy.max_simulation_retries,
+        )
+        return True
 
     def _enrich(self, experiment: ExperimentRecord, *, now: float) -> None:
         if not experiment.alpha_id:

@@ -25,6 +25,7 @@ WQB_BACKPRESSURE_MARKERS = frozenset(
         "concurrent_simulation_limit_exceeded",
         "api rate limit exceeded",
         "rate_limit_exceeded",
+        "throttled",
     }
 )
 

@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import json
+import re
 import time
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
 from ..core.io import parse_key_values, read_json_file, write_json
+from ..core.paths import LOCAL_ROOT
 from ..core.registry import EndpointRegistry
 from .common import add_range_argument, put_bool_if_set, put_if_set, put_range_if_set
 
@@ -226,6 +232,34 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     _add_wait_argument(performance_parser)
     performance_parser.add_argument("--output", help="Write JSON result to file")
 
+    os_sync_parser = alpha_sub.add_parser(
+        "os-sync",
+        help="Incrementally sync own OS (submitted) alphas into the local quarter-partitioned store",
+    )
+    os_sync_parser.add_argument("--status", default="ACTIVE", help="Own-alpha status filter; default ACTIVE = OS pool")
+    os_sync_parser.add_argument(
+        "--since",
+        default="2025-01-01",
+        help="First-sync lower bound YYYY-MM-DD on dateCreated; later syncs resume from the stored watermark",
+    )
+    os_sync_parser.add_argument("--settings-region", default=None, help="Filter by region")
+    os_sync_parser.add_argument("--settings-delay", default=None, help="Filter by delay")
+    os_sync_parser.add_argument("--limit", default="100", help="Page size for /users/self/alphas")
+    os_sync_parser.add_argument("--max-pages-per-slice", type=int, default=12, help="Safety cap on pages per 30-day slice")
+    os_sync_parser.add_argument("--store", default=None, help="Store directory (default: local/os_alphas)")
+    os_sync_parser.add_argument("--output", help="Write JSON result to file")
+
+    field_usage_parser = alpha_sub.add_parser(
+        "field-usage",
+        help="Check which of the given datafields already appear in the local OS-alpha store (run os-sync first)",
+    )
+    field_usage_parser.add_argument("--fields", required=True, help="Comma-separated datafield ids")
+    field_usage_parser.add_argument("--settings-region", default=None, help="Filter store records by region")
+    field_usage_parser.add_argument("--settings-delay", default=None, help="Filter store records by delay")
+    field_usage_parser.add_argument("--quarter", default=None, help="Only compare against one quarter, e.g. 2026Q4")
+    field_usage_parser.add_argument("--store", default=None, help="Store directory (default: local/os_alphas)")
+    field_usage_parser.add_argument("--output", help="Write JSON result to file")
+
 
 def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     simple_paths = {
@@ -382,7 +416,222 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
+    if args.alpha_command == "os-sync":
+        return _handle_alpha_os_sync(args, registry)
+    if args.alpha_command == "field-usage":
+        return _handle_alpha_field_usage(args, registry)
     raise AssertionError(args.alpha_command)
+
+
+def _os_store_dir(args: argparse.Namespace) -> Path:
+    return Path(args.store) if getattr(args, "store", None) else LOCAL_ROOT / "os_alphas"
+
+
+def _quarter_of(iso: str | None) -> str:
+    if not iso:
+        return "unknown"
+    try:
+        dt = datetime.fromisoformat(iso)
+    except ValueError:
+        return "unknown"
+    return f"{dt.year}Q{(dt.month - 1) // 3 + 1}"
+
+
+def _load_os_store(store: Path) -> dict[str, dict[str, Any]]:
+    alphas: dict[str, dict[str, Any]] = {}
+    if not store.exists():
+        return alphas
+    for path in sorted(store.glob("*.json")):
+        if path.name == "meta.json":
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        for alpha_id, record in (data.get("alphas") or {}).items():
+            alphas[alpha_id] = record
+    return alphas
+
+
+def _record_from_item(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "id": item.get("id"),
+        "name": item.get("name"),
+        "status": item.get("status"),
+        "dateCreated": item.get("dateCreated"),
+        "dateSubmitted": item.get("dateSubmitted"),
+        "region": (item.get("settings") or {}).get("region"),
+        "delay": (item.get("settings") or {}).get("delay"),
+        "code": str((item.get("regular") or {}).get("code") or ""),
+    }
+
+
+def _handle_alpha_os_sync(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    store = _os_store_dir(args)
+    store.mkdir(parents=True, exist_ok=True)
+    meta_path = store / "meta.json"
+    meta: dict[str, Any] = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            meta = {}
+
+    tz = ZoneInfo("America/New_York")
+    now = datetime.now(tz)
+    watermark = meta.get("last_sync")
+    if watermark:
+        try:
+            start = datetime.fromisoformat(watermark) - timedelta(seconds=1)
+        except ValueError:
+            start = datetime.fromisoformat(f"{args.since}T00:00:00").replace(tzinfo=tz)
+        mode = "incremental"
+    else:
+        start = datetime.fromisoformat(f"{args.since}T00:00:00").replace(tzinfo=tz)
+        mode = "full"
+
+    params_base: dict[str, str] = {"limit": str(args.limit)}
+    put_if_set(params_base, "status", args.status)
+    put_if_set(params_base, "settings.region", args.settings_region)
+    put_if_set(params_base, "settings.delay", args.settings_delay)
+
+    slices: list[tuple[str, str]] = []
+    cursor = start
+    while cursor < now:
+        slice_end = min(cursor + timedelta(days=30), now)
+        slices.append((cursor.isoformat(), slice_end.isoformat()))
+        cursor = slice_end - timedelta(seconds=1) if slice_end < now else slice_end
+
+    client = WqbClient(registry, session_from_cookies(args.cookies))
+    endpoint = registry.get("/users/self/alphas")
+    seen_ids: set[str] = set()
+    new_records: dict[str, dict[str, Any]] = {}
+    saturated = False
+    limit = int(args.limit)
+    for slice_start, slice_end in slices:
+        slice_params = dict(params_base)
+        slice_params["dateCreated>"] = slice_start
+        slice_params["dateCreated<"] = slice_end
+        slice_count = 0
+        for page in range(max(args.max_pages_per_slice, 1)):
+            prepared = client.prepare(
+                endpoint, "GET", params=dict(slice_params, offset=str(page * limit))
+            )
+            result = client.call(prepared)
+            if not result.get("ok"):
+                write_json(result, args.output)
+                return 1
+            body = (result.get("response") or {}).get("body")
+            items = body.get("results", []) if isinstance(body, dict) else (body or [])
+            slice_count += len(items)
+            for item in items:
+                alpha_id = str((item or {}).get("id"))
+                if not alpha_id or alpha_id in seen_ids:
+                    continue
+                seen_ids.add(alpha_id)
+                new_records[alpha_id] = _record_from_item(item or {})
+            if len(items) < limit:
+                break
+        if slice_count >= 1000:
+            saturated = True
+
+    by_quarter: dict[str, dict[str, dict[str, Any]]] = {}
+    for alpha_id, record in new_records.items():
+        quarter = _quarter_of(record.get("dateSubmitted") or record.get("dateCreated"))
+        by_quarter.setdefault(quarter, {})[alpha_id] = record
+    for quarter, alphas in by_quarter.items():
+        path = store / f"{quarter}.json"
+        existing: dict[str, dict[str, Any]] = {}
+        if path.exists():
+            try:
+                existing = json.loads(path.read_text(encoding="utf-8")).get("alphas") or {}
+            except (json.JSONDecodeError, OSError):
+                existing = {}
+        existing.update(alphas)
+        path.write_text(
+            json.dumps({"quarter": quarter, "alphas": existing}, ensure_ascii=False, indent=1),
+            encoding="utf-8",
+        )
+
+    total = len(_load_os_store(store))
+    meta["last_sync"] = now.isoformat()
+    meta["mode"] = mode
+    meta["total_alphas"] = total
+    meta["quarters"] = sorted(p.stem for p in store.glob("*Q*.json"))
+    meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+    write_json(
+        {
+            "mode": mode,
+            "slices": len(slices),
+            "saturated": saturated,
+            "fetched": len(new_records),
+            "total_alphas": total,
+            "store": str(store),
+            "quarters_touched": sorted(by_quarter),
+        },
+        args.output,
+    )
+    return 0
+
+
+def _handle_alpha_field_usage(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    fields = [f.strip() for f in str(args.fields).split(",") if f.strip()]
+    if not fields:
+        write_json({"ok": False, "error": "--fields is empty"}, args.output)
+        return 2
+    store = _os_store_dir(args)
+    alphas = _load_os_store(store)
+    if not alphas:
+        write_json(
+            {"ok": False, "error": f"empty OS store at {store}; run 'wqb alpha os-sync' first"},
+            args.output,
+        )
+        return 1
+    patterns = {f: re.compile(rf"(?<![A-Za-z0-9_]){re.escape(f)}(?![A-Za-z0-9_])") for f in fields}
+    usage = {f: {"used": False, "by_quarter": {}, "records": []} for f in fields}
+    scanned = 0
+    for record in alphas.values():
+        if args.settings_region and record.get("region") != args.settings_region:
+            continue
+        if args.settings_delay is not None and str(record.get("delay")) != str(args.settings_delay):
+            continue
+        quarter = _quarter_of(record.get("dateSubmitted") or record.get("dateCreated"))
+        if args.quarter and quarter != args.quarter:
+            continue
+        code = str(record.get("code") or "")
+        if not code:
+            continue
+        scanned += 1
+        for field, pattern in patterns.items():
+            if pattern.search(code):
+                state = usage[field]
+                state["used"] = True
+                state["by_quarter"].setdefault(quarter, []).append(record.get("id"))
+                state["records"].append(
+                    {"id": record.get("id"), "quarter": quarter, "dateSubmitted": record.get("dateSubmitted")}
+                )
+    verdict = {}
+    for field, state in usage.items():
+        if not state["used"]:
+            verdict[field] = "not-used"
+        else:
+            parts = [f"{q}[{','.join(ids)}]" for q, ids in sorted(state["by_quarter"].items())]
+            verdict[field] = "used-in-os:" + ";".join(parts)
+    write_json(
+        {
+            "store": str(store),
+            "filters": {
+                "region": args.settings_region,
+                "delay": args.settings_delay,
+                "quarter": args.quarter,
+            },
+            "alphas_scanned": scanned,
+            "fields": usage,
+            "verdict": verdict,
+        },
+        args.output,
+    )
+    return 0
 
 
 def _add_wait_argument(parser: argparse.ArgumentParser) -> None:

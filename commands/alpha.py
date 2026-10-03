@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import re
 import time
+from datetime import datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from ..core.auth import session_from_cookies
 from ..core.client import WqbClient
@@ -226,6 +229,27 @@ def add_alpha_parser(subparsers: argparse._SubParsersAction) -> None:
     _add_wait_argument(performance_parser)
     performance_parser.add_argument("--output", help="Write JSON result to file")
 
+    field_usage_parser = alpha_sub.add_parser(
+        "field-usage",
+        help="Check which of the given datafields already appear in own OS (submitted) alphas",
+    )
+    field_usage_parser.add_argument("--fields", required=True, help="Comma-separated datafield ids")
+    field_usage_parser.add_argument(
+        "--status",
+        default="ACTIVE",
+        help="Own-alpha status filter; default ACTIVE = OS/submitted pool",
+    )
+    field_usage_parser.add_argument(
+        "--after",
+        default=None,
+        help="Optional: only scan own alphas created after YYYY-MM-DD (America/New_York)",
+    )
+    field_usage_parser.add_argument("--settings-region", default=None, help="Filter own alphas by region")
+    field_usage_parser.add_argument("--settings-delay", default=None, help="Filter own alphas by delay")
+    field_usage_parser.add_argument("--limit", default="100", help="Page size for /users/self/alphas")
+    field_usage_parser.add_argument("--max-pages", type=int, default=50, help="Safety cap on fetched pages")
+    field_usage_parser.add_argument("--output", help="Write JSON result to file")
+
 
 def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
     simple_paths = {
@@ -382,7 +406,100 @@ def handle_alpha(args: argparse.Namespace, registry: EndpointRegistry) -> int:
         result = _call_waiting_alpha(client, prepared, args.max_wait_seconds)
         write_json(result, args.output)
         return 0 if result.get("ok") else 1
+    if args.alpha_command == "field-usage":
+        return _handle_alpha_field_usage(args, registry)
     raise AssertionError(args.alpha_command)
+
+
+def _handle_alpha_field_usage(args: argparse.Namespace, registry: EndpointRegistry) -> int:
+    fields = [f.strip() for f in str(args.fields).split(",") if f.strip()]
+    if not fields:
+        write_json({"ok": False, "error": "--fields is empty"}, args.output)
+        return 2
+    patterns = {f: re.compile(rf"(?<![A-Za-z0-9_]){re.escape(f)}(?![A-Za-z0-9_])") for f in fields}
+    params_base: dict[str, str] = {"limit": str(args.limit)}
+    put_if_set(params_base, "status", args.status)
+    tz = ZoneInfo("America/New_York")
+    if args.after:
+        start = datetime.fromisoformat(f"{args.after}T00:00:00").replace(tzinfo=tz)
+        # The platform displays at most 1,000 alphas per query window; walk
+        # 30-day slices (1s overlap, deduped by id) so long seasons stay complete.
+        end = datetime.now(tz)
+        slices: list[tuple[str, str]] = []
+        cursor = start
+        while cursor < end:
+            slice_end = min(cursor + timedelta(days=30), end)
+            slices.append((cursor.isoformat(), slice_end.isoformat()))
+            cursor = slice_end - timedelta(seconds=1) if slice_end < end else slice_end
+    else:
+        slices = [("", "")]
+    put_if_set(params_base, "settings.region", args.settings_region)
+    put_if_set(params_base, "settings.delay", args.settings_delay)
+    client = WqbClient(registry, session_from_cookies(args.cookies))
+    endpoint = registry.get("/users/self/alphas")
+    usage = {f: {"used": False, "submitted": [], "unsubmitted": []} for f in fields}
+    scanned_ids: set[str] = set()
+    saturated = False
+    limit = int(args.limit)
+    for slice_start, slice_end in slices:
+        slice_params = dict(params_base)
+        if slice_start:
+            slice_params["dateCreated>"] = slice_start
+            slice_params["dateCreated<"] = slice_end
+        slice_count = 0
+        for page in range(max(args.max_pages, 1)):
+            prepared = client.prepare(
+                endpoint, "GET", params=dict(slice_params, offset=str(page * limit))
+            )
+            result = client.call(prepared)
+            if not result.get("ok"):
+                write_json(result, args.output)
+                return 1
+            body = (result.get("response") or {}).get("body")
+            items = body.get("results", []) if isinstance(body, dict) else (body or [])
+            slice_count += len(items)
+            for item in items:
+                alpha_id = str((item or {}).get("id"))
+                if alpha_id in scanned_ids:
+                    continue
+                scanned_ids.add(alpha_id)
+                code = str(((item or {}).get("regular") or {}).get("code") or "")
+                if not code:
+                    continue
+                record = {
+                    "id": item.get("id"),
+                    "status": item.get("status"),
+                    "dateCreated": item.get("dateCreated"),
+                    "dateSubmitted": item.get("dateSubmitted"),
+                }
+                bucket = "submitted" if item.get("dateSubmitted") else "unsubmitted"
+                for field, pattern in patterns.items():
+                    if pattern.search(code):
+                        usage[field]["used"] = True
+                        usage[field][bucket].append(record)
+            if len(items) < limit:
+                break
+        if slice_count >= 1000:
+            saturated = True
+    verdict = {}
+    for field, state in usage.items():
+        if not state["used"]:
+            verdict[field] = "not-used"
+        elif state["submitted"]:
+            verdict[field] = "used-in-submitted:" + ",".join(str(r["id"]) for r in state["submitted"])
+        else:
+            verdict[field] = "used-in-unsubmitted:" + ",".join(str(r["id"]) for r in state["unsubmitted"])
+    write_json(
+        {
+            "window": {"after": args.after},
+            "alphas_scanned": len(scanned_ids),
+            "saturated": saturated,
+            "fields": usage,
+            "verdict": verdict,
+        },
+        args.output,
+    )
+    return 0
 
 
 def _add_wait_argument(parser: argparse.ArgumentParser) -> None:

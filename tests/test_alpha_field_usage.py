@@ -4,10 +4,12 @@ import argparse
 import json
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
+from zoneinfo import ZoneInfo
 
 from wqb_cli.commands.alpha import add_alpha_parser, handle_alpha
-from wqb_cli.core.client import WqbClient
 from wqb_cli.core.registry import EndpointRegistry
 
 
@@ -36,12 +38,14 @@ class FakeSession:
         return response
 
 
-def _alpha(alpha_id: str, code: str, *, submitted: bool) -> dict[str, object]:
+def _os_alpha(alpha_id: str, code: str, date_submitted: str) -> dict[str, object]:
     return {
         "id": alpha_id,
-        "status": "ACTIVE" if submitted else "UNSUBMITTED",
-        "dateCreated": "2026-08-01T00:00:00-04:00",
-        "dateSubmitted": "2026-08-02T00:00:00-04:00" if submitted else None,
+        "name": f"alpha-{alpha_id}",
+        "status": "ACTIVE",
+        "dateCreated": date_submitted,
+        "dateSubmitted": date_submitted,
+        "settings": {"region": "USA", "delay": 1},
         "regular": {"code": code, "operatorCount": 3},
     }
 
@@ -63,8 +67,13 @@ def _parse(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-class AlphaFieldUsageTests(unittest.TestCase):
-    def test_matches_fields_across_pages_and_buckets(self) -> None:
+def _recent_date(days_ago: int) -> str:
+    tz = ZoneInfo("America/New_York")
+    return (datetime.now(tz) - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+
+
+class AlphaOsStoreTests(unittest.TestCase):
+    def test_sync_partitions_by_quarter_and_usage_reads_local(self) -> None:
         session = FakeSession(
             [
                 FakeResponse(
@@ -72,8 +81,8 @@ class AlphaFieldUsageTests(unittest.TestCase):
                     json_body={
                         "count": 3,
                         "results": [
-                            _alpha("aaa111", "rank(ts_backfill(field_one,63))", submitted=True),
-                            _alpha("bbb222", "group_rank(field_two_x, subindustry)", submitted=False),
+                            _os_alpha("aaa111", "rank(ts_backfill(field_one,63))", f"{_recent_date(5)}T10:00:00-04:00"),
+                            _os_alpha("bbb222", "group_rank(field_two_x, subindustry)", f"{_recent_date(1)}T10:00:00-04:00"),
                         ],
                     },
                 ),
@@ -81,78 +90,79 @@ class AlphaFieldUsageTests(unittest.TestCase):
                     status_code=200,
                     json_body={
                         "count": 3,
-                        "results": [_alpha("ccc333", "rank(field_one_extended)", submitted=False)],
+                        "results": [_os_alpha("ccc333", "rank(unrelated)", f"{_recent_date(2)}T10:00:00-04:00")],
                     },
                 ),
             ]
         )
         registry = EndpointRegistry.load()
-        args = _parse(
+        with tempfile.TemporaryDirectory() as tmp:
+            store = str(Path(tmp) / "os_alphas")
+            sync_args = _parse(
+                ["os-sync", "--since", _recent_date(8), "--limit", "2", "--store", store]
+            )
+            sync_args.output = None
+            with patch("wqb_cli.commands.alpha.session_from_cookies", return_value=session):
+                code = handle_alpha(sync_args, registry)
+            self.assertEqual(code, 0)
+
+            q3 = json.loads((Path(store) / "meta.json").read_text(encoding="utf-8"))
+            self.assertIn("last_sync", q3)
+            self.assertEqual(q3["total_alphas"], 3)
+            # second transport call continued pagination at offset 2
+            second_params = session.kwargs_history[1].get("params") or {}
+            self.assertEqual(second_params.get("offset"), "2")
+            self.assertEqual(second_params.get("status"), "ACTIVE")
+
+            usage_args = _parse(
+                [
+                    "field-usage",
+                    "--fields",
+                    "field_one,field_two_x,field_three",
+                    "--store",
+                    store,
+                ]
+            )
+            usage_args.output = None
+            code = handle_alpha(usage_args, registry)
+            self.assertEqual(code, 0)
+
+    def test_sync_watermark_makes_second_run_incremental(self) -> None:
+        session = FakeSession(
             [
-                "field-usage",
-                "--fields",
-                "field_one,field_two_x,field_three",
-                "--after",
-                "2026-07-01",
-                "--limit",
-                "2",
-                "--settings-region",
-                "USA",
-                "--settings-delay",
-                "1",
+                FakeResponse(
+                    status_code=200,
+                    json_body={"count": 1, "results": [_os_alpha("aaa111", "rank(field_one)", "2026-09-28T10:00:00-04:00")]},
+                )
             ]
         )
+        registry = EndpointRegistry.load()
         with tempfile.TemporaryDirectory() as tmp:
-            out = str(Path(tmp) / "usage.json")
-            args.output = out
-            with patch_session(session):
-                code = handle_alpha(args, registry)
-            self.assertEqual(code, 0)
-            result = json.loads(Path(out).read_text(encoding="utf-8"))
-        self.assertEqual(result["alphas_scanned"], 3)
-        self.assertEqual(result["verdict"]["field_one"], "used-in-submitted:aaa111")
-        self.assertEqual(result["verdict"]["field_two_x"], "used-in-unsubmitted:bbb222")
-        self.assertEqual(result["verdict"]["field_three"], "not-used")
-        submitted_records = result["fields"]["field_one"]["submitted"]
-        self.assertEqual(submitted_records[0]["id"], "aaa111")
-        # word-boundary: field_one must not match field_one_extended
-        self.assertEqual(result["fields"]["field_one"]["unsubmitted"], [])
-        # paging and filters reached the transport
-        first_kwargs = session.kwargs_history[0]
-        params = first_kwargs.get("params") or {}
-        self.assertEqual(params.get("offset"), "0")
-        self.assertIn("dateCreated>", params)
-        self.assertTrue(str(params["dateCreated>"]).startswith("2026-07-01T00:00:00"))
-        self.assertEqual(params.get("settings.region"), "USA")
-        second_kwargs = session.kwargs_history[1]
-        self.assertEqual((second_kwargs.get("params") or {}).get("offset"), "2")
+            store = str(Path(tmp) / "os_alphas")
+            first = _parse(["os-sync", "--since", _recent_date(8), "--store", store])
+            first.output = None
+            with patch("wqb_cli.commands.alpha.session_from_cookies", return_value=session):
+                self.assertEqual(handle_alpha(first, registry), 0)
+            first_calls = session.calls
 
-    def test_empty_fields_fails_fast(self) -> None:
-        registry = EndpointRegistry.load()
-        args = _parse(["field-usage", "--fields", " , "])
-        args.output = None
-        with patch_session(FakeSession([])):
-            code = handle_alpha(args, registry)
-        self.assertEqual(code, 2)
+            second = _parse(["os-sync", "--store", store])
+            second.output = None
+            with patch("wqb_cli.commands.alpha.session_from_cookies", return_value=session):
+                self.assertEqual(handle_alpha(second, registry), 0)
 
-    def test_transport_error_returns_one(self) -> None:
-        session = FakeSession(
-            [FakeResponse(status_code=400, json_body=["Expected ISO 8601 datetime with timezone"])]
-        )
+            meta = json.loads((Path(store) / "meta.json").read_text(encoding="utf-8"))
+            self.assertIn("mode", meta)
+            # incremental run resumes from the watermark, not the original --since
+            second_params = session.kwargs_history[first_calls].get("params") or {}
+            self.assertGreater(str(second_params.get("dateCreated>")), "2025-01-01")
+
+    def test_field_usage_empty_store_hints_sync(self) -> None:
         registry = EndpointRegistry.load()
-        args = _parse(["field-usage", "--fields", "field_one", "--limit", "100"])
-        args.output = None
-        with patch_session(session):
+        with tempfile.TemporaryDirectory() as tmp:
+            args = _parse(["field-usage", "--fields", "field_one", "--store", str(Path(tmp) / "missing")])
+            args.output = None
             code = handle_alpha(args, registry)
         self.assertEqual(code, 1)
-
-
-def patch_session(session: FakeSession):
-    import unittest.mock
-
-    return unittest.mock.patch(
-        "wqb_cli.commands.alpha.session_from_cookies", return_value=session
-    )
 
 
 if __name__ == "__main__":

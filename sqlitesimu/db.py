@@ -1091,6 +1091,18 @@ class SqliteStore:
                 return None
             category = selected_group['category'] if balance_metadata is not None else None
             allow_resend = selected_group["dispatch_class"] == 2
+            prioritize_super = False
+            if selected_group["simulation_type"] == "SUPER":
+                run_metadata = json.loads(conn.execute(
+                    "SELECT metadata_json FROM runs WHERE id = ?", (run_id,),
+                ).fetchone()["metadata_json"])
+                priority_policy = run_metadata.get("super_queue_priority", {})
+                prioritize_super = (
+                    isinstance(priority_policy, dict)
+                    and priority_policy.get("enabled") is True
+                    and priority_policy.get("mode") == "within_group"
+                )
+            priority_order = "e.priority DESC, " if prioritize_super else ""
             selected_head = conn.execute(
                 f"""
                 SELECT e.id AS experiment_id, c.*
@@ -1107,7 +1119,7 @@ class SqliteStore:
                   AND json_extract(c.settings_json, '$.region') IS ?
                   AND json_extract(c.settings_json, '$.delay') IS ?
                   AND (? IS NULL OR {CATEGORY_SQL} = ?)
-                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, {priority_order}RANDOM()
                 LIMIT 1
                 """,
                 (
@@ -1120,7 +1132,7 @@ class SqliteStore:
                 return None
             compatible = conn.execute(
                 f"""
-                SELECT e.id AS experiment_id, c.payload_json
+                SELECT e.id AS experiment_id, e.priority AS queue_priority, c.payload_json
                 FROM simulation_queue q
                 JOIN experiments e ON e.id = q.experiment_id
                 JOIN candidates c ON c.id = e.candidate_id
@@ -1132,7 +1144,7 @@ class SqliteStore:
                   AND (e.state <> 'POLLING' OR ?)
                   AND c.compatibility_key = ?
                   AND (? IS NULL OR {CATEGORY_SQL} = ?)
-                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, RANDOM()
+                ORDER BY CASE WHEN e.state = 'RETRY_WAIT' THEN 0 ELSE 1 END, {priority_order}RANDOM()
                 LIMIT ?
                 """,
                 (
@@ -1204,6 +1216,10 @@ class SqliteStore:
                     "region": selected_group["region"],
                     "delay": selected_group["delay"],
                     "type": selected_group["simulation_type"],
+                    **({"queue_priority": {
+                        "mode": "within_group",
+                        "priorities": [row["queue_priority"] for row in compatible],
+                    }} if prioritize_super else {}),
                 },
                 now=now,
             )

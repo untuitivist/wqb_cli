@@ -19,6 +19,7 @@ Current command nodes:
 - `alpha/check`
 - `alpha/recordsets`
 - `community` (online topics, posts, comments, search and API calls)
+- `help-center` (official online articles, search, categories, sections and read-only API calls)
 - `sqlitecom` (incremental sync, local search, imports and read-only SQL)
 - `config`
 - `docs`

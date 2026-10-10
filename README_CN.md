@@ -1,5 +1,10 @@
 # wqb-cli
 
+0.6.2 增加原生官方帮助中心入口：`wqb help-center search Themes`、
+`wqb help-center get 38927747787031`。复用社区 SSO，保留正文 HTML、
+更新时间和分页信息，无需界面操作或临时认证脚本。
+详见[帮助中心命令](resources/docs/commands/help-center/README.md)。
+
 社区登录与缓存复用现通过 Zendesk 当前用户 JSON API 验证。`sqlitecom sync`
 不依赖网页落地：网页出现验证页，不再误判已经成功的 API 登录。
 发帖需要的网页及 CSRF 上下文仅在写操作时按需获取，并独立检查。
@@ -30,13 +35,14 @@ CLI 不自动完成浏览器验证，也不重复发送社区写操作。正常�
 
 ## 常用入口
 
-直接回测命令统一为 `wqb simu`。0.6.1 的示例和脚本使用以下入口：
+直接回测命令统一为 `wqb simu`。0.6.2 的示例和脚本使用以下入口：
 
 | 命令 | 用途 |
 | --- | --- |
 | `wqb simu` | 创建、查询并等待 Regular、Super 和 ALL 回测。 |
 | `wqb sqlitesimu` | 候选入库、批量执行、断点恢复和结果导出。 |
 | `wqb community` | 在线读帖、搜索，以及带本地图片的 HTML 发帖。 |
+| `wqb help-center` | 复用社区认证，发现并读取官方文章及 Theme/PPA 日历。 |
 | `wqb sqlitecom` | 社区增量同步、本地检索和只读 SQL。 |
 
 查看回测设置和请求帮助可从 `wqb simu options`、`wqb simu create --help` 开始。完整层级见[命令总览](#命令总览)，请求格式见后文示例。
@@ -131,6 +137,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 ├─ suggest                                                       # 平台建议接口，各项支持 GET/POST
 ├─ search <query>                                                # 平台全局搜索，没有下一级子命令
 ├─ community                 # 在线论坛：分区、帖子、评论、搜索和原始 API
+├─ help-center               # 官方文章、搜索、分类、分区和只读 API
 ├─ sqlitecom                 # 本地社区库：增量同步、查询、导入和只读 SQL
 ├─ scope                                                         # 按 REGION_DELAY 查看本地历史研究数据
 ├─ shortcut (alias: quick)                                       # 常用组合操作
@@ -297,6 +304,10 @@ wqb  # WorldQuant BRAIN 命令行工具
 │  ├─ user-posts / user-comments
 │  ├─ create / update / delete / comment-create / comment-update / comment-delete
 │  └─ api stats / list / show / params / call
+├─ help-center               # 官方帮助中心；复用社区 SSO，只读
+│  ├─ categories / category / sections / section
+│  ├─ articles / get / search
+│  └─ api stats / list / show / params / call
 ├─ sqlitecom                 # 本地社区库：增量同步、查询、导入和只读 SQL
 │  ├─ sync / search / get / import
 │  ├─ stats / status / schema
@@ -343,6 +354,7 @@ wqb  # WorldQuant BRAIN 命令行工具
 - `simu` 直接调用平台回测接口；`sqlitesimu` 增加本地数据库、批量队列、并发执行、断点恢复和结果导出。
 - 回测与正式提交不同：`simu create`、`sqlitesimu run` 发起回测，`alpha submit` 才是正式提交入口。命令树不代表已完成研究流程或提交前终检。
 - `community` 读取在线论坛；`sqlitecom` 管理本地社区库，`sync` 通过同一在线客户端增量更新。旧本地查询迁到 `sqlitecom search`，旧导入迁到 `sqlitecom import`。
+- `help-center` 读取实时官方文章，不搜索论坛帖子；`docs` 读取随包 CLI 文档，`tutorial` 读取平台独立教程 API。帮助中心复用社区认证，只允许 GET。
 - `sqlitesimu cancel` 管理本地 run 并保留历史，不等于撤销平台上所有已发出的回测；默认不会越过仍有效的 worker 租约。
 - `api call` 可直接调用注册表内端点；写操作会发送真实请求，不会自动补齐高层研究检查。
 
@@ -383,7 +395,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.6.1"
+version = "0.6.2"
 ```
 
 ## 认证

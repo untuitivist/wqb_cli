@@ -36,6 +36,24 @@ class CliSmokeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("shortcut", result.stdout)
         self.assertIn("docs", result.stdout)
+        self.assertIn("help-center", result.stdout)
+
+    def test_help_center_is_discoverable_and_dry_runs_without_auth(self) -> None:
+        help_result = run_wqb("help-center", "--help")
+        self.assertEqual(help_result.returncode, 0, help_result.stderr)
+        for command in ("categories", "category", "sections", "section", "articles", "get", "search", "api"):
+            self.assertIn(command, help_result.stdout)
+        stats = run_wqb("help-center", "api", "stats")
+        self.assertEqual(stats.returncode, 0, stats.stderr)
+        self.assertEqual(json.loads(stats.stdout)["method_counts"], {"GET": 10})
+        preview = run_wqb("help-center", "get", "38927747787031", "--dry-run")
+        self.assertEqual(preview.returncode, 0, preview.stderr)
+        payload = json.loads(preview.stdout)
+        self.assertTrue(payload["dry_run"])
+        self.assertFalse(payload["request"]["mutating"])
+        docs = run_wqb("docs", "show", "help-center")
+        self.assertEqual(docs.returncode, 0, docs.stderr)
+        self.assertIn("Help Center", json.loads(docs.stdout)["text"])
 
     def test_config_init_get_set_with_temp_config(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

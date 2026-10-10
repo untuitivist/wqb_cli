@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.6.2 - 2026-10-10
+
+### Added
+
+- Native `help-center` commands for official articles, search, categories and sections, with their own inspectable ten-endpoint read-only API inventory.
+- Article reading by ID or trusted Help Center URL, explicit locale selection, category/section filters, sorting, pagination and offline dry runs.
+- Bounded `--all-pages` collection with preserved page envelopes, same-resource/origin validation, repeated-page detection and explicit incomplete-result exit codes.
+- Reuse the existing community BRAIN-to-Zendesk SSO, session cache, expiry renewal and bounded Retry-After handling. Reads do not load HTML pages or acquire write CSRF context.
+
+### Fixed
+
+- Official Help Center article paths no longer require ad hoc authenticated scripts outside the CLI. Only the supported GET article/category/section/search paths are added to the support transport allowlist; writes and request bodies remain rejected.
+- Preserve language-specific 404s, persistent 403s and browser challenges. No silent translation fallback, browser automation, theme inference or simulation scheduling changes.
+
 ## 0.6.1 community API authentication fix (2026-09-25)
 
 - Verify fresh and cached Zendesk sessions using the current-user JSON API instead of HTML landing pages.

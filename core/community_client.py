@@ -26,6 +26,13 @@ SSO_HOSTS = {"api.worldquantbrain.com", "support.worldquantbrain.com", "worldqua
 COMMUNITY_REGISTRY = RESOURCES_ROOT / "community_api" / "api_inventory.json"
 PAGE_HEADERS = {"Accept": "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9"}
 API_HEADERS = {"Accept": "application/json", "Accept-Language": "en-US,en;q=0.9"}
+SUPPORT_LOCALE = re.compile(r"[a-z]{2,3}(?:-[a-z0-9]{2,8})*")
+HELP_CENTER_READ_PATH = re.compile(
+    r"/api/v2/help_center/(?:[a-z]{2,3}(?:-[a-z0-9]{2,8})*/)?"
+    r"(?:categories(?:/[0-9]+(?:/(?:sections|articles))?)?"
+    r"|sections(?:/[0-9]+(?:/articles)?)?"
+    r"|articles(?:/(?:[0-9]+|search))?)(?:\.json)?"
+)
 
 
 class CommunityError(RuntimeError):
@@ -78,6 +85,7 @@ def community_url(path: str) -> str:
             or parsed.path == "/api/v2/help_center/sessions.json"
             or parsed.path == IDENTITY_PATH
             or parsed.path in {"/api/v2/guide/user_images/uploads", "/api/v2/guide/user_images"}
+            or HELP_CENTER_READ_PATH.fullmatch(parsed.path) is not None
         )
     ):
         raise ValueError("Community requests must target the registered HTTPS forum API origin")
@@ -433,6 +441,8 @@ class CommunityClient:
         address = community_url(path)
         if method not in {"GET", "POST", "PUT", "DELETE"}:
             raise ValueError("Unsupported community HTTP method")
+        if HELP_CENTER_READ_PATH.fullmatch(urlsplit(address).path) is not None and (method != "GET" or json_body is not None):
+            raise ValueError("Help Center article, category, section and search endpoints are read-only GET requests")
         mutating = method in MUTATING_METHODS
         if not self.authenticated:
             self.authenticate()
@@ -527,7 +537,15 @@ def prepare_community_request(
     resolved = path
     for name in endpoint.variables:
         value = str((path_vars or {}).get(name, ""))
-        if not value or not (value.isdecimal() or name == "user_id" and value == "me"):
+        if name == "locale":
+            value = value.lower()
+            valid = SUPPORT_LOCALE.fullmatch(value) is not None
+        else:
+            valid = value.isdecimal() or name == "user_id" and value == "me"
+        if not value or not valid:
             raise ValueError(f"A valid {name} is required")
         resolved = resolved.replace("{" + name + "}", value)
-    return {"method": method, "url": community_url(resolved), "params": params or {}, "json": json_body, "mutating": method in MUTATING_METHODS}
+    address = community_url(resolved)
+    if HELP_CENTER_READ_PATH.fullmatch(urlsplit(address).path) is not None and (method != "GET" or json_body is not None):
+        raise ValueError("Help Center requests are read-only GET requests without a JSON body")
+    return {"method": method, "url": address, "params": params or {}, "json": json_body, "mutating": method in MUTATING_METHODS}

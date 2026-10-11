@@ -1,5 +1,15 @@
 # wqb-cli
 
+Version 0.6.2 adds native official Help Center article discovery and reading:
+`wqb help-center search Themes` and `wqb help-center get 38927747787031`.
+It reuses community SSO and preserves article HTML, update timestamps and pagination;
+no browser interaction or temporary authenticated script is needed. See
+[Help Center commands](resources/docs/commands/help-center/README.md).
+
+Optional [Delay 1 tower balancing](docs/tower_balance.md) allocates compatible
+batches by Region × Category expression counts, including AMR and ALL, while
+preserving the default random scheduler for runs that do not opt in.
+
 Community login and cached-session validation now use the Zendesk current-user
 JSON API. `sqlitecom sync` does not load an HTML landing page: a help-center page
 challenge must not reject an otherwise authenticated API session. Write-specific
@@ -34,13 +44,14 @@ It is built for coding agents and long-running research agents first, not as a t
 
 ## Main Commands
 
-The direct simulation command is `wqb simu`. Use the following entry points in examples and scripts for version 0.6.1:
+The direct simulation command is `wqb simu`. Use the following entry points in examples and scripts for version 0.6.2:
 
 | Command | Purpose |
 | --- | --- |
 | `wqb simu` | Create, inspect, and wait for Regular, Super, and ALL simulations. |
 | `wqb sqlitesimu` | Queue candidates in SQLite, execute batches, recover runs, and export results. |
 | `wqb community` | Read/search the forum and publish HTML posts with local images. |
+| `wqb help-center` | Discover and read official articles, including Theme/PPA calendars, using community SSO. |
 | `wqb sqlitecom` | Incrementally sync the forum, search local content, and run read-only SQL. |
 
 For simulation settings and request previews, start with `wqb simu options` and `wqb simu create --help`. See [Command Overview](#command-overview) for the complete command tree and examples below for request formats.
@@ -135,6 +146,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 ├─ suggest                                                       # Request platform suggestions using GET or POST
 ├─ search <query>                                                # Search the platform globally; no subcommands
 ├─ community                 # Online forum topics, posts, comments, search and raw API
+├─ help-center               # Official Help Center articles, search, categories, sections and read-only API
 ├─ sqlitecom                 # Local community database, incremental sync, imports and read-only SQL
 ├─ scope                                                         # Inspect local historical research data by REGION_DELAY
 ├─ shortcut (alias: quick)                                       # Run common combined operations
@@ -301,6 +313,10 @@ wqb  # WorldQuant BRAIN command-line toolkit
 │  ├─ user-posts / user-comments
 │  ├─ create / update / delete / comment-create / comment-update / comment-delete
 │  └─ api stats / list / show / params / call
+├─ help-center               # Official Help Center; reuses community SSO, read-only
+│  ├─ categories / category / sections / section
+│  ├─ articles / get / search
+│  └─ api stats / list / show / params / call
 ├─ sqlitecom                 # Local community database, incremental sync, imports and read-only SQL
 │  ├─ sync / search / get / import
 │  ├─ stats / status / schema
@@ -347,6 +363,7 @@ wqb  # WorldQuant BRAIN command-line toolkit
 - `simu` calls the platform simulation API directly; `sqlitesimu` adds a local database, batch queues, concurrent workers, recovery, and result exports.
 - Simulating is not submitting: `simu create` and `sqlitesimu run` launch simulations; `alpha submit` performs formal Alpha submission. The command tree does not imply that research or final eligibility checks have been completed.
 - `community` accesses the live forum. `sqlitecom` owns local storage and syncs through the same online client. Migrate old local searches to `sqlitecom search` and plugin imports to `sqlitecom import`.
+- `help-center` reads live official support articles, not forum posts. `docs` reads bundled CLI documentation; `tutorial` reads the separate platform tutorial API. Help Center requests reuse community authentication and are GET-only.
 - `sqlitesimu cancel` manages a local run and preserves history; it does not cancel every simulation already sent to the platform, and it does not bypass an active worker lease by default.
 - `api call` invokes registered endpoints directly. Mutating operations send real requests and do not automatically perform higher-level research checks.
 
@@ -379,7 +396,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.6.1"
+version = "0.6.2"
 ```
 
 ## Authentication
@@ -597,7 +614,7 @@ wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 
 The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code. Run exports also include structured `pnl_paths` with deduplicated date grids and per-Alpha daily increments so downstream correlation analysis can align observations by date without filling missing values.
 
-The sender randomly selects an eligible `(region, delay, type)` group, then randomly fills a compatible batch: up to 10 Regular FASTEXPR candidates, or one Super, ALL, or Python candidate. Full batches are sent whenever enough candidates are due; smaller final batches are also sent. Due confirmed-failure retries take precedence, and new work is selected before explicitly enabled resends. Queue priority and insertion order do not control sampling. Each accepted request is followed immediately by the next send, with no local simulation-slot cap; server backpressure and daily-limit deadlines govern waiting. Accepted work is excluded by default; `--resend-seconds SECONDS` opts in to reposting pending work, and `--no-resend` overrides that option.
+The sender randomly selects an eligible `(region, delay, type)` group, then randomly fills a compatible batch: up to 10 Regular FASTEXPR candidates, or one Super, ALL, or Python candidate. Full batches are sent whenever enough candidates are due; smaller final batches are also sent. Due confirmed-failure retries take precedence, and new work is selected before explicitly enabled resends. Queue priority and insertion order do not control default sampling. A run can opt in to descending Super priority within the selected group with manifest metadata `"super_queue_priority": {"enabled": true, "mode": "within_group"}`. This does not change group sampling, Regular/ALL ordering, dispatch exclusions, or confirmed-failure retry precedence; equal priorities remain random. `BATCH_CREATED` records the applied mode and selected priorities. Each accepted request is followed immediately by the next send, with no local simulation-slot cap; server backpressure and daily-limit deadlines govern waiting. Accepted work is excluded by default; `--resend-seconds SECONDS` opts in to reposting pending work, and `--no-resend` overrides that option.
 
 Template-family manifests can be validated before enqueue and rendered into a fixed terminal report:
 

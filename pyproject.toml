@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wqb-cli"
-version = "0.6.1"
+version = "0.6.2"
 description = "Agent-first WorldQuant BRAIN CLI with durable batch simulations and template-family workflows."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -42,6 +42,8 @@ wqb_cli = [
     "resources/api_inventory/**/*.html",
     "resources/community_api/**/*.json",
     "resources/community_api/**/*.md",
+    "resources/help_center_api/**/*.json",
+    "resources/help_center_api/**/*.md",
     "resources/docs/**/*.md",
     "resources/docs/**/*.json",
     "resources/docs/**/*.sql",

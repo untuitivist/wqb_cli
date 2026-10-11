@@ -74,7 +74,7 @@ class WqbApiGateway:
             params=params,
             json_body=json_body,
         )
-        if not self._should_reauthenticate(path, result):
+        if not self._should_reauthenticate(path, result, method=method):
             return result
         trigger_status = _status_code(result)
         with self._reauth_lock:
@@ -87,7 +87,7 @@ class WqbApiGateway:
                     json_body=json_body,
                     auto_auth=False,
                 )
-                if not self._should_reauthenticate(path, result):
+                if not self._should_reauthenticate(path, result, method=method):
                     result["reauthentication"] = {
                         "layer": "sqlitesimu",
                         "ok": True,
@@ -129,7 +129,7 @@ class WqbApiGateway:
                     auto_auth=False,
                 )
                 authentication["replay_status"] = _status_code(result)
-                if not self._should_reauthenticate(path, result):
+                if not self._should_reauthenticate(path, result, method=method):
                     result["reauthentication"] = {
                         "layer": "sqlitesimu",
                         "ok": True,
@@ -230,10 +230,13 @@ class WqbApiGateway:
     def _should_reauthenticate(
         path: str,
         result: dict[str, Any],
+        *, method: str = "GET",
     ) -> bool:
         if path == "/authentication":
             return False
         status_code = _status_code(result)
+        if method.upper() == "DELETE" and status_code == 204:
+            return False
         if status_code not in SQLITESIMU_REAUTH_STATUSES:
             return False
         response = result.get("response")

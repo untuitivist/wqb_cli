@@ -226,4 +226,8 @@ wqb sqlitesimu template-report run_export.json --analysis-contract analysis_cont
 
 ## SQLite 约束
 
+SQLite BUSY/LOCKED 会在回滚并关闭连接后重试整个本地 store 操作，最多额外重试 3 次，退避为 0.25、0.5、1 秒；每次连接仍保留 30 秒 busy timeout。日志记录发生竞争的方法和重试次数。其他 SQL 错误直接报错，持续锁库耗尽重试后仍会退出，不能保证永久锁定自动恢复。
+
+重试范围不包含 HTTP 请求。服务器已返回的 simulation location 在本地保存重试期间保留，不会因为数据库竞争再次 POST。数据库初始化会为新库和既有库补齐 `simulation_items(experiment_id)` 索引，避免按实验查询历史回测时扫描整个明细表。
+
 数据库应放在运行 worker 的本地磁盘。不要把活跃 WAL 数据库放在 SMB/NFS/网盘同步目录；如需跨机器调度，应把 store 接口替换成服务型数据库，而不是共享 SQLite 文件。

@@ -281,6 +281,7 @@ class ClientPrepareTests(unittest.TestCase):
             {"detail": "DAILY_SIMULATION_LIMIT_EXCEEDED"},
             {"message": "API rate limit exceeded"},
             {"error": "RATE_LIMIT_EXCEEDED"},
+            {"detail": "THROTTLED"},
         )
         for body in bodies:
             with self.subTest(body=body):

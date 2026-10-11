@@ -54,6 +54,8 @@ class EnqueueResult:
 class RuntimePolicy:
     max_attempts: int = 5
     max_simulation_retries: int = 1
+    simulation_timeout_seconds: float = 1800.0
+    max_not_found_retries: int = 3
     default_retry_seconds: float = 10.0
     idle_sleep_seconds: float = 1.0
     resend_interval_seconds: float | None = None

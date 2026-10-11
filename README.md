@@ -6,6 +6,10 @@ It reuses community SSO and preserves article HTML, update timestamps and pagina
 no browser interaction or temporary authenticated script is needed. See
 [Help Center commands](resources/docs/commands/help-center/README.md).
 
+Optional [Delay 1 tower balancing](docs/tower_balance.md) allocates compatible
+batches by Region × Category expression counts, including AMR and ALL, while
+preserving the default random scheduler for runs that do not opt in.
+
 Community login and cached-session validation now use the Zendesk current-user
 JSON API. `sqlitecom sync` does not load an HTML landing page: a help-center page
 challenge must not reject an otherwise authenticated API session. Write-specific
@@ -610,7 +614,7 @@ wqb sqlitesimu export <run_id> --db simulations.sqlite3 --output run-export.json
 
 The default database is `local/sqlitesimu/simulations.sqlite3`. Each run retains candidates, batches, simulation locations, errors, Alpha details, and PnL history, and exposes a `simued_alpha_is_pnl` compatibility view for legacy analysis code. Run exports also include structured `pnl_paths` with deduplicated date grids and per-Alpha daily increments so downstream correlation analysis can align observations by date without filling missing values.
 
-The sender randomly selects an eligible `(region, delay, type)` group, then randomly fills a compatible batch: up to 10 Regular FASTEXPR candidates, or one Super, ALL, or Python candidate. Full batches are sent whenever enough candidates are due; smaller final batches are also sent. Due confirmed-failure retries take precedence, and new work is selected before explicitly enabled resends. Queue priority and insertion order do not control sampling. Each accepted request is followed immediately by the next send, with no local simulation-slot cap; server backpressure and daily-limit deadlines govern waiting. Accepted work is excluded by default; `--resend-seconds SECONDS` opts in to reposting pending work, and `--no-resend` overrides that option.
+The sender randomly selects an eligible `(region, delay, type)` group, then randomly fills a compatible batch: up to 10 Regular FASTEXPR candidates, or one Super, ALL, or Python candidate. Full batches are sent whenever enough candidates are due; smaller final batches are also sent. Due confirmed-failure retries take precedence, and new work is selected before explicitly enabled resends. Queue priority and insertion order do not control default sampling. A run can opt in to descending Super priority within the selected group with manifest metadata `"super_queue_priority": {"enabled": true, "mode": "within_group"}`. This does not change group sampling, Regular/ALL ordering, dispatch exclusions, or confirmed-failure retry precedence; equal priorities remain random. `BATCH_CREATED` records the applied mode and selected priorities. Each accepted request is followed immediately by the next send, with no local simulation-slot cap; server backpressure and daily-limit deadlines govern waiting. Accepted work is excluded by default; `--resend-seconds SECONDS` opts in to reposting pending work, and `--no-resend` overrides that option.
 
 Template-family manifests can be validated before enqueue and rendered into a fixed terminal report:
 

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.6.2 - 2026-10-10
+## 0.6.2 - 2026-10-11
 
 ### Added
 
@@ -8,11 +8,15 @@
 - Article reading by ID or trusted Help Center URL, explicit locale selection, category/section filters, sorting, pagination and offline dry runs.
 - Bounded `--all-pages` collection with preserved page envelopes, same-resource/origin validation, repeated-page detection and explicit incomplete-result exit codes.
 - Reuse the existing community BRAIN-to-Zendesk SSO, session cache, expiry renewal and bounded Retry-After handling. Reads do not load HTML pages or acquire write CSRF context.
+- Opt-in persistent D1 tower balancing and opt-in Super priority within compatible groups; other runs retain random scheduling.
+- Native simulation cancellation, confirmed 30-minute timeout recovery, and bounded missing-simulation retries, with durable schema 9 acceptance timestamps.
 
 ### Fixed
 
 - Official Help Center article paths no longer require ad hoc authenticated scripts outside the CLI. Only the supported GET article/category/section/search paths are added to the support transport allowlist; writes and request bodies remain rejected.
-- Preserve language-specific 404s, persistent 403s and browser challenges. No silent translation fallback, browser automation, theme inference or simulation scheduling changes.
+- Preserve language-specific 404s, persistent 403s and browser challenges. No silent translation fallback, browser automation or theme inference.
+- Retry bounded SQLite BUSY/LOCKED transactions after rollback and close, without replaying simulation HTTP requests; preserve original lock errors for worker recovery.
+- Respect hidden/retired dispatch policies for retries and batched items, and recognize explicit THROTTLED responses as backpressure.
 
 ## 0.6.1 community API authentication fix (2026-09-25)
 

@@ -243,6 +243,9 @@ def _add_runtime_arguments(parser: argparse.ArgumentParser) -> None:
         help="Retries after a confirmed simulation failure; exhausted experiments are recorded and skipped",
     )
     parser.add_argument("--retry-seconds", type=float, default=10.0)
+    parser.add_argument("--simulation-timeout-seconds", type=float, default=1800.0)
+    parser.add_argument("--max-not-found-retries", type=int, default=3,
+                        help="Retries after the first simulation 404 before bounded resimulation")
     parser.add_argument("--idle-sleep-seconds", type=float, default=1.0)
     parser.add_argument(
         "--resend-seconds",
@@ -287,6 +290,8 @@ def _run(
     policy = RuntimePolicy(
         max_attempts=args.max_attempts,
         max_simulation_retries=args.max_simulation_retries,
+        simulation_timeout_seconds=args.simulation_timeout_seconds,
+        max_not_found_retries=args.max_not_found_retries,
         default_retry_seconds=args.retry_seconds,
         idle_sleep_seconds=args.idle_sleep_seconds,
         resend_interval_seconds=None if args.no_resend else args.resend_seconds,

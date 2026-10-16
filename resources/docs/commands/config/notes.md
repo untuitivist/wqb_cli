@@ -4,6 +4,7 @@ Credential resolution order for `wqb auth login`:
 
 - explicit `--email` / `--password`
 - JSON `--input`
+- process `WQB_EMAIL` / `WQB_PASSWORD` (temporary override; skips keyring when the password is present)
 - keyring password using `auth.keyring_service` and `auth.keyring_username`
 - `wqb_cli/local/.env`
 - legacy root `.env` fallback

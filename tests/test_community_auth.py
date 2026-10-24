@@ -79,6 +79,17 @@ class CommunityAuthTests(unittest.TestCase):
                     client.authenticate()
                 self.assertFalse(client.authenticated)
 
+    def test_sso_reuses_identity_csrf_for_writes_without_an_html_get(self):
+        client, brain, session = self.client()
+        brain.call_once.return_value["response"]["location"] = IDENTITY_URL
+        session.get.return_value = response(200, body={"user": {"id": 20, "role": "end-user", "authenticity_token": "private-token"}})
+        session.request.return_value = response(201, body={"comment": {"id": 100}})
+        client.authenticate()
+        self.assertEqual(client.csrf_token, "private-token")
+        client.call("POST", "/api/v2/community/posts/100/comments.json", json_body={"comment": {"body": "fixture"}})
+        self.assertEqual(session.get.call_count, 1)
+        self.assertEqual(session.request.call_args.kwargs["headers"]["X-CSRF-Token"], "private-token")
+
     def test_html_user_marker_cannot_replace_api_identity(self):
         client, brain, session = self.client()
         brain.call_once.return_value["response"]["location"] = IDENTITY_URL
@@ -135,7 +146,7 @@ class CommunityAuthTests(unittest.TestCase):
         with self.assertRaises(CommunityChallengeError):
             client.post_page("https://support.worldquantbrain.com/hc/en-us/community/posts/100", "100")
         self.assertTrue(client.authenticated)
-        self.assertIsNone(client.csrf_token)
+        self.assertEqual(client.csrf_token, "old-context")
         session.request.return_value = response(200, body={"post": {"id": 100}})
         self.assertTrue(client.call("GET", "/api/v2/community/posts/100.json")["ok"])
         brain.call_once.assert_not_called()

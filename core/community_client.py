@@ -50,10 +50,19 @@ class CommunityError(RuntimeError):
 
 class CommunityChallengeError(CommunityError):
     def __init__(self, status_code: int, stage: str) -> None:
-        super().__init__(
+        message = (
             "Community browser verification is required; this is not an expired BRAIN password. "
             "Open https://support.worldquantbrain.com/hc/zh-cn/community in a normal browser. "
-            "If CLI access remains challenged, contact platform support for supported API access.",
+            "If CLI access remains challenged, contact platform support for supported API access."
+        )
+        if stage == "write_context":
+            message = (
+                "Forum HTML brand discovery was challenged. Supply a verified --brand-id for "
+                "API-only image uploads; do not use a topic/community ID. The separately "
+                "validated API session is preserved."
+            )
+        super().__init__(
+            message,
             status_code=status_code, code="browser_verification_required", stage=stage,
         )
 
@@ -140,6 +149,13 @@ def session_user_id(reply: requests.Response) -> str | None:
     return identifier if identifier.isdecimal() and int(identifier) > 0 else None
 
 
+def session_csrf_token(reply: requests.Response) -> str | None:
+    if session_user_id(reply) is None:
+        return None
+    token = reply.json()["user"].get("authenticity_token")
+    return token if isinstance(token, str) and token.strip() else None
+
+
 def next_page_url(body: dict[str, Any]) -> str | None:
     meta = body.get("meta") or {}
     if meta.get("has_more") is False:
@@ -164,9 +180,13 @@ class CommunityClient:
         max_wait_seconds: float = 300,
         sleeper: Callable[[float], None] = time.sleep,
         session_store: CommunitySessionStore | None = None,
+        brand_id: str | None = None,
     ) -> None:
         if timeout <= 0 or max_retries < 0 or max_wait_seconds < 0:
             raise ValueError("Invalid community timeout, retry count or wait budget")
+        if brand_id is not None and re.fullmatch(r"[1-9][0-9]*", str(brand_id)) is None:
+            raise ValueError("Community brand ID must be a positive integer")
+        self._configured_brand_id = str(brand_id) if brand_id is not None else None
         self.brain = brain_client or WqbClient(
             brain_registry or EndpointRegistry.load(), session_from_cookies(cookies_path),
             login_payload_provider=lambda: resolve_login_payload(config_path=config_path),
@@ -181,7 +201,7 @@ class CommunityClient:
         self.sleeper = sleeper
         self.authenticated = False
         self.csrf_token: str | None = None
-        self.brand_id: str | None = None
+        self.brand_id: str | None = self._configured_brand_id
         self.user_id: str | None = None
         self.session_store = session_store
         self.cache_status = "disabled"
@@ -199,7 +219,7 @@ class CommunityClient:
     def authenticate(self) -> None:
         self.authenticated = False
         self.csrf_token = None
-        self.brand_id = None
+        self.brand_id = self._configured_brand_id
         self.user_id = None
         if self._restore_session():
             return
@@ -273,6 +293,7 @@ class CommunityClient:
                                      status_code=reply.status_code,
                                      code="community_session_unverified", stage="support_sso")
             self.authenticated = True
+            self.csrf_token = session_csrf_token(reply)
             self._save_session()
             return
         raise CommunityError("Support SSO exceeded its redirect limit")
@@ -296,6 +317,7 @@ class CommunityClient:
         if identity and identity == str(payload["user_id"]):
             self.user_id = identity
             self.authenticated = True
+            self.csrf_token = session_csrf_token(reply)
             self.cache_status = "reused"
             self._save_session()
             return True
@@ -326,7 +348,7 @@ class CommunityClient:
     def _invalidate_session(self) -> None:
         self.authenticated = False
         self.csrf_token = None
-        self.brand_id = None
+        self.brand_id = self._configured_brand_id
         self.user_id = None
         self._cache_attempted = True
         if isinstance(self.session.cookies, requests.cookies.RequestsCookieJar):
@@ -359,8 +381,7 @@ class CommunityClient:
             check_browser_challenge(reply, stage)
         except CommunityChallengeError:
             if stage in {"post_page", "write_context"}:
-                self.csrf_token = None
-                self.brand_id = None
+                self.brand_id = self._configured_brand_id
             else:
                 self._invalidate_session()
             raise
@@ -400,19 +421,33 @@ class CommunityClient:
             waited += delay
         return reply
 
-    def write_context(self) -> dict[str, str]:
+    def write_context(self, *, require_brand: bool = False) -> dict[str, str]:
         if not self.authenticated:
             self.authenticate()
-        if not self.csrf_token or not self.brand_id:
+        if not self.csrf_token:
+            reply = self._get_response(IDENTITY_URL, stage="write_identity", headers=API_HEADERS)
+            if session_user_id(reply) != self.user_id or self.user_id is None:
+                self._invalidate_session()
+                raise CommunityError("Forum write identity could not be verified", status_code=reply.status_code,
+                                     code="community_session_unverified", stage="write_identity")
+            self.csrf_token = session_csrf_token(reply)
+            self._save_session()
+        if not self.csrf_token:
+            raise CommunityError("Forum identity API did not provide an authenticity token",
+                                 code="community_csrf_unavailable", stage="write_identity")
+        if require_brand and not self.brand_id:
             reply = self._read_page(SUPPORT_ORIGIN + "/hc/zh-cn/community/posts/new", stage="write_context")
             if reply.status_code != 200:
                 raise CommunityError(f"Forum write context failed (HTTP {reply.status_code})", status_code=reply.status_code)
             context = browser_write_context(reply.text)
-            self.csrf_token = context.get("csrf_token")
             self.brand_id = context.get("brand_id")
-        if not self.csrf_token or not self.brand_id:
-            raise CommunityError("Forum page did not provide the shared CSRF token and brand required for writes")
-        return {"csrf_token": self.csrf_token, "brand_id": self.brand_id}
+        if require_brand and not self.brand_id:
+            raise CommunityError("Image uploads require a verified forum brand ID; supply --brand-id",
+                                 code="community_brand_unavailable", stage="write_context")
+        if not self.csrf_token:
+            raise CommunityError("Forum session changed without a new authenticity token",
+                                 code="community_csrf_unavailable", stage="write_identity")
+        return {"csrf_token": self.csrf_token, **({"brand_id": self.brand_id} if self.brand_id else {})}
 
     def post_page(self, address: str, post_id: str) -> requests.Response:
         parsed = urlsplit(address)

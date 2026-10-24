@@ -10,7 +10,7 @@ import requests
 
 from wqb_cli.cli import build_parser
 from wqb_cli.commands.community import handle_community
-from wqb_cli.core.community_client import CommunityClient, CommunityError, browser_write_context
+from wqb_cli.core.community_client import CommunityChallengeError, CommunityClient, CommunityError, browser_write_context
 from wqb_cli.core.community_publish import image_file, materialize_images, plan_images, upload_image, verify_post_page
 
 
@@ -24,31 +24,84 @@ def reply(status, body):
     return response
 
 
-class SharedCsrfTests(unittest.TestCase):
-    def test_api_writes_use_shared_token_from_page(self):
-        context = {"current_session": {"csrf_token": "wrong-help-center-token", "shared_csrf_token": "shared-token"},
-                   "current_brand_id": 123}
-        page = reply(200, {})
-        page._content = ("<script>HelpCenter.internal = " + json.dumps(context) + ";</script>").encode("utf-8")
+class IdentityCsrfTests(unittest.TestCase):
+    def test_api_writes_use_documented_identity_token_without_html(self):
         session = Mock()
-        session.get.return_value = page
+        session.get.return_value = reply(200, {"user": {"id": 20, "role": "end-user", "authenticity_token": "identity-token"}})
         session.request.return_value = reply(201, {"post": {"id": 100}})
         client = CommunityClient(session=session, brain_client=Mock())
         client.authenticated = True
+        client.user_id = "20"
         result = client.call("POST", "/api/v2/community/posts.json", json_body={"post": {"title": "fixture"}})
         self.assertTrue(result["ok"])
-        self.assertEqual(session.request.call_args.kwargs["headers"]["X-CSRF-Token"], "shared-token")
-        self.assertEqual(client.brand_id, "123")
-        self.assertNotIn("shared-token", json.dumps(result))
+        self.assertEqual(session.request.call_args.kwargs["headers"]["X-CSRF-Token"], "identity-token")
+        self.assertTrue(session.get.call_args.args[0].endswith("/api/v2/users/me.json"))
+        self.assertEqual(session.get.call_args.kwargs["headers"]["Accept"], "application/json")
+        self.assertIsNone(client.brand_id)
+        self.assertNotIn("identity-token", json.dumps(result))
 
-    def test_missing_shared_token_prevents_write(self):
+    def test_missing_identity_token_prevents_write(self):
         session = Mock()
-        session.get.return_value = reply(200, {})
+        session.get.return_value = reply(200, {"user": {"id": 20, "role": "end-user"}})
         client = CommunityClient(session=session, brain_client=Mock())
         client.authenticated = True
-        with self.assertRaisesRegex(CommunityError, "shared CSRF"):
+        client.user_id = "20"
+        with self.assertRaisesRegex(CommunityError, "authenticity token"):
             client.call("POST", "/api/v2/community/posts.json")
         session.request.assert_not_called()
+
+    def test_changed_identity_prevents_write(self):
+        session = Mock()
+        session.get.return_value = reply(200, {"user": {"id": 21, "role": "end-user", "authenticity_token": "private"}})
+        client = CommunityClient(session=session, brain_client=Mock())
+        client.authenticated = True
+        client.user_id = "20"
+        with self.assertRaises(CommunityError):
+            client.call("POST", "/api/v2/community/posts.json")
+        session.request.assert_not_called()
+        self.assertFalse(client.authenticated)
+
+    def test_explicit_brand_uses_identity_token_without_html(self):
+        session = Mock()
+        client = CommunityClient(session=session, brain_client=Mock(), brand_id="123")
+        client.authenticated = True
+        client.csrf_token = "identity-token"
+        self.assertEqual(client.write_context(require_brand=True), {"csrf_token": "identity-token", "brand_id": "123"})
+        session.get.assert_not_called()
+        client._invalidate_session()
+        self.assertEqual(client.brand_id, "123")
+        self.assertIsNone(client.csrf_token)
+
+    def test_invalid_brand_is_rejected_before_auth(self):
+        for value in ("0", "-1", "not-a-brand", "123/path", " 123", "123\n"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                CommunityClient(session=Mock(), brain_client=Mock(), brand_id=value)
+
+    def test_brand_challenge_stops_upload_without_discarding_api_token(self):
+        session = Mock()
+        challenged = reply(403, {})
+        challenged.headers["cf-mitigated"] = "challenge"
+        session.get.return_value = challenged
+        client = CommunityClient(session=session, brain_client=Mock())
+        client.authenticated = True
+        client.csrf_token = "identity-token"
+        with self.assertRaises(CommunityChallengeError):
+            client.write_context(require_brand=True)
+        self.assertTrue(client.authenticated)
+        self.assertEqual(client.csrf_token, "identity-token")
+        self.assertEqual(session.get.call_count, 1)
+        session.request.assert_not_called()
+
+    def test_html_brand_discovery_preserves_identity_token(self):
+        session = Mock()
+        context = {"current_session": {"shared_csrf_token": "legacy-token"}, "current_brand_id": 123}
+        page = reply(200, {})
+        page._content = ("HelpCenter.internal = " + json.dumps(context) + ";").encode("utf-8")
+        session.get.return_value = page
+        client = CommunityClient(session=session, brain_client=Mock())
+        client.authenticated = True
+        client.csrf_token = "identity-token"
+        self.assertEqual(client.write_context(require_brand=True), {"csrf_token": "identity-token", "brand_id": "123"})
 
     def test_context_parser_does_not_execute_javascript(self):
         self.assertEqual(browser_write_context("HelpCenter.internal = fetch('/private');"), {})
@@ -121,11 +174,21 @@ class ImagePublicationTests(unittest.TestCase):
         with patch("wqb_cli.core.community_publish.requests.Session", return_value=transfer):
             result = upload_image(client, self.image)
         self.assertEqual(result["path"], "/hc/user_images/trace.png")
+        client.write_context.assert_called_once_with(require_brand=True)
         self.assertEqual(transfer.put.call_args.kwargs["data"], PNG)
         self.assertEqual(transfer.put.call_args.kwargs["headers"], {"Content-Type": "image/png"})
         self.assertFalse(transfer.put.call_args.kwargs["allow_redirects"])
         self.assertEqual(client.call.call_args_list[1].kwargs["json_body"], {"token": "private-token", "brand_id": "123"})
         self.assertNotIn("private", json.dumps(result))
+
+    def test_image_upload_cli_passes_verified_brand_to_shared_client(self):
+        args = build_parser(plugins=[]).parse_args(["community", "image-upload", str(self.image), "--brand-id", "123"])
+        with patch("wqb_cli.commands.community.CommunityClient") as client, \
+                patch("wqb_cli.commands.community.upload_image", return_value=self.image_receipt()) as uploaded, \
+                patch("wqb_cli.commands.community.write_json"):
+            self.assertEqual(handle_community(args), 0)
+        self.assertEqual(client.call_args.kwargs["brand_id"], "123")
+        uploaded.assert_called_once_with(client.return_value, self.image.resolve())
 
     def test_upload_timeout_does_not_register_or_replay(self):
         client = self.upload_client()

@@ -36,7 +36,9 @@ The default image receipt file is `post.html.assets.json`. Override it with `--a
 
 HTML creation requires `--title` and `--topic` and does not notify subscribers unless `--notify-subscribers` is supplied. Update changes only supplied fields. Native JSON remains supported via `--input` or `--json`; add `--upload-images` to prepare local images in JSON input.
 
-`--dry-run` validates files and previews requests without authentication, uploads or HTTP. Actual publishing is explicit. The client uses the forum page's `shared_csrf_token` and brand context; the Help Center session API's different CSRF token cannot authorize these writes. Image upload follows Zendesk's upload-ticket, byte-transfer and registration steps, without exposing signed URLs or copying authentication cookies to the upload host.
+`--dry-run` validates files and previews requests without authentication, uploads or HTTP. Actual publishing is explicit. Writes use `user.authenticity_token` from the authenticated `/api/v2/users/me.json` response, following Zendesk's documented CSRF flow. Posts and comments do not need an HTML editor page. The Help Center sessions API's different token is not used for image uploads.
+
+Image registration also requires the site's brand ID. Supply a verified `--brand-id` to `create`, `update` or `image-upload` to keep the complete upload path on APIs; otherwise the client retains its authenticated HTML brand lookup. A topic ID or community ID is not a substitute for a brand ID. A challenged brand lookup stops before any upload request. Image upload follows Zendesk's upload-ticket, byte-transfer and registration steps, without exposing signed URLs or copying authentication cookies to the upload host.
 
 `create/update/delete` and comment commands never automatically resend a write, including after 429 or a timeout. Inspect the target before retrying any unknown outcome. Live verification is recorded in `resources/community_api/reports/verification.md`; it does not imply permission to use every mutation.
 

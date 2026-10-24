@@ -97,7 +97,7 @@ def image_file(path: Path) -> tuple[dict[str, Any], bytes]:
 
 def upload_image(client: CommunityClient, path: Path) -> dict[str, Any]:
     metadata, content = image_file(path)
-    context = client.write_context()
+    context = client.write_context(require_brand=True)
     created = client.call("POST", "/api/v2/guide/user_images/uploads",
                           json_body={"content_type": metadata["content_type"], "file_size": len(content)})
     if not created["ok"]:

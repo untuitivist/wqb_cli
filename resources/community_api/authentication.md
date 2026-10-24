@@ -23,8 +23,10 @@ BRAIN API credentials are not copied to the cache. Session cookies without an ex
 have a local maximum idle age of six hours. Every new client validates the saved
 forum user with `GET /api/v2/users/me.json` before reuse. Identity requires a positive
 user ID and the end-user, agent or admin role. SSO requests this API as its return
-target; a help-center HTML redirect is normalized to the identity API. Write
-context is obtained only when a write needs it.
+target; a help-center HTML redirect is normalized to the identity API. Its
+`user.authenticity_token` is retained only in memory for writes and is never saved
+in the session cache or included in authentication command output. A new session
+obtains a fresh token from its verified identity response.
 No JavaScript is evaluated. A missing or different user identity causes fresh SSO.
 An anonymous HTTP 200 response never establishes an authenticated session.
 
@@ -68,5 +70,25 @@ unnecessary dependency; it does not solve HTML-page challenges or assert write a
 Official Help Center sessions documentation:
 https://developer.zendesk.com/api-reference/help_center/help-center-api/help_center_sessions/
 This endpoint also serves anonymous users, so receiving its CSRF token alone is
-not proof of account authentication. Its token is not a substitute for the shared
-CSRF token used by existing community write support.
+not proof of account authentication. Its token returned HTTP 401 for image upload
+preparation on both 2026-09-22 and 2026-10-24, and is not used by this client.
+
+## API write context
+
+Zendesk documents `user.authenticity_token` from `/api/v2/users/me.json` as the
+token to send in `X-CSRF-Token` for cookie-authenticated writes:
+https://developer.zendesk.com/documentation/help_center/help-center-api/secured-requests/
+
+On 2026-10-24, the authenticated identity API returned 200 and image upload
+preparation with this token returned 201, while the editor/home HTML returned a
+403 challenge. The CLI now separates API write authentication from HTML brand
+discovery. This removes the unnecessary HTML dependency; it does not solve or
+disable the challenge. Mutations still have no automatic retry.
+
+User-image registration additionally requires the site's brand ID. A verified
+`--brand-id` on `community create`, `update` or `image-upload` supplies this public
+site metadata without reading the editor page. Without it, the existing HTML
+lookup remains available and stops immediately on a challenge. Missing brand IDs
+are not guessed from topic/community IDs; registration without a brand returned
+400 in the live diagnostic. An HTML challenge preserves the independently
+validated API session and identity token.

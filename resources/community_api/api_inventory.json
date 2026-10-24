@@ -1,7 +1,7 @@
 {
   "base_url": "https://support.worldquantbrain.com",
   "homepage": "https://support.worldquantbrain.com/hc/zh-cn/community",
-  "authentication": "BRAIN authentication/support SSO, then verify the Zendesk session using GET /api/v2/users/me.json. HTML landing pages are not required for API reads. Cookie-authenticated API writes use HelpCenter.internal.current_session.shared_csrf_token from the authenticated page, not the Help Center session API csrf_token.",
+  "authentication": "BRAIN authentication/support SSO, then verify the Zendesk session using GET /api/v2/users/me.json. Cookie-authenticated writes use user.authenticity_token from that response. Image registration also requires a verified brand ID via --brand-id or authenticated HTML discovery. The Help Center session API csrf_token is not used for images.",
   "verification": "2026-09-22: authenticated reads and cursor pagination verified. Authorized image upload and post creation succeeded through the installed CLI (POST 201). Published HTML and image GET returned 200; the post JSON GET returned 404, which is preserved separately from successful page verification.",
   "endpoints": [
     {
@@ -53,7 +53,7 @@
       "request_body": {
         "POST": {
           "token": "token from the completed upload",
-          "brand_id": "current_brand_id from the authenticated page"
+          "brand_id": "verified site brand ID supplied via --brand-id or discovered from authenticated HTML"
         }
       },
       "notes": [

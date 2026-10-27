@@ -115,6 +115,25 @@ Retained the explicit local pickle reader for compatibility and documented that
 untrusted pickle loading can execute code; that legacy input is not made safe by
 renaming a file or by the transport dependency updates.
 
+## Completed pre-merge verification
+
+- Final offline suite: 322 tests and 175 subtests passed on Windows in a clean
+  environment. The dependency advisory recheck covered 18 runtime packages and
+  returned no known vulnerabilities at the time of the check.
+- The native Windows `wqb.exe` successfully reinstalled its own package through
+  the hidden helper and real pip, preserved private sentinel data, verified the
+  new version in a fresh process and passed `pip check`. Release downloads in
+  this pre-publication test used a local fixture; it is not evidence of a public
+  release download. Distlib's normalized `wqb` entry-point name is covered too.
+- A separate real GitHub metadata check selected the existing v0.6.1 Release
+  and correctly refused to downgrade the installed 0.6.3 candidate.
+- Clean wheel and source archives passed member/version/resource checks.
+  Publication must rebuild them from the merged master commit, then verify
+  downloaded assets and the actual public-release upgrade path.
+- Remote CI is not enabled. The preserved WQBRAIN production environment is
+  still the merged 0.6.2 installation; independent validation of 0.6.3 does not
+  mean its conflicting third-party dependencies have been changed.
+
 ## Release boundary
 
 The user authorized development, installation, pushing a PR and release after

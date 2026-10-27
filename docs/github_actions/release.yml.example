@@ -35,4 +35,3 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/*.whl dist/*.tar.gz dist/SHA256SUMS.txt dist/BUILD_INFO.json --verify-tag --title "wqb-cli ${GITHUB_REF_NAME#v}" --notes-file release-notes.md
-

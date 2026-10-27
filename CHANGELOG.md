@@ -17,6 +17,9 @@
   included; enabling Actions requires a GitHub credential with workflow scope.
 - Optional existing GitHub CLI/environment authentication for release metadata,
   scoped to the API origin and excluded from receipts and CDN requests.
+- Native Windows launcher handoff: a one-time helper waits for `wqb.exe` to exit
+  before pip replaces it; `--status PATH --wait` reads the final verified receipt.
+  `upgrade_started` explicitly does not mean installation success.
 - Development dependencies and JSON `--output` on base auth/API read commands.
 
 ### Fixed

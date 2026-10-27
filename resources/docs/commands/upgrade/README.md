@@ -15,6 +15,7 @@ wqb upgrade --version 0.6.3
 wqb upgrade --version 0.6.3 --reinstall
 wqb upgrade --version 0.6.1 --allow-downgrade
 wqb upgrade --check --output update.json
+python -I -m wqb_cli upgrade --status <status_path> --wait
 ```
 
 - The default selects the latest stable release. If that release is older than
@@ -42,7 +43,20 @@ wqb upgrade --check --output update.json
 - pip output and a fresh interpreter's version verification are returned as
   JSON. A failed/timed-out install is not success or an automatic rollback:
   inspect the reported installer result and `python -I -m wqb_cli --version`
-  before retrying. On Windows, the updater uses normal pip launcher replacement.
+  before retrying.
+- A running Windows `wqb.exe` locks its launcher. It verifies the download, then
+  starts a one-time helper that waits for that exact launcher process to exit
+  before invoking pip. The initial receipt is `upgrade_started`, with
+  `installed: false`, `status_path` and `log_path`. This is acceptance, not success.
+  The helper writes the final receipt and updates `--output` when supplied.
+- To inspect or wait for a Windows job, use the Python module command above;
+  this avoids holding another `wqb.exe` open during replacement. `--wait` blocks
+  on the process handle for at most 60 seconds. Only `status: updated` with
+  `installed: true` confirms installation and fresh-process version verification.
+  A timed-out wait can still be pending. A helper that exits without a final
+  receipt reports an unknown outcome. Keep the verified wheel, log and receipt
+  in the reported temporary job directory for diagnosis.
 - `--output` saves the JSON receipt; it suppresses stdout like other CLI commands.
 
-This command does not run automatically in the background or publish a release.
+This command never schedules recurring updates or publishes a release. The
+Windows helper belongs only to the explicit update invocation.

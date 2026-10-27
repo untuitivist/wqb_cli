@@ -16,8 +16,8 @@ import requests
 from wqb_cli.cli import build_parser
 from wqb_cli.commands.upgrade import handle_upgrade
 from wqb_cli.core.upgrade import (
-    API_ROOT, RELEASE_ROOT, GitHubAuth, UpgradeError, _environment, _fetch, _github_token, _install,
-    _wheel_requirements, release_version, upgrade,
+    API_ROOT, RELEASE_ROOT, GitHubAuth, UpgradeError, _apply_job, _environment, _fetch, _github_token, _install,
+    _wheel_requirements, release_version, upgrade, upgrade_status,
 )
 
 
@@ -58,6 +58,9 @@ class UpgradeTests(unittest.TestCase):
         token_patch = patch("wqb_cli.core.upgrade._github_token", return_value=None)
         token_patch.start()
         self.addCleanup(token_patch.stop)
+        launcher_patch = patch("wqb_cli.core.upgrade._windows_launcher", return_value=False)
+        launcher_patch.start()
+        self.addCleanup(launcher_patch.stop)
 
     def fixture(self, version: str = "0.6.4", **kwargs) -> tuple[dict, bytes, bytes]:
         release, checksums, wheel = release_fixture(version, **kwargs)
@@ -123,6 +126,23 @@ class UpgradeTests(unittest.TestCase):
         self.assertEqual(result["sha256"], hashlib.sha256(wheel_bytes).hexdigest())
         environment.assert_called_once()
         install.assert_called_once()
+
+    def test_native_windows_launch_defers_install_until_launcher_exits(self) -> None:
+        _, _, expected = self.fixture()
+
+        def start_job(wheel, version, digest, result, output):
+            self.assertEqual(wheel.read_bytes(), expected)
+            self.assertEqual(version, "0.6.4")
+            self.assertEqual(output, "receipt.json")
+            return {**result, "status": "upgrade_started", "installed": False}
+
+        with patch("wqb_cli.core.upgrade._windows_launcher", return_value=True), \
+                patch("wqb_cli.core.upgrade._environment"), patch("wqb_cli.core.upgrade._install") as install, \
+                patch("wqb_cli.core.upgrade._start_windows_job", side_effect=start_job):
+            result = upgrade(output="receipt.json")
+        self.assertEqual(result["status"], "upgrade_started")
+        self.assertFalse(result["installed"])
+        install.assert_not_called()
 
     def test_tampered_wheel_is_rejected_before_pip(self) -> None:
         release, checksums, _ = self.fixture()
@@ -205,7 +225,8 @@ class DownloadAndInstallTests(unittest.TestCase):
     def test_github_token_is_sent_only_to_the_api_origin(self) -> None:
         auth = GitHubAuth("private-fixture-token")
         for address in (API_ROOT + "/releases/latest", RELEASE_ROOT + "/download/v0.6.3/file.whl",
-                        "https://release-assets.githubusercontent.com/file", "https://api.worldquantbrain.com/authentication"):
+                        "https://release-assets.githubusercontent.com/file", "https://api.worldquantbrain.com/authentication",
+                        "http://api.github.com/releases", "https://api.github.com:444/releases"):
             request = requests.Request("GET", address).prepare()
             auth(request)
             self.assertEqual("Authorization" in request.headers, address.startswith("https://api.github.com/"))
@@ -270,7 +291,7 @@ class DownloadAndInstallTests(unittest.TestCase):
         with patch("wqb_cli.core.upgrade.subprocess.run", side_effect=calls) as run:
             result = _install(Path("release.whl"), "0.6.4")
         command = run.call_args_list[0].args[0]
-        self.assertEqual(command[:4], [__import__("sys").executable, "-I", "-m", "pip"])
+        self.assertEqual(command[:6], [__import__("sys").executable, "-I", "-X", "utf8", "-m", "pip"])
         self.assertIn("--no-deps", command)
         self.assertIn("--no-index", command)
         self.assertNotIn("shell", run.call_args_list[0].kwargs)
@@ -292,6 +313,56 @@ class DownloadAndInstallTests(unittest.TestCase):
                 _install(Path("release.whl"), "0.6.4")
         self.assertEqual(caught.exception.reason, "installation_timed_out")
         self.assertEqual(caught.exception.evidence["installer"]["stdout"], "uninstall started")
+
+
+class UpgradeJobTests(unittest.TestCase):
+    def test_worker_rechecks_staged_hash_and_preserves_final_status(self) -> None:
+        for tamper in (False, True):
+            with self.subTest(tamper=tamper), tempfile.TemporaryDirectory() as temporary:
+                directory = Path(temporary)
+                _, _, content = release_fixture()
+                wheel = directory / "wqb_cli-0.6.4-py3-none-any.whl"
+                wheel.write_bytes(content + (b"tampered" if tamper else b""))
+                job = {"wheel": str(wheel), "version": "0.6.4", "sha256": hashlib.sha256(content).hexdigest(),
+                       "launcher_pid": 123, "output": str(directory / "output.json")}
+                job_path = directory / "job.json"
+                job_path.write_text(json.dumps(job), encoding="utf-8")
+                (directory / "result.json").write_text('{"ok":true,"status":"upgrade_started","installed":false,"job_pid":456}', encoding="utf-8")
+                with patch("wqb_cli.core.upgrade._wait_process", return_value=True), \
+                        patch("wqb_cli.core.upgrade._environment"), patch("wqb_cli.core.upgrade._install", return_value={"verification": {"runtime": "0.6.4"}}) as install:
+                    code = _apply_job(job_path)
+                result = json.loads((directory / "result.json").read_text(encoding="utf-8"))
+                self.assertEqual(result, json.loads((directory / "output.json").read_text(encoding="utf-8")))
+                self.assertEqual(result["job_pid"], 456)
+                self.assertEqual(code, 1 if tamper else 0)
+                if tamper:
+                    self.assertEqual(result["reason"], "wheel_checksum_mismatch")
+                    install.assert_not_called()
+                else:
+                    self.assertEqual(result["status"], "updated")
+                    self.assertTrue(result["installed"])
+
+    def test_status_wait_blocks_on_process_handle_then_reads_final_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            receipt = Path(temporary) / "result.json"
+            receipt.write_text('{"ok":true,"status":"upgrade_started","installed":false,"job_pid":123}', encoding="utf-8")
+
+            def complete(process_id):
+                self.assertEqual(process_id, 123)
+                receipt.write_text('{"ok":true,"status":"updated","installed":true}', encoding="utf-8")
+                return True
+
+            with patch("wqb_cli.core.upgrade._wait_process", side_effect=complete):
+                self.assertEqual(upgrade_status(str(receipt), wait=True)["status"], "updated")
+
+    def test_missing_worker_outcome_is_not_reported_as_success(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            receipt = Path(temporary) / "result.json"
+            receipt.write_text('{"ok":true,"status":"upgrade_started","installed":false,"job_pid":123}', encoding="utf-8")
+            with patch("wqb_cli.core.upgrade._wait_process", return_value=True):
+                result = upgrade_status(str(receipt), wait=True)
+            self.assertFalse(result["ok"])
+            self.assertEqual(result["reason"], "upgrade_job_ended_without_receipt")
 
 
 if __name__ == "__main__":

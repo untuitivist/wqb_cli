@@ -10,7 +10,7 @@ are separate states; the updater must never silently downgrade between them.
 | Work | Implementation | Acceptance evidence |
 | --- | --- | --- |
 | Community publication | Retain PR #9: identity API CSRF, explicit image brand ID, no automatic write replay | Community authentication/publication regressions; no new public test posts |
-| Native updates | `wqb upgrade`, `--check`, `--dry-run`, `--version VERSION`, `--reinstall`, `--allow-downgrade`, `--output` | Latest/specified stable release, no-op, downgrade, failure and native Windows launcher tests |
+| Native updates | `wqb upgrade`, `--check`, `--dry-run`, `--version VERSION`, `--reinstall`, `--allow-downgrade`, `--output`, `--status PATH --wait` | Latest/specified stable release, no-op, downgrade, failure and native Windows launcher tests |
 | Update integrity | Fixed upstream GitHub repository, HTTPS allowlisted redirects, bounded downloads, SHA256SUMS and optional GitHub asset digest, wheel identity verification | Tampered bytes/metadata/URLs are rejected before pip runs; BRAIN cookies are never used |
 | Environment safety | Install with the running interpreter and verify in a fresh process; reject source/editable execution and externally managed environments | Tests for environment mismatch, pip failure and post-install version verification; no worker/config/database edits |
 | Issue #3 | Correct workflow docs paths, document development dependencies, add missing auth/API JSON `--output`, explain simulation timeout recovery, expose returned submit checks | Offline CLI/workflow/submission regression; keep platform errors and never infer missing checks |
@@ -51,6 +51,17 @@ installer output and a nonzero exit status; partial installation is not called
 success. Successful installation is confirmed by a fresh isolated Python process.
 Already-running processes retain their loaded code; the updater does not restart
 research workers or rewrite queues, credentials, cookies or databases.
+
+The actual Windows launcher test reproduced WinError 32 when pip tried to
+uninstall the running `wqb.exe`; pip's script-writing fallback cannot solve an
+earlier uninstall lock. Native Windows updates therefore verify/download first,
+then return an explicit `upgrade_started` receipt and hand installation to a
+one-time helper. It walks the native ancestor chain (including virtualenv Python
+redirectors), waits on the exact `wqb.exe` process handle, rechecks the staged
+wheel and installs only after that launcher exits. Final success is recorded
+only after the fresh interpreter verifies the version. The status command can
+block on the helper's handle; it does not poll. Logs, staged wheel and receipts
+remain in the reported temporary job directory for diagnosis.
 
 ## Issue and forum review
 

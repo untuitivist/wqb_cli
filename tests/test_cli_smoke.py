@@ -39,6 +39,15 @@ class CliSmokeTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertEqual(json.loads(result.stdout)["reason"], "invalid_version")
 
+    def test_upgrade_status_is_readable_offline_without_locking_launcher(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            receipt = Path(temporary) / "result.json"
+            expected = {"ok": True, "status": "updated", "installed": True}
+            receipt.write_text(json.dumps(expected), encoding="utf-8")
+            result = run_wqb("upgrade", "--status", str(receipt))
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(json.loads(result.stdout), expected)
+
     def test_api_output_can_be_saved_without_shell_redirection(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             for command in (("api", "stats"), ("api", "list"), ("api", "show", "/authentication")):

@@ -228,7 +228,7 @@ def _environment() -> None:
 
 
 def _install(wheel: Path, version: str) -> dict[str, Any]:
-    command = [sys.executable, "-I", "-m", "pip", "--isolated", "install", "--no-input",
+    command = [sys.executable, "-I", "-X", "utf8", "-m", "pip", "--isolated", "install", "--no-input",
                "--disable-pip-version-check", "--no-index", "--no-deps", "--upgrade", "--force-reinstall", str(wheel)]
     try:
         installed = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=600, check=False)
@@ -255,8 +255,166 @@ def _install(wheel: Path, version: str) -> dict[str, Any]:
     return {"installer": evidence, "verification": verified}
 
 
+def _windows_launcher() -> bool:
+    return sys.platform == "win32" and Path(sys.argv[0]).name.lower() == "wqb.exe"
+
+
+def _launcher_pid() -> int:
+    import ctypes
+    from ctypes import wintypes
+
+    class ProcessEntry(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD), ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG), ("dwFlags", wintypes.DWORD), ("szExeFile", wintypes.WCHAR * 260)]
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
+    kernel.Process32FirstW.restype = wintypes.BOOL
+    kernel.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(ProcessEntry)]
+    kernel.Process32NextW.restype = wintypes.BOOL
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    snapshot = kernel.CreateToolhelp32Snapshot(2, 0)
+    if snapshot == ctypes.c_void_p(-1).value:
+        raise UpgradeError("launcher_lookup_failed", "Cannot inspect the Windows launcher process chain")
+    processes: dict[int, tuple[int, str]] = {}
+    try:
+        entry = ProcessEntry()
+        entry.dwSize = ctypes.sizeof(entry)
+        available = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
+        while available:
+            processes[entry.th32ProcessID] = (entry.th32ParentProcessID, entry.szExeFile)
+            available = kernel.Process32NextW(snapshot, ctypes.byref(entry))
+    finally:
+        kernel.CloseHandle(snapshot)
+    process_id = os.getppid()
+    visited: set[int] = set()
+    while process_id in processes and process_id not in visited:
+        visited.add(process_id)
+        parent_id, name = processes[process_id]
+        if name.lower() == "wqb.exe":
+            return process_id
+        process_id = parent_id
+    raise UpgradeError("launcher_lookup_failed", "The native wqb.exe ancestor was not found; no update was started")
+
+
+def _wait_process(process_id: int, timeout_seconds: int = 60) -> bool:
+    if sys.platform != "win32":
+        raise UpgradeError("wait_not_supported", "Process-handle waiting is available only for Windows upgrade jobs")
+    import ctypes
+    from ctypes import wintypes
+
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.OpenProcess(0x00100000, False, process_id)
+    if not handle:
+        if ctypes.get_last_error() == 87:
+            return True
+        raise UpgradeError("process_wait_failed", "Cannot open the Windows upgrade process handle")
+    try:
+        waited = kernel.WaitForSingleObject(handle, timeout_seconds * 1000)
+        if waited == 0x00000102:
+            return False
+        if waited != 0:
+            raise UpgradeError("process_wait_failed", "Windows did not complete the process wait normally")
+        return True
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def _save_receipt(path: Path, result: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    staged = path.with_name(path.name + f".{os.getpid()}.tmp")
+    staged.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    staged.replace(path)
+
+
+def _start_windows_job(wheel: Path, version: str, digest: str, result: dict[str, Any], output: str | None) -> dict[str, Any]:
+    directory = wheel.parent
+    job_path = directory / "job.json"
+    receipt = directory / "result.json"
+    log = directory / "install.log"
+    pending = {**result, "status": "upgrade_started", "installed": False, "sha256": digest,
+               "status_path": str(receipt), "log_path": str(log)}
+    job = {"wheel": str(wheel), "version": version, "sha256": digest, "launcher_pid": _launcher_pid(),
+           "result": pending, "output": str(Path(output).resolve()) if output else None}
+    job_path.write_text(json.dumps(job), encoding="utf-8")
+    _save_receipt(receipt, pending)
+    try:
+        with log.open("ab") as log_handle:
+            process = subprocess.Popen(
+                [sys.executable, "-I", "-m", "wqb_cli.core.upgrade", "--apply-job", str(job_path)],
+                stdin=subprocess.DEVNULL, stdout=log_handle, stderr=subprocess.STDOUT, close_fds=True,
+                creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
+            )
+    except OSError as error:
+        failed = {**pending, "ok": False, "status": "failed", "reason": "upgrade_job_start_failed", "detail": str(error)}
+        _save_receipt(receipt, failed)
+        raise UpgradeError("upgrade_job_start_failed", "Cannot start the Windows upgrade helper", status_path=str(receipt)) from error
+    pending["job_pid"] = process.pid
+    _save_receipt(receipt, pending)
+    return pending
+
+
+def _apply_job(job_path: Path) -> int:
+    job = json.loads(job_path.read_text(encoding="utf-8"))
+    receipt = job_path.parent / "result.json"
+    pending = json.loads(receipt.read_text(encoding="utf-8"))
+    try:
+        if not _wait_process(int(job["launcher_pid"])):
+            raise UpgradeError("launcher_exit_timed_out", "The Windows launcher did not exit; no installation was attempted")
+        pending = json.loads(receipt.read_text(encoding="utf-8"))
+        version = release_version(job["version"])
+        wheel = Path(job["wheel"]).resolve()
+        if wheel.parent != job_path.parent.resolve() or wheel.name != f"wqb_cli-{version}-py3-none-any.whl":
+            raise UpgradeError("invalid_upgrade_job", "The upgrade job does not reference its verified wheel")
+        if hashlib.sha256(wheel.read_bytes()).hexdigest() != job["sha256"]:
+            raise UpgradeError("wheel_checksum_mismatch", "The staged upgrade wheel changed; nothing was installed")
+        _environment()
+        _wheel_requirements(wheel, version)
+        installed = _install(wheel, version)
+        result = {**pending, "ok": True, "status": "updated", "installed": True, **installed}
+    except UpgradeError as error:
+        result = {**pending, **error.as_dict(), "status": "failed", "installed": False}
+    except Exception as error:
+        result = {**pending, "ok": False, "status": "failed", "installed": False,
+                  "reason": "upgrade_job_failed", "detail": f"{type(error).__name__}: {error}"}
+    _save_receipt(receipt, result)
+    if job.get("output"):
+        try:
+            _save_receipt(Path(job["output"]), result)
+        except OSError as error:
+            result["output_error"] = str(error)
+            _save_receipt(receipt, result)
+    return 0 if result["ok"] else 1
+
+
+def upgrade_status(path: str, *, wait: bool = False) -> dict[str, Any]:
+    receipt = Path(path)
+    result = json.loads(receipt.read_text(encoding="utf-8"))
+    if not isinstance(result, dict) or "status" not in result or "ok" not in result:
+        raise UpgradeError("invalid_upgrade_receipt", "The selected file is not an upgrade receipt")
+    if wait and result["status"] == "upgrade_started" and result.get("job_pid"):
+        completed = _wait_process(int(result["job_pid"]))
+        result = json.loads(receipt.read_text(encoding="utf-8"))
+        if not completed:
+            result = {**result, "wait_timed_out": True}
+        elif result.get("status") == "upgrade_started":
+            result = {**result, "ok": False, "status": "unknown", "reason": "upgrade_job_ended_without_receipt"}
+    return result
+
+
 def upgrade(*, target_version: str | None = None, check: bool = False, dry_run: bool = False,
-            reinstall: bool = False, allow_downgrade: bool = False) -> dict[str, Any]:
+            reinstall: bool = False, allow_downgrade: bool = False, output: str | None = None) -> dict[str, Any]:
     target = release_version(target_version) if target_version is not None else None
     with requests.Session() as session:
         session.auth = GitHubAuth(_github_token())
@@ -281,7 +439,17 @@ def upgrade(*, target_version: str | None = None, check: bool = False, dry_run: 
             status = "update_available" if selected > current else "reinstall_available" if selected == current else "downgrade_available"
             return {**result, "status": status if check else "planned", "installed": False}
         _environment()
+        if _windows_launcher():
+            directory = Path(tempfile.mkdtemp(prefix="wqb-upgrade-"))
+            wheel, digest = _verified_wheel(session, release, directory)
+            return _start_windows_job(wheel, release["version"], digest, result, output)
         with tempfile.TemporaryDirectory(prefix="wqb-upgrade-") as temporary:
             wheel, digest = _verified_wheel(session, release, Path(temporary))
             installed = _install(wheel, release["version"])
         return {**result, "status": "updated", "installed": True, "sha256": digest, **installed}
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3 or sys.argv[1] != "--apply-job":
+        raise SystemExit("Use wqb upgrade to create a verified upgrade job")
+    raise SystemExit(_apply_job(Path(sys.argv[2]).resolve()))

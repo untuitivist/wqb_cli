@@ -9,7 +9,7 @@
   "request_body": {
     "POST": {
       "token": "token from the completed upload",
-      "brand_id": "current_brand_id from the authenticated page"
+      "brand_id": "verified site brand ID supplied via --brand-id or discovered from authenticated HTML"
     }
   },
   "notes": [

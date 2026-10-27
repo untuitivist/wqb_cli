@@ -56,9 +56,11 @@ def add_community_parser(subparsers: argparse._SubParsersAction) -> None:
                 command.add_argument("--upload-images", action="store_true", help="Upload local images referenced by a JSON input")
                 command.add_argument("--assets-manifest", help="Durable image receipts; defaults beside the HTML/JSON input")
                 command.add_argument("--prepared-output", help="Write the exact JSON body with uploaded image paths before sending")
+                command.add_argument("--brand-id", help="Verified forum brand ID for image uploads without reading an HTML page")
         _request_options(command)
     image = community_sub.add_parser("image-upload", help="Upload one image and return its forum image path")
     image.add_argument("file", help="PNG, JPEG, GIF or WebP image, at most 2 MB")
+    image.add_argument("--brand-id", help="Verified forum brand ID; avoids the HTML brand lookup")
     _request_options(image)
     api = community_sub.add_parser("api", help="Inspect the forum API inventory or issue a raw request")
     api_sub = api.add_subparsers(dest="community_api_command", required=True)
@@ -95,7 +97,8 @@ def handle_community(args: argparse.Namespace) -> int:
         client = _client(args)
         client.authenticate()
         write_json({"ok": True, "authenticated": client.authenticated,
-                    "write_context_available": bool(client.csrf_token and client.brand_id),
+                    "write_context_available": bool(client.csrf_token),
+                    "image_brand_available": bool(client.brand_id),
                     "session_cache": client.cache_status}, args.output)
         return 0
     if args.community_command == "image-upload":
@@ -203,4 +206,5 @@ def handle_community(args: argparse.Namespace) -> int:
 
 def _client(args: argparse.Namespace) -> CommunityClient:
     return CommunityClient(cookies_path=args.cookies, config_path=args.config_path,
-                           brain_registry=EndpointRegistry.load(args.registry), max_wait_seconds=args.max_wait_seconds)
+                           brain_registry=EndpointRegistry.load(args.registry), max_wait_seconds=args.max_wait_seconds,
+                           brand_id=getattr(args, "brand_id", None))

@@ -582,6 +582,7 @@ def _classify_submit_post(result: dict[str, Any]) -> dict[str, Any]:
                 "regular_submission": regular,
                 "super_submission": super_submission,
                 "already_submitted": already_submitted,
+                "checks": checks,
             }
         if already_submitted.get("result") == "FAIL":
             return {
@@ -590,13 +591,15 @@ def _classify_submit_post(result: dict[str, Any]) -> dict[str, Any]:
                 "regular_submission": regular,
                 "super_submission": super_submission,
                 "already_submitted": already_submitted,
+                "checks": checks,
             }
         return {
             "submit_code": 403,
-            "reason": "forbidden",
+            "reason": _submit_check_reason(checks, "forbidden"),
             "regular_submission": regular,
             "super_submission": super_submission,
             "already_submitted": already_submitted,
+            "checks": checks,
         }
     if status_code == 401:
         return {"submit_code": 401, "reason": "unauthorized"}
@@ -655,7 +658,7 @@ def _classify_submit_wait(result: dict[str, Any]) -> dict[str, Any]:
             }
         return {
             "submit_code": 403,
-            "reason": "submit_forbidden",
+            "reason": _submit_check_reason(checks, "submit_forbidden"),
             "checks": checks,
         }
     if status_code == 401:
@@ -668,9 +671,18 @@ def _classify_submit_wait(result: dict[str, Any]) -> dict[str, Any]:
 def _checks_by_name(body: Any) -> dict[str, dict[str, Any]]:
     if not isinstance(body, dict):
         return {}
-    checks = body.get("is", {}).get("checks")
+    in_sample = body.get("is")
+    checks = in_sample.get("checks") if isinstance(in_sample, dict) else None
     if not isinstance(checks, list):
         checks = body.get("checks")
     if not isinstance(checks, list):
         return {}
     return {check.get("name"): check for check in checks if isinstance(check, dict) and check.get("name")}
+
+
+def _submit_check_reason(checks: dict[str, dict[str, Any]], default: str) -> str:
+    if any(check.get("result") in {"FAIL", "ERROR"} for check in checks.values()):
+        return "alpha_checks_failed"
+    if any(check.get("result") == "PENDING" for check in checks.values()):
+        return "alpha_checks_pending"
+    return default

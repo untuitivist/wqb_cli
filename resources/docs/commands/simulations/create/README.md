@@ -36,11 +36,15 @@ Final success is determined by the waited result:
 
 Parallel and batch constraints:
 
-- `REGULAR_FASTEXPR_MULTI`: max 10 expressions in one request. Use 10 outside `GLB`, 5 for `GLB`.
+- `REGULAR_FASTEXPR_MULTI`: max 10 compatible expressions in one request, including `GLB`.
 - `REGULAR_PYTHON`: no multi-simulation; one expression per request.
 - `SUPER`: one SUPER request per simulation.
 - `REGION_AGNOSTIC`: one parent object per request; ALL is not supported in HTTP batch arrays.
 - Current simulation capacity is controlled by BRAIN's 429 / Retry-After responses. The CLI does not impose a fixed number of simulation slots.
+
+If the local wait times out and a simulation ID is present, save the receipt and
+continue with `wqb simu get <simulation_id> --max-wait-seconds 900`. A local wait
+timeout is not a confirmed platform failure; do not create a duplicate simulation.
 
 Examples:
 

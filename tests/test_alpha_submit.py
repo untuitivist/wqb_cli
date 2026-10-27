@@ -49,6 +49,23 @@ class FakeSession:
 
 
 class AlphaSubmitTests(unittest.TestCase):
+    def test_submit_rejection_preserves_actual_failure_and_pending_checks(self) -> None:
+        for check_result, reason in (("FAIL", "alpha_checks_failed"), ("PENDING", "alpha_checks_pending")):
+            result = {"response": {"status_code": 403, "body": {"is": None, "checks": [
+                {"name": "LOW_SHARPE", "result": check_result, "value": 1.2}
+            ]}}}
+            for classify in (_classify_submit_post, _classify_submit_wait):
+                with self.subTest(result=check_result, classify=classify.__name__):
+                    classified = classify(result)
+                    self.assertEqual(classified["submit_code"], 403)
+                    self.assertEqual(classified["reason"], reason)
+                    self.assertEqual(classified["checks"]["LOW_SHARPE"]["value"], 1.2)
+
+    def test_submit_forbidden_without_checks_does_not_invent_quality_failure(self) -> None:
+        result = {"response": {"status_code": 403, "body": {"is": None}}}
+        self.assertEqual(_classify_submit_post(result)["reason"], "forbidden")
+        self.assertEqual(_classify_submit_wait(result)["reason"], "submit_forbidden")
+
     def test_response_body_keeps_full_non_json_text(self) -> None:
         text = "x" * 3000
         session = FakeSession(

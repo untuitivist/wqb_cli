@@ -1,5 +1,9 @@
 # wqb-cli
 
+Version 0.6.3 adds native updates: `wqb upgrade --check`, `wqb upgrade` and
+`wqb upgrade --version 0.6.3`. Releases are checksum-verified and installed into
+the running Python environment. See [Upgrade](resources/docs/commands/upgrade/README.md).
+
 Version 0.6.2 adds native official Help Center article discovery and reading:
 `wqb help-center search Themes` and `wqb help-center get 38927747787031`.
 It reuses community SSO and preserves article HTML, update timestamps and pagination;
@@ -13,7 +17,8 @@ preserving the default random scheduler for runs that do not opt in.
 Community login and cached-session validation now use the Zendesk current-user
 JSON API. `sqlitecom sync` does not load an HTML landing page: a help-center page
 challenge must not reject an otherwise authenticated API session. Write-specific
-HTML/CSRF context is fetched only when needed and is verified independently.
+API CSRF comes from the verified current-user response. Image registration accepts
+an explicit verified `--brand-id`; HTML brand lookup is needed only without it.
 
 Community sessions now persist across CLI invocations in the private local auth
 directory. Cookies retain their original domain/path/expiry, are isolated by
@@ -396,7 +401,7 @@ wqb
 Current package version:
 
 ```toml
-version = "0.6.2"
+version = "0.6.3"
 ```
 
 ## Authentication
@@ -789,20 +794,19 @@ resources/api_inventory/
 Install editable package:
 
 ```powershell
-python -m pip install -e .
+python -m pip install -e ".[dev]"
 ```
 
 Run tests from the repository root:
 
 ```powershell
-$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
 python -m pytest tests
 ```
 
 Build package artifacts:
 
 ```powershell
-python -m build
+python scripts/build_release.py --outdir dist --expected-version 0.6.3
 ```
 
 Do not commit:
@@ -850,17 +854,24 @@ python -m wqb_cli --help
 
 Package release:
 
-[wqb-cli 0.6.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.1)
+[GitHub Releases](https://github.com/untuitivist/wqb_cli/releases)
 
 Release checklist:
 
-1. Update `version` in `pyproject.toml`.
-2. Run editable install.
-3. Run tests.
-4. Commit changes.
-5. Tag the release, for example `v0.6.1`.
-6. Push the branch and tag.
-7. Publish a GitHub Release.
+1. Update package/runtime versions, the changelog and bilingual documentation.
+2. Install `.[dev]` in a development environment and run tests.
+3. Commit the changes, open a PR and merge after verification.
+4. Tag the merged master commit, for example `v0.6.3`, and push the tag.
+5. Build from that exact clean commit with `scripts/build_release.py`, verify
+   the installed wheel, and publish wheel/sdist, `SHA256SUMS.txt` and
+   `BUILD_INFO.json` using `gh release create --verify-tag` and a notes file.
+6. Verify the downloaded release and `wqb upgrade --check`. Existing versions
+   without `upgrade` can bootstrap by installing the verified release wheel.
+
+The build helper requires an empty output directory and excludes ignored local
+data and old build outputs. See the [0.6.3 plan](docs/RELEASE_0.6.3.md).
+Optional [GitHub Actions examples](docs/github_actions/README.md) automate these
+checks and publication once a credential with workflow scope can enable them.
 
 ## Version History
 

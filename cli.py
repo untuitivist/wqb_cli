@@ -26,6 +26,7 @@ from .commands.scope import add_scope_parser, handle_scope
 from .commands.suggest import add_suggest_parser, handle_suggest
 from .commands.tutorial import add_tutorial_parser, handle_tutorial
 from .commands.user import add_user_parser, handle_user
+from .commands.upgrade import add_upgrade_parser, handle_upgrade
 from .core.io import parse_key_values, read_json_file, write_json
 from .core.plugins import PluginLoadError, discover_plugins, register_plugins
 from .core.registry import EndpointRegistry
@@ -44,13 +45,16 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     api = sub.add_parser("api", help="Call API endpoints from the registry")
     api_sub = api.add_subparsers(dest="api_command", required=True)
 
-    api_sub.add_parser("stats", help="Show registry statistics")
+    stats_parser = api_sub.add_parser("stats", help="Show registry statistics")
+    stats_parser.add_argument("--output", help="Write JSON result to file")
 
     list_parser = api_sub.add_parser("list", help="List registered endpoints")
     list_parser.add_argument("--prefix", help="Filter endpoint path prefix")
+    list_parser.add_argument("--output", help="Write JSON result to file")
 
     show_parser = api_sub.add_parser("show", help="Show one endpoint definition")
     show_parser.add_argument("path")
+    show_parser.add_argument("--output", help="Write JSON result to file")
 
     params_parser = api_sub.add_parser("params", help="Show query/body parameter hints for one endpoint")
     params_parser.add_argument("path")
@@ -69,17 +73,22 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
 
     auth = sub.add_parser("auth", help="Authentication helpers")
     auth_sub = auth.add_subparsers(dest="auth_command", required=True)
-    auth_sub.add_parser("status", help="GET /authentication")
-    auth_sub.add_parser("head", help="HEAD /authentication")
+    status_parser = auth_sub.add_parser("status", help="GET /authentication")
+    status_parser.add_argument("--output", help="Write JSON result to file")
+    head_parser = auth_sub.add_parser("head", help="HEAD /authentication")
+    head_parser.add_argument("--output", help="Write JSON result to file")
     login_parser = auth_sub.add_parser("login", help="POST /authentication")
     login_parser.add_argument("--input", help="JSON login payload; defaults to keyring/config/env")
     login_parser.add_argument("--email", help="Email override")
     login_parser.add_argument("--password", help="Password override; prefer keyring or .env for normal use")
     login_parser.add_argument("--expiry", type=int, default=3600, help="Token expiry seconds")
     login_parser.add_argument("--config", dest="config_path", help="Path to local config.json")
+    login_parser.add_argument("--output", help="Write JSON result to file")
     logout_parser = auth_sub.add_parser("logout", help="DELETE /authentication")
+    logout_parser.add_argument("--output", help="Write JSON result to file")
     for name in ["brainlabs", "persona", "support", "workday"]:
-        auth_sub.add_parser(name, help=f"GET /authentication/{name}")
+        auth_parser = auth_sub.add_parser(name, help=f"GET /authentication/{name}")
+        auth_parser.add_argument("--output", help="Write JSON result to file")
     add_account_parser(sub)
     add_alpha_parser(sub)
     add_competition_parser(sub)
@@ -100,6 +109,7 @@ def build_parser(plugins: Iterable[CliPlugin] | None = None) -> argparse.Argumen
     add_suggest_parser(sub)
     add_tutorial_parser(sub)
     add_user_parser(sub)
+    add_upgrade_parser(sub)
     resolved_plugins = discover_plugins((sqlitesimu_plugin,)) if plugins is None else plugins
     register_plugins(sub, resolved_plugins)
     return parser
@@ -112,7 +122,7 @@ def load_registry(args: argparse.Namespace) -> EndpointRegistry:
 def handle_api(args: argparse.Namespace) -> int:
     registry = load_registry(args)
     if args.api_command == "stats":
-        write_json(registry.stats())
+        write_json(registry.stats(), args.output)
         return 0
     if args.api_command == "list":
         write_json(
@@ -123,11 +133,12 @@ def handle_api(args: argparse.Namespace) -> int:
                     "description": endpoint.description,
                 }
                 for endpoint in registry.list(args.prefix)
-            ]
+            ],
+            args.output,
         )
         return 0
     if args.api_command == "show":
-        write_json(registry.get(args.path).raw)
+        write_json(registry.get(args.path).raw, args.output)
         return 0
     if args.api_command == "params":
         endpoint = registry.get(args.path)
@@ -189,12 +200,12 @@ def handle_auth(args: argparse.Namespace) -> int:
     if args.auth_command == "status":
         endpoint = registry.get("/authentication")
         prepared = client.prepare(endpoint, "GET")
-        write_json(client.call(prepared))
+        write_json(client.call(prepared), args.output)
         return 0
     if args.auth_command == "head":
         endpoint = registry.get("/authentication")
         prepared = client.prepare(endpoint, "HEAD")
-        write_json(client.call(prepared))
+        write_json(client.call(prepared), args.output)
         return 0
     if args.auth_command == "login":
         endpoint = registry.get("/authentication")
@@ -209,18 +220,18 @@ def handle_auth(args: argparse.Namespace) -> int:
         result = client.call(prepared)
         if result.get("ok"):
             save_cookie_payload(client.session, args.cookies)
-        write_json(result)
+        write_json(result, args.output)
         return 0
     if args.auth_command == "logout":
         endpoint = registry.get("/authentication")
         prepared = client.prepare(endpoint, "DELETE")
         result = client.call(prepared)
-        write_json(result)
+        write_json(result, args.output)
         return 0
     if args.auth_command in {"brainlabs", "persona", "support", "workday"}:
         endpoint = registry.get(f"/authentication/{args.auth_command}")
         prepared = client.prepare(endpoint, "GET")
-        write_json(client.call(prepared))
+        write_json(client.call(prepared), args.output)
         return 0
     raise AssertionError(args.auth_command)
 
@@ -283,6 +294,8 @@ def main(argv: list[str] | None = None) -> None:
             code = handle_tutorial(args, load_registry(args))
         elif args.command == "user":
             code = handle_user(args, load_registry(args))
+        elif args.command == "upgrade":
+            code = handle_upgrade(args)
         else:
             parser.error(f"Unknown command: {args.command}")
             code = 2

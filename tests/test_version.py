@@ -17,7 +17,7 @@ class VersionTests(unittest.TestCase):
             package_version = tomllib.load(handle)["project"]["version"]
 
         self.assertEqual(wqb_cli.__version__, package_version)
-        self.assertEqual(package_version, "0.6.2")
+        self.assertEqual(package_version, "0.6.3")
 
         for readme_name in ("README.md", "README_CN.md"):
             readme = (REPO_ROOT / readme_name).read_text(encoding="utf-8")

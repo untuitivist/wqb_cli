@@ -53,8 +53,8 @@ wqb sqlitecom search "technical" --limit 20 --output <node_dir>/community_search
 
 # 官方文档
 wqb docs list --output <node_dir>/docs_list.json
-wqb docs show "simulations" --output <node_dir>/docs__simulations.md
-wqb docs show "alpha_submission" --output <node_dir>/docs__alpha_submission.md
+wqb docs show "simulations/create" --output <node_dir>/docs__simulations.md
+wqb docs show "alpha/submit" --output <node_dir>/docs__alpha_submission.md
 
 # 平台资料搜索
 wqb search "volume" --output <node_dir>/platform_search__volume.json

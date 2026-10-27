@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import string
 import unittest
 from pathlib import Path
@@ -27,6 +28,16 @@ def _markdown_text(workflow: Path) -> str:
 
 
 class WorkflowLayoutTests(unittest.TestCase):
+    def test_all_workflow_docs_show_targets_exist(self) -> None:
+        docs = ROOT / "resources" / "docs" / "commands"
+        for document in WORKFLOWS.rglob("*.md"):
+            content = document.read_text(encoding="utf-8")
+            for match in re.finditer(r'wqb docs show ["\']?([^\s"\'`]+)', content):
+                target = docs / match.group(1)
+                if target.is_dir():
+                    target /= "README.md"
+                self.assertTrue(target.is_file(), f"{document}: {match.group(1)}")
+
     def test_workflows_are_complete_and_old_layout_is_gone(self) -> None:
         self.assertTrue((SIMU / "workflow_graph.md").is_file())
         self.assertTrue((BATCH / "workflow_graph.md").is_file())

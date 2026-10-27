@@ -44,4 +44,9 @@ wqb_cli/local/data_all/info_data.bin
 Use `--info <path>` to read another quick index.
 Use `--pickle <path>` to read another full pickle.
 
+Pickle deserialization can execute code. Load `all_data.pickle` only from a
+trusted producer; a local filename does not establish trust. This legacy reader
+does not sandbox or authenticate a downloaded pickle. Prefer the msgpack index
+for discovery when the full trusted pickle is unnecessary.
+
 Use `info_data.bin` first for fast ranking. Use `all_data.pickle` only after a scope/field/dataset is worth inspecting, because it is much larger and loads slower.

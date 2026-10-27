@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel>=0.45.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["build>=1.2", "pytest>=8", "pip-audit>=2.7"]
+dev = ["build>=1.2", "setuptools>=78.1.1", "wheel>=0.45.1", "pytest>=8", "pip-audit>=2.7"]
 
 [project.scripts]
 wqb = "wqb_cli.cli:main"

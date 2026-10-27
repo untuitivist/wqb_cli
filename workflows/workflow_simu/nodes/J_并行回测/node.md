@@ -32,6 +32,11 @@ wqb alpha recordsets <alpha_id> --max-wait-seconds 900 --output <node_dir>/recor
 
 For multi-simulation, `wqb simu create` also waits for child simulations and places them under top-level `children`. Use `wqb simu get <child_simulation_id>` only when re-checking a child later.
 
+If `classification.reason` is `simulation_wait_timed_out` and a simulation ID
+was returned, continue with `wqb simu get <simulation_id> --max-wait-seconds 900`.
+The timeout describes the local wait, not a confirmed platform failure. Keep the
+original receipt and do not resubmit the expression just because the wait ended.
+
 ## 输出
 
 必要：
@@ -50,9 +55,8 @@ For multi-simulation, `wqb simu create` also waits for child simulations and pla
 
 ## 并发规则
 
-- REGULAR FASTEXPR multi: use 10 expressions per non-GLB batch, 5 per GLB batch.
-- REGULAR external concurrency: max 8 outside GLB, max 4 for GLB.
-- SUPER external concurrency: max 3.
+- REGULAR FASTEXPR multi: up to 10 compatible expressions per batch, including GLB.
+- Request concurrency follows platform capacity and Retry-After; this CLI imposes no fixed simulation-slot cap.
 - REGULAR PYTHON cannot use multi-simulation.
 - Simulation wait cap defaults to 900 seconds.
 - Unexplained `FAIL/ERROR` should be recorded as platform execution failure first, not immediately as expression economics failure.

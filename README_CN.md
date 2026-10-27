@@ -1,5 +1,9 @@
 # wqb-cli
 
+0.6.3 增加原生更新：`wqb upgrade --check`、`wqb upgrade`、
+`wqb upgrade --version 0.6.3`。安装前核验发行包校验和，使用当前 Python
+环境更新；详见[更新命令](resources/docs/commands/upgrade/README.md)。
+
 0.6.2 增加原生官方帮助中心入口：`wqb help-center search Themes`、
 `wqb help-center get 38927747787031`。复用社区 SSO，保留正文 HTML、
 更新时间和分页信息，无需界面操作或临时认证脚本。
@@ -11,7 +15,8 @@
 
 社区登录与缓存复用现通过 Zendesk 当前用户 JSON API 验证。`sqlitecom sync`
 不依赖网页落地：网页出现验证页，不再误判已经成功的 API 登录。
-发帖需要的网页及 CSRF 上下文仅在写操作时按需获取，并独立检查。
+写入使用已核验的当前用户 API CSRF；图片注册支持明确的真实 `--brand-id`，
+未指定时才按需读取网页中的品牌信息。
 
 社区会话现在会保存到本地 auth 目录，并按账号、配置和 BRAIN cookie 路径隔离。
 cookie 的域、路径和过期时间保持原样；下次调用先核验原论坛用户身份，再复用。
@@ -399,7 +404,7 @@ wqb
 当前版本：
 
 ```toml
-version = "0.6.2"
+version = "0.6.3"
 ```
 
 ## 认证
@@ -785,20 +790,19 @@ resources/api_inventory/
 editable 安装：
 
 ```powershell
-python -m pip install -e .
+python -m pip install -e ".[dev]"
 ```
 
 从仓库根目录运行测试：
 
 ```powershell
-$env:PYTHONPATH='U:\Project\MainCode\3.Work\WQB'
 python -m pytest tests
 ```
 
 构建发布包：
 
 ```powershell
-python -m build
+python scripts/build_release.py --outdir dist --expected-version 0.6.3
 ```
 
 不要提交：
@@ -846,17 +850,24 @@ python -m wqb_cli --help
 
 软件包 release：
 
-[wqb-cli 0.6.1](https://github.com/untuitivist/wqb_cli/releases/tag/v0.6.1)
+[GitHub Releases](https://github.com/untuitivist/wqb_cli/releases)
 
 发布 checklist：
 
-1. 更新 `pyproject.toml` 的 `version`。
-2. 运行 editable install。
-3. 运行测试。
-4. 提交改动。
-5. 创建 tag，例如 `v0.6.1`。
-6. 推送 branch 和 tag。
-7. 发布 GitHub Release。
+1. 同步软件包／运行时版本、CHANGELOG 和中英文文档。
+2. 在独立开发环境安装 `.[dev]` 并运行测试。
+3. 提交、创建 PR，验证后合并。
+4. 为已经合并的 master 提交创建 `v0.6.3` 等 tag，并推送 tag。
+5. 从该干净提交运行 `scripts/build_release.py`，核验安装后的 wheel，
+   使用 `gh release create --verify-tag` 和说明文件发布 wheel／sdist、
+   `SHA256SUMS.txt` 及 `BUILD_INFO.json`。
+6. 核验下载结果及 `wqb upgrade --check`；还不支持 `upgrade` 的旧版先安装
+   已校验的发行 wheel。
+
+构建工具要求输出目录为空，从 Git 提交归档构建，不混入私有 local 数据或旧
+build 产物。详见 [0.6.3 开发计划](docs/RELEASE_0.6.3.md)。
+可选 [GitHub Actions 配置示例](docs/github_actions/README.md) 可自动测试与发布；
+启用这些工作流需要具备 workflow 权限的 GitHub 凭据。
 
 ## 版本记录
 

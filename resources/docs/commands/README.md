@@ -13,6 +13,8 @@ This directory documents WQB CLI commands in a command-tree layout inspired by L
 
 Current command nodes:
 
+- `upgrade` (check/install verified stable GitHub Releases)
+
 - `auth/login`
 - `auth/status`
 - `alpha/get`

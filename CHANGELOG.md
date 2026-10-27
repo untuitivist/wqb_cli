@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.6.3 - 2026-10-27
+
+### Added
+
+- Include the previously unreleased 0.6.2 Help Center commands and integrated
+  simulation reliability improvements described below.
+
+- Native `wqb upgrade` for latest or exact stable GitHub Releases, metadata-only
+  checks/previews, explicit same-version reinstall and opt-in exact downgrades.
+- Bounded HTTPS downloads, SHA256SUMS and GitHub digest checks, wheel identity and
+  compatibility validation, same-interpreter pip installation without dependency
+  changes, and fresh-process version verification with structured failure receipts.
+- Clean-commit wheel/sdist builds, private/stale file checks, SHA256SUMS and build
+  provenance. Ready-to-enable Windows/Linux CI and release workflow examples are
+  included; enabling Actions requires a GitHub credential with workflow scope.
+- Optional existing GitHub CLI/environment authentication for release metadata,
+  scoped to the API origin and excluded from receipts and CDN requests.
+- Native Windows launcher handoff: a one-time helper waits for `wqb.exe` to exit
+  before pip replaces it; `--status PATH --wait` reads the final verified receipt.
+  `upgrade_started` explicitly does not mean installation success.
+- Development dependencies and JSON `--output` on base auth/API read commands.
+
+### Fixed
+
+- Community writes use the authenticated current-user API's CSRF token; image
+  uploads accept an explicit verified brand ID. An HTML challenge no longer
+  invalidates a working API session. Preserve identity validation, challenge
+  diagnostics and non-replaying writes (merged PR #9).
+- Correct stale workflow documentation nodes and GLB batch-size guidance;
+  explain how to resume a timed-out simulation without duplicating its POST.
+- Preserve actual checks on rejected submission POSTs, distinguish reported
+  quality failures/pending checks from an unexplained 403, and tolerate null IS
+  payloads without inventing missing failure details (issue #3).
+- Raise runtime dependency floors for confirmed Requests, urllib3, certifi,
+  IDNA, MessagePack and jaraco.context security advisories. Preserve the existing
+  local pickle interface and document its trusted-input requirement.
+
 ## 0.6.2 - 2026-10-11
 
 ### Added

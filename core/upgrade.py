@@ -256,7 +256,7 @@ def _install(wheel: Path, version: str) -> dict[str, Any]:
 
 
 def _windows_launcher() -> bool:
-    return sys.platform == "win32" and Path(sys.argv[0]).name.lower() == "wqb.exe"
+    return sys.platform == "win32" and Path(sys.argv[0]).name.lower().removesuffix(".exe") == "wqb"
 
 
 def _launcher_pid() -> int:

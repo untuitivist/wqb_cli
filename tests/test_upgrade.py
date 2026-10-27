@@ -17,7 +17,7 @@ from wqb_cli.cli import build_parser
 from wqb_cli.commands.upgrade import handle_upgrade
 from wqb_cli.core.upgrade import (
     API_ROOT, RELEASE_ROOT, GitHubAuth, UpgradeError, _apply_job, _environment, _fetch, _github_token, _install,
-    _wheel_requirements, release_version, upgrade, upgrade_status,
+    _wheel_requirements, _windows_launcher, release_version, upgrade, upgrade_status,
 )
 
 
@@ -316,6 +316,11 @@ class DownloadAndInstallTests(unittest.TestCase):
 
 
 class UpgradeJobTests(unittest.TestCase):
+    def test_distlib_launcher_name_is_detected_after_exe_suffix_is_removed(self) -> None:
+        for name, expected in (("wqb.exe", True), ("wqb", True), ("__main__.py", False)):
+            with self.subTest(name=name), patch("sys.platform", "win32"), patch("sys.argv", [name, "upgrade"]):
+                self.assertEqual(_windows_launcher(), expected)
+
     def test_worker_rechecks_staged_hash_and_preserves_final_status(self) -> None:
         for tamper in (False, True):
             with self.subTest(tamper=tamper), tempfile.TemporaryDirectory() as temporary:
